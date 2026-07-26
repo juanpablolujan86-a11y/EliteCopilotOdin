@@ -1,35 +1,21 @@
 class EventBus:
-    """
-    Centro de comunicaciones de ODIN.
-
-    Los módulos pueden suscribirse a eventos y serán notificados
-    cuando ocurra uno.
-    """
 
     def __init__(self):
-        # Diccionario de suscriptores
-        self._subscribers = {}
+        self.subscribers = {}
 
     def subscribe(self, event_name, callback):
-        """
-        Registra una función para un tipo de evento.
 
-        Ejemplo:
-            bus.subscribe("FSDJump", mi_funcion)
-        """
+        if event_name not in self.subscribers:
+            self.subscribers[event_name] = []
 
-        if event_name not in self._subscribers:
-            self._subscribers[event_name] = []
+        self.subscribers[event_name].append(callback)
 
-        self._subscribers[event_name].append(callback)
+    def publish(self, event):
 
-    def publish(self, event_name, data):
-        """
-        Envía un evento a todos los suscriptores.
-        """
+        event_name = event.get("event")
 
-        if event_name not in self._subscribers:
+        if event_name not in self.subscribers:
             return
 
-        for callback in self._subscribers[event_name]:
-            callback(data)
+        for callback in self.subscribers[event_name]:
+            callback(event)
