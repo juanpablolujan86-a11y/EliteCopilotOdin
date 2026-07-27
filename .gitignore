@@ -1,0 +1,26 @@
+# Virtual Environment
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# SQLite
+database/*.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Archivos temporales
+*.tmp
+
+# Árbol del proyecto
+estructura.txt
+
+# OS
+Thumbs.db
+.DS_Store
