@@ -3,13 +3,7 @@ ODIN - Orbital Data Intelligence Nexus
 
 database.py
 
-Administrador de la base de datos SQLite.
-
-Responsabilidades:
-- Conectarse a la base de datos.
-- Crear las tablas si no existen.
-- Ejecutar consultas.
-- Ejecutar inserciones, actualizaciones y eliminaciones.
+Administrador central de SQLite.
 """
 
 from pathlib import Path
@@ -19,67 +13,45 @@ from sqlite3 import Connection
 
 class DatabaseManager:
     """
-    Gestiona la conexión con SQLite y la creación
-    automática de la base de datos.
+    Gestiona la base de datos local de ODIN.
     """
 
     def __init__(self, project_root: Path):
-
         self.database_folder = project_root / "database"
-
         self.database_folder.mkdir(exist_ok=True)
 
         self.database_file = self.database_folder / "odin.db"
-
         self.connection: Connection | None = None
 
     def connect(self) -> None:
-        """
-        Abre la conexión con SQLite.
-        """
-
         if self.connection is None:
-
             self.connection = sqlite3.connect(self.database_file)
-
             self.connection.row_factory = sqlite3.Row
 
     def disconnect(self) -> None:
-        """
-        Cierra la conexión.
-        """
-
         if self.connection is not None:
-
             self.connection.close()
-
             self.connection = None
 
     def execute(self, sql: str, parameters: tuple = ()) -> None:
-        """
-        Ejecuta INSERT, UPDATE o DELETE.
-        """
+        if self.connection is None:
+            raise RuntimeError("La base de datos no está conectada.")
 
         cursor = self.connection.cursor()
-
         cursor.execute(sql, parameters)
-
         self.connection.commit()
 
     def query(self, sql: str, parameters: tuple = ()) -> list:
-        """
-        Ejecuta un SELECT.
-        """
+        if self.connection is None:
+            raise RuntimeError("La base de datos no está conectada.")
 
         cursor = self.connection.cursor()
-
         cursor.execute(sql, parameters)
-
         return cursor.fetchall()
 
     def create_tables(self) -> None:
         """
-        Crea las tablas principales de ODIN.
+        Crea todas las tablas principales de ODIN.
         """
 
         self.execute(
@@ -87,11 +59,8 @@ class DatabaseManager:
             CREATE TABLE IF NOT EXISTS commander
             (
                 id INTEGER PRIMARY KEY,
-
                 name TEXT,
-
                 fid TEXT,
-
                 created_at TEXT
             )
             """
@@ -102,12 +71,97 @@ class DatabaseManager:
             CREATE TABLE IF NOT EXISTS journal_events
             (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-
                 timestamp TEXT NOT NULL,
-
                 event TEXT NOT NULL,
-
                 json TEXT NOT NULL
+            )
+            """
+        )
+
+        self.execute(
+            """
+            CREATE TABLE IF NOT EXISTS stellar_bodies
+            (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                system_address INTEGER NOT NULL,
+                system_name TEXT NOT NULL,
+                body_id INTEGER NOT NULL,
+                body_name TEXT NOT NULL,
+                body_type TEXT NOT NULL,
+                subtype TEXT,
+                is_moon INTEGER NOT NULL DEFAULT 0,
+                terraformable INTEGER NOT NULL DEFAULT 0,
+                atmosphere TEXT,
+                volcanism TEXT,
+                gravity REAL,
+                radius REAL,
+                distance_from_arrival REAL,
+                was_discovered INTEGER NOT NULL DEFAULT 0,
+                was_mapped INTEGER NOT NULL DEFAULT 0,
+                raw_json TEXT NOT NULL,
+                scanned_at TEXT NOT NULL,
+
+                UNIQUE(system_address, body_id)
+            )
+            """
+        )
+
+        self.execute(
+            """
+            CREATE TABLE IF NOT EXISTS system_exploration
+            (
+                system_address INTEGER PRIMARY KEY,
+                system_name TEXT NOT NULL,
+                expected_body_count INTEGER NOT NULL DEFAULT 0,
+                discovered_body_count INTEGER NOT NULL DEFAULT 0,
+                star_count INTEGER NOT NULL DEFAULT 0,
+                planet_count INTEGER NOT NULL DEFAULT 0,
+                moon_count INTEGER NOT NULL DEFAULT 0,
+                terraformable_count INTEGER NOT NULL DEFAULT 0,
+                mapped_count INTEGER NOT NULL DEFAULT 0,
+                biology_signal_count INTEGER NOT NULL DEFAULT 0,
+                organic_sample_count INTEGER NOT NULL DEFAULT 0,
+                all_bodies_found INTEGER NOT NULL DEFAULT 0,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
+
+        self.execute(
+            """
+            CREATE TABLE IF NOT EXISTS mapped_bodies
+            (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                system_address INTEGER NOT NULL,
+                body_id INTEGER NOT NULL,
+                body_name TEXT,
+                probes_used INTEGER,
+                efficiency_target INTEGER,
+                efficiency_bonus INTEGER NOT NULL DEFAULT 0,
+                mapped_at TEXT NOT NULL,
+
+                UNIQUE(system_address, body_id)
+            )
+            """
+        )
+
+        self.execute(
+            """
+            CREATE TABLE IF NOT EXISTS biological_signals
+            (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                system_address INTEGER NOT NULL,
+                body_id INTEGER,
+                body_name TEXT,
+                source_event TEXT NOT NULL,
+                signal_type TEXT,
+                signal_count INTEGER NOT NULL DEFAULT 0,
+                genus TEXT,
+                species TEXT,
+                variant TEXT,
+                scan_type TEXT,
+                recorded_at TEXT NOT NULL,
+                raw_json TEXT NOT NULL
             )
             """
         )

@@ -18,6 +18,8 @@ class InternalEvent:
 
     EXPLORATION_CONTEXT_READY = "ExplorationContextReady"
 
+    EXPLORATION_REPORT_READY = "ExplorationReportReady"
+
     RECOMMENDATION_READY = "RecommendationReady"
 
     COMMANDER_STATE_UPDATED = "CommanderStateUpdated"
