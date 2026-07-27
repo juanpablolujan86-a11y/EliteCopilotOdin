@@ -1,0 +1,34 @@
+{
+    "schema_version": "1.0",
+    "generated_by": "HUGINN",
+    "species": [
+        {
+            "id": "stratum_tectonicas",
+            "genus": "Stratum",
+            "species": "Tectonicas",
+            "variant": "",
+            "rarity": "Common",
+            "source": "Deep Space Network",
+            "raw": {
+                "genus": "Stratum",
+                "species": "Tectonicas",
+                "variant": "",
+                "rarity": "Common"
+            }
+        },
+        {
+            "id": "bacterium_cerbrus",
+            "genus": "Bacterium",
+            "species": "Cerbrus",
+            "variant": "",
+            "rarity": "Rare",
+            "source": "Deep Space Network",
+            "raw": {
+                "genus": "Bacterium",
+                "species": "Cerbrus",
+                "variant": "",
+                "rarity": "Rare"
+            }
+        }
+    ]
+}
