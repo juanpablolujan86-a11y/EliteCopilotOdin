@@ -1,3 +1,11 @@
+# ============================================================
+# ODIN
+#
+# Versión : 0.2.0
+#
+# Sprint  : 4 - MÍMIR
+# ============================================================
+
 """
 ODIN - Orbital Data Intelligence Nexus
 
@@ -19,6 +27,9 @@ from core.event_bus import EventBus
 from core.internal_events import InternalEvent
 from models.events.exploration_report_ready import (
     ExplorationReportReady,
+)
+from models.events.planet_scan_ready import (
+    PlanetScanReady,
 )
 from state.commander_state import CommanderState
 
@@ -192,6 +203,15 @@ class ExplorationProcessor:
             system_address,
             system_name,
             timestamp,
+        )
+
+        planet_scan = PlanetScanReady(
+            event=event,
+        )
+
+        self.event_bus.publish_internal(
+            InternalEvent.PLANET_SCAN_READY,
+            planet_scan,
         )
 
         print(

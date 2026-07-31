@@ -1,0 +1,82 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+
+    "title": "ODIN Biological Species",
+
+    "type": "object",
+
+    "required": [
+        "id",
+        "genus",
+        "species"
+    ],
+
+    "properties": {
+
+        "id": {
+            "type": "string"
+        },
+
+        "genus": {
+            "type": "string"
+        },
+
+        "species": {
+            "type": "string"
+        },
+
+        "variant": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+
+        "rarity": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+
+        "estimated_value": {
+            "type": "number"
+        },
+
+        "sampling_distance": {
+            "type": "number"
+        },
+
+        "planet_classes": {
+            "type": "array"
+        },
+
+        "atmospheres": {
+            "type": "array"
+        },
+
+        "gravity": {
+            "type": "object"
+        },
+
+        "temperature": {
+            "type": "object"
+        },
+
+        "volcanism": {
+            "type": "array"
+        },
+
+        "star_types": {
+            "type": "array"
+        },
+
+        "sources": {
+            "type": "array"
+        },
+
+        "confidence": {
+            "type": "number"
+        }
+    }
+}

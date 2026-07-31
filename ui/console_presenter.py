@@ -10,6 +10,7 @@ from models.events.recommendation_ready import RecommendationReady
 from models.events.exploration_report_ready import (
     ExplorationReportReady,
 )
+from models.officer_report import OfficerReport
 
 class ConsolePresenter:
     """
@@ -109,3 +110,40 @@ class ConsolePresenter:
                 print(f"  - {reason}")
 
         print("=" * 50)
+
+    def show_scientific_report(
+        self,
+        report: OfficerReport,
+    ) -> None:
+        """
+        Muestra un informe generado por un oficial de ODIN.
+        """
+
+        print()
+        print("=" * 50)
+        print(report.officer)
+        print("=" * 50)
+        print()
+        print(report.title)
+        print()
+        print(report.message)
+
+        priority_map = {
+            "LOW": "Bajo",
+            "MEDIUM": "Moderado",
+            "HIGH": "Muy alto",
+            "CRITICAL": "Crítico",
+        }
+
+        print()
+        print(
+            "Interés científico : "
+            f"{priority_map.get(report.priority, report.priority)}"
+        )
+
+        if report.details:
+            print()
+            print("Detalles:")
+
+            for detail in report.details:
+                print(f"  - {detail}")

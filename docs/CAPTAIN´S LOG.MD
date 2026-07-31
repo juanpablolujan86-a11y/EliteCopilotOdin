@@ -151,3 +151,116 @@ ODIN
 ---
 
 **This is the Way.**
+
+# Captain's Log — Sprint 4.0
+
+## Fecha
+
+2026-07-27
+
+## Estado
+
+**HUGINN v0.1 operativo**
+
+---
+
+## Resumen
+
+Durante esta jornada comenzó oficialmente el desarrollo de **HUGINN**, el Oficial de Adquisición de Conocimiento de ODIN.
+
+El objetivo fue abandonar la carga manual de conocimiento y construir una arquitectura capaz de importar, validar, convertir y mantener una Biblioteca Científica propia a partir de fuentes consolidadas de la comunidad de Elite Dangerous.
+
+---
+
+## Logros
+
+* Se diseñó la arquitectura del subsistema **Knowledge Acquisition**.
+* Se implementó `SourceManifest` como registro oficial de fuentes de conocimiento.
+* Se implementó `KnowledgeValidator`.
+* Se implementó `KnowledgeConverter`.
+* Se implementó `KnowledgeWriter`.
+* Se implementó `ImportManager`.
+* Se definió la arquitectura de **Providers**.
+* Se implementó el primer proveedor:
+
+  * Deep Space Network Provider.
+* Se implementó el primer importador de especies.
+* Se ejecutó correctamente el primer pipeline completo de adquisición de conocimiento.
+
+---
+
+## Resultado del Pipeline
+
+Flujo validado:
+
+Fuente externa
+
+↓
+
+Provider
+
+↓
+
+ImportManager
+
+↓
+
+Species Importer
+
+↓
+
+Knowledge Converter
+
+↓
+
+Knowledge Writer
+
+↓
+
+Biblioteca de Conocimiento de ODIN
+
+El pipeline produjo correctamente una biblioteca inicial a partir de un documento de prueba.
+
+---
+
+## Decisiones Arquitectónicas
+
+Durante este Sprint se aprobaron las siguientes decisiones:
+
+* La Biblioteca del Conocimiento permanecerá separada del razonamiento.
+* HUGINN será responsable exclusivamente de adquirir conocimiento.
+* MÍMIR nunca accederá directamente a Internet.
+* Toda información deberá conservar su trazabilidad.
+* Las observaciones del comandante no modificarán la fuente original; únicamente ajustarán el nivel de confianza de las recomendaciones.
+* Se adoptó el principio **"Integración antes que reinvención"**, reutilizando el conocimiento consolidado por la comunidad cuando sea técnica y legalmente posible.
+
+---
+
+## Próximo Objetivo
+
+Comenzar la integración con fuentes científicas reales.
+
+Se investigarán y evaluarán:
+
+* Deep Space Network
+* EDMC BioScan
+* Canonn Research
+* ExploData
+
+El objetivo será construir una Biblioteca Científica oficial de ODIN basada en conocimiento comunitario verificable y versionado.
+
+---
+
+## Estado General del Proyecto
+
+Sprint 3 puede considerarse finalizado.
+
+Sprint 4 entra oficialmente en la fase de adquisición de conocimiento.
+
+Por primera vez, ODIN dispone de una arquitectura preparada para aprender de fuentes externas sin depender de ellas durante el vuelo.
+
+**HUGINN ha abierto los ojos.**
+
+---
+
+**This is the Way.**

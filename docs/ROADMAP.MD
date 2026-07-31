@@ -19,6 +19,19 @@
 - [x] Generar recomendaciones contextuales
 - [x] Completar prueba real en Elite Dangerous
 
+## Sprint 4.0 — MÍMIR Operativo
+
+**Estado: En cierre**
+
+- [x] Implementar el oficial científico MÍMIR
+- [x] Adaptar eventos `Scan` del Journal
+- [x] Integrar MÍMIR con el EventBus
+- [x] Publicar informes científicos en consola
+- [x] Importar el género Stratum mediante HUGINN
+- [x] Validar el flujo con un Journal real
+- [x] Incorporar pruebas automáticas de regresión
+
 ## Próximo objetivo
 
-Sprint 4.0 — Exobiology Intelligence
+Operación Yggdrasil — importar y validar toda la biología disponible
+en EDMC BioScan.

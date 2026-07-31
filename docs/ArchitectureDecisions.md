@@ -253,3 +253,34 @@ La calidad de ODIN dependerá más de la calidad de su conocimiento que de la co
 **Este documento es un registro vivo y deberá actualizarse cada vez que una decisión arquitectónica importante sea aceptada.**
 
 **This is the Way.**
+
+## AD-014 — Separación entre Conocimiento y Razonamiento
+
+**Estado:** Aprobada
+
+### Contexto
+
+Durante el análisis de la estructura interna de BioScan se observó que el conocimiento biológico está compuesto por especies y múltiples reglas de aparición independientes.
+
+ODIN adopta este concepto, pero separa explícitamente:
+
+- El conocimiento (HUGINN).
+- El razonamiento (MÍMIR).
+
+### Decisión
+
+La Enciclopedia Galáctica almacenará:
+
+- Especies.
+- Reglas de predicción.
+- Valores.
+- Distancias de muestreo.
+
+MÍMIR será responsable de evaluar las reglas utilizando la información obtenida del Journal de Elite Dangerous y la experiencia almacenada por MUNINN.
+
+### Consecuencias
+
+- La Enciclopedia permanece completamente independiente del motor de decisión.
+- Las reglas podrán evolucionar sin modificar las especies.
+- Será posible incorporar nuevas fuentes de conocimiento sin cambiar el razonamiento.
+- El sistema permitirá asignar una puntuación de coincidencia a cada especie para construir recomendaciones probabilísticas.

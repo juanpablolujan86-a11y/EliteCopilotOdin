@@ -1,3 +1,11 @@
+# ============================================================
+# ODIN
+#
+# Versión : 0.3.0
+#
+# Sprint  : 4 - CORE
+# ============================================================
+
 """
 ODIN - Orbital Data Intelligence Nexus
 
@@ -11,7 +19,8 @@ class InternalEvent:
     """
     Catálogo central de eventos internos.
 
-    Evita usar textos escritos a mano por todo el proyecto.
+    Evita usar textos escritos manualmente
+    en diferentes partes del proyecto.
     """
 
     SYSTEM_ENTERED = "SystemEntered"
@@ -19,6 +28,10 @@ class InternalEvent:
     EXPLORATION_CONTEXT_READY = "ExplorationContextReady"
 
     EXPLORATION_REPORT_READY = "ExplorationReportReady"
+
+    PLANET_SCAN_READY = "PlanetScanReady"
+
+    SCIENTIFIC_ANALYSIS_READY = "ScientificAnalysisReady"
 
     RECOMMENDATION_READY = "RecommendationReady"
 

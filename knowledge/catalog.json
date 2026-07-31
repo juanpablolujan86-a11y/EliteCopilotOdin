@@ -1,0 +1,49 @@
+{
+    "catalog_version": "1.0.0",
+    "generated_by": "HUGINN",
+    "generated_at": null,
+
+    "domains": {
+
+        "biology": {
+            "enabled": true,
+            "version": "0.1.0",
+            "files": [
+                "species.json",
+                "values.json",
+                "sampling_distances.json",
+                "planet_conditions.json"
+            ]
+        },
+
+        "geology": {
+            "enabled": true,
+            "version": "0.1.0",
+            "files": [
+                "materials.json",
+                "volcanism.json",
+                "geological_signals.json"
+            ]
+        },
+
+        "astronomy": {
+            "enabled": true,
+            "version": "0.1.0",
+            "files": [
+                "planet_classes.json",
+                "star_classes.json",
+                "atmospheres.json",
+                "terraforming.json"
+            ]
+        },
+
+        "economy": {
+            "enabled": true,
+            "version": "0.1.0",
+            "files": [
+                "exobiology_values.json",
+                "exploration_rewards.json"
+            ]
+        }
+    }
+}

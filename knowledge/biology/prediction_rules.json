@@ -1,0 +1,482 @@
+{
+    "schema_version": "1.0.0",
+    "generated_by": "HUGINN",
+    "source": {
+        "id": "bioscan",
+        "file": "knowledge\\external\\bioscan\\EDMC-BioScan-master\\src\\bio_scan\\bio_data\\rulesets\\stratum.py"
+    },
+    "rules": [
+        {
+            "species": "stratum_excutitus",
+            "rule_id": "stratum_excutitus_1",
+            "conditions": {
+                "atmosphere": [
+                    "CarbonDioxide"
+                ],
+                "min_gravity": 0.04,
+                "max_gravity": 0.48,
+                "min_temperature": 165.0,
+                "max_temperature": 190.0,
+                "min_pressure": 0.0035,
+                "body_type": [
+                    "Rocky body"
+                ],
+                "volcanism": "None",
+                "regions": [
+                    "orion-cygnus"
+                ]
+            }
+        },
+        {
+            "species": "stratum_excutitus",
+            "rule_id": "stratum_excutitus_2",
+            "conditions": {
+                "atmosphere": [
+                    "SulphurDioxide"
+                ],
+                "min_gravity": 0.27,
+                "max_gravity": 0.4,
+                "min_temperature": 165.0,
+                "max_temperature": 190.0,
+                "body_type": [
+                    "Rocky body"
+                ],
+                "regions": [
+                    "orion-cygnus"
+                ]
+            }
+        },
+        {
+            "species": "stratum_paleas",
+            "rule_id": "stratum_paleas_1",
+            "conditions": {
+                "atmosphere": [
+                    "Ammonia"
+                ],
+                "min_gravity": 0.04,
+                "max_gravity": 0.35,
+                "min_temperature": 165.0,
+                "max_temperature": 177.0,
+                "max_pressure": 0.0135,
+                "body_type": [
+                    "Rocky body"
+                ]
+            }
+        },
+        {
+            "species": "stratum_paleas",
+            "rule_id": "stratum_paleas_2",
+            "conditions": {
+                "atmosphere": [
+                    "CarbonDioxide"
+                ],
+                "min_gravity": 0.04,
+                "max_gravity": 0.585,
+                "min_temperature": 165.0,
+                "max_temperature": 395.0,
+                "body_type": [
+                    "Rocky body"
+                ],
+                "volcanism": "None"
+            }
+        },
+        {
+            "species": "stratum_paleas",
+            "rule_id": "stratum_paleas_3",
+            "conditions": {
+                "atmosphere": [
+                    "CarbonDioxideRich"
+                ],
+                "min_gravity": 0.43,
+                "max_gravity": 0.585,
+                "min_temperature": 185.0,
+                "max_temperature": 260.0,
+                "min_pressure": 0.015,
+                "body_type": [
+                    "Rocky body"
+                ],
+                "volcanism": "None"
+            }
+        },
+        {
+            "species": "stratum_paleas",
+            "rule_id": "stratum_paleas_4",
+            "conditions": {
+                "atmosphere": [
+                    "Water"
+                ],
+                "min_gravity": 0.04,
+                "max_gravity": 0.056,
+                "body_type": [
+                    "Rocky body"
+                ],
+                "volcanism": "None"
+            }
+        },
+        {
+            "species": "stratum_paleas",
+            "rule_id": "stratum_paleas_5",
+            "conditions": {
+                "atmosphere": [
+                    "Water"
+                ],
+                "min_gravity": 0.04,
+                "max_gravity": 0.056,
+                "min_pressure": 0.065,
+                "body_type": [
+                    "Rocky body"
+                ],
+                "volcanism": [
+                    "water"
+                ]
+            }
+        },
+        {
+            "species": "stratum_paleas",
+            "rule_id": "stratum_paleas_6",
+            "conditions": {
+                "atmosphere": [
+                    "Oxygen"
+                ],
+                "min_gravity": 0.39,
+                "max_gravity": 0.59,
+                "min_temperature": 165.0,
+                "max_temperature": 250.0,
+                "min_pressure": 0.022,
+                "body_type": [
+                    "Rocky body"
+                ]
+            }
+        },
+        {
+            "species": "stratum_laminamus",
+            "rule_id": "stratum_laminamus_1",
+            "conditions": {
+                "atmosphere": [
+                    "Ammonia"
+                ],
+                "min_gravity": 0.04,
+                "max_gravity": 0.34,
+                "min_temperature": 165.0,
+                "max_temperature": 177.0,
+                "max_pressure": 0.0135,
+                "body_type": [
+                    "Rocky body"
+                ],
+                "regions": [
+                    "orion-cygnus"
+                ]
+            }
+        },
+        {
+            "species": "stratum_araneamus",
+            "rule_id": "stratum_araneamus_1",
+            "conditions": {
+                "atmosphere": [
+                    "SulphurDioxide"
+                ],
+                "min_gravity": 0.26,
+                "max_gravity": 0.57,
+                "min_temperature": 165.0,
+                "max_temperature": 373.0,
+                "body_type": [
+                    "Rocky body"
+                ]
+            }
+        },
+        {
+            "species": "stratum_limaxus",
+            "rule_id": "stratum_limaxus_1",
+            "conditions": {
+                "atmosphere": [
+                    "CarbonDioxide"
+                ],
+                "min_gravity": 0.03,
+                "max_gravity": 0.4,
+                "min_temperature": 165.0,
+                "max_temperature": 190.0,
+                "min_pressure": 0.05,
+                "body_type": [
+                    "Rocky body"
+                ],
+                "volcanism": "None",
+                "regions": [
+                    "scutum-centaurus-core"
+                ]
+            }
+        },
+        {
+            "species": "stratum_limaxus",
+            "rule_id": "stratum_limaxus_2",
+            "conditions": {
+                "atmosphere": [
+                    "SulphurDioxide"
+                ],
+                "min_gravity": 0.27,
+                "max_gravity": 0.4,
+                "min_temperature": 165.0,
+                "max_temperature": 190.0,
+                "body_type": [
+                    "Rocky body"
+                ],
+                "regions": [
+                    "scutum-centaurus-core"
+                ]
+            }
+        },
+        {
+            "species": "stratum_cucumisis",
+            "rule_id": "stratum_cucumisis_1",
+            "conditions": {
+                "atmosphere": [
+                    "CarbonDioxide"
+                ],
+                "min_gravity": 0.04,
+                "max_gravity": 0.6,
+                "min_temperature": 191.0,
+                "max_temperature": 371.0,
+                "body_type": [
+                    "Rocky body"
+                ],
+                "volcanism": "None",
+                "regions": [
+                    "sagittarius-carina"
+                ]
+            }
+        },
+        {
+            "species": "stratum_cucumisis",
+            "rule_id": "stratum_cucumisis_2",
+            "conditions": {
+                "atmosphere": [
+                    "CarbonDioxideRich"
+                ],
+                "min_gravity": 0.44,
+                "max_gravity": 0.56,
+                "min_temperature": 210.0,
+                "max_temperature": 246.0,
+                "min_pressure": 0.01,
+                "body_type": [
+                    "Rocky body"
+                ],
+                "volcanism": "None",
+                "regions": [
+                    "sagittarius-carina"
+                ]
+            }
+        },
+        {
+            "species": "stratum_cucumisis",
+            "rule_id": "stratum_cucumisis_3",
+            "conditions": {
+                "atmosphere": [
+                    "Oxygen"
+                ],
+                "min_gravity": 0.4,
+                "max_gravity": 0.6,
+                "min_temperature": 200.0,
+                "max_temperature": 250.0,
+                "min_pressure": 0.01,
+                "body_type": [
+                    "Rocky body"
+                ],
+                "regions": [
+                    "sagittarius-carina"
+                ]
+            }
+        },
+        {
+            "species": "stratum_cucumisis",
+            "rule_id": "stratum_cucumisis_4",
+            "conditions": {
+                "atmosphere": [
+                    "SulphurDioxide"
+                ],
+                "min_gravity": 0.26,
+                "max_gravity": 0.55,
+                "min_temperature": 191.0,
+                "max_temperature": 373.0,
+                "body_type": [
+                    "Rocky body"
+                ],
+                "regions": [
+                    "sagittarius-carina"
+                ]
+            }
+        },
+        {
+            "species": "stratum_tectonicas",
+            "rule_id": "stratum_tectonicas_1",
+            "conditions": {
+                "atmosphere": [
+                    "Ammonia"
+                ],
+                "min_gravity": 0.045,
+                "max_gravity": 0.38,
+                "min_temperature": 165.0,
+                "max_temperature": 177.0,
+                "body_type": [
+                    "High metal content body"
+                ]
+            }
+        },
+        {
+            "species": "stratum_tectonicas",
+            "rule_id": "stratum_tectonicas_2",
+            "conditions": {
+                "atmosphere": [
+                    "Argon",
+                    "ArgonRich"
+                ],
+                "min_gravity": 0.485,
+                "max_gravity": 0.54,
+                "min_temperature": 167.0,
+                "max_temperature": 199.0,
+                "body_type": [
+                    "High metal content body"
+                ],
+                "volcanism": "None"
+            }
+        },
+        {
+            "species": "stratum_tectonicas",
+            "rule_id": "stratum_tectonicas_3",
+            "conditions": {
+                "atmosphere": [
+                    "CarbonDioxide"
+                ],
+                "min_gravity": 0.045,
+                "max_gravity": 0.61,
+                "min_temperature": 165.0,
+                "max_temperature": 430.0,
+                "body_type": [
+                    "High metal content body"
+                ]
+            }
+        },
+        {
+            "species": "stratum_tectonicas",
+            "rule_id": "stratum_tectonicas_4",
+            "conditions": {
+                "atmosphere": [
+                    "CarbonDioxideRich"
+                ],
+                "min_gravity": 0.035,
+                "max_gravity": 0.61,
+                "min_temperature": 165.0,
+                "max_temperature": 260.0,
+                "body_type": [
+                    "High metal content body"
+                ]
+            }
+        },
+        {
+            "species": "stratum_tectonicas",
+            "rule_id": "stratum_tectonicas_5",
+            "conditions": {
+                "atmosphere": [
+                    "Oxygen"
+                ],
+                "min_gravity": 0.4,
+                "max_gravity": 0.52,
+                "min_temperature": 165.0,
+                "max_temperature": 246.0,
+                "body_type": [
+                    "High metal content body"
+                ]
+            }
+        },
+        {
+            "species": "stratum_tectonicas",
+            "rule_id": "stratum_tectonicas_6",
+            "conditions": {
+                "atmosphere": [
+                    "SulphurDioxide"
+                ],
+                "min_gravity": 0.29,
+                "max_gravity": 0.62,
+                "min_temperature": 165.0,
+                "max_temperature": 450.0,
+                "body_type": [
+                    "High metal content body"
+                ]
+            }
+        },
+        {
+            "species": "stratum_tectonicas",
+            "rule_id": "stratum_tectonicas_7",
+            "conditions": {
+                "atmosphere": [
+                    "Water"
+                ],
+                "min_gravity": 0.045,
+                "max_gravity": 0.063,
+                "body_type": [
+                    "High metal content body"
+                ],
+                "volcanism": "None"
+            }
+        },
+        {
+            "species": "stratum_frigus",
+            "rule_id": "stratum_frigus_1",
+            "conditions": {
+                "atmosphere": [
+                    "CarbonDioxide"
+                ],
+                "min_gravity": 0.043,
+                "max_gravity": 0.54,
+                "min_temperature": 191.0,
+                "max_temperature": 365.0,
+                "min_pressure": 0.001,
+                "body_type": [
+                    "Rocky body"
+                ],
+                "volcanism": "None",
+                "regions": [
+                    "perseus-core"
+                ]
+            }
+        },
+        {
+            "species": "stratum_frigus",
+            "rule_id": "stratum_frigus_2",
+            "conditions": {
+                "atmosphere": [
+                    "CarbonDioxideRich"
+                ],
+                "min_gravity": 0.45,
+                "max_gravity": 0.56,
+                "min_temperature": 200.0,
+                "max_temperature": 250.0,
+                "min_pressure": 0.01,
+                "body_type": [
+                    "Rocky body"
+                ],
+                "volcanism": "None",
+                "regions": [
+                    "perseus-core"
+                ]
+            }
+        },
+        {
+            "species": "stratum_frigus",
+            "rule_id": "stratum_frigus_3",
+            "conditions": {
+                "atmosphere": [
+                    "SulphurDioxide"
+                ],
+                "min_gravity": 0.29,
+                "max_gravity": 0.52,
+                "min_temperature": 191.0,
+                "max_temperature": 369.0,
+                "body_type": [
+                    "Rocky body"
+                ],
+                "regions": [
+                    "perseus-core"
+                ]
+            }
+        }
+    ]
+}

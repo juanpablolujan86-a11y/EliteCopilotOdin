@@ -18,6 +18,9 @@ database/*.db
 # Archivos temporales
 *.tmp
 
+# Descargas externas duplicadas
+knowledge/external/bioscan/*.zip
+
 # Árbol del proyecto
 estructura.txt
 

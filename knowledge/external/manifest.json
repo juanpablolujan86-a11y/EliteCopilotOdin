@@ -1,0 +1,46 @@
+{
+    "schema_version": "1.0",
+    "generated_by": "HUGINN",
+    "sources": [
+        {
+            "id": "explodata",
+            "name": "ExploData",
+            "enabled": true,
+            "status": "research",
+            "version": null,
+            "last_update": null
+        },
+        {
+            "id": "bioscan",
+            "name": "EDMC BioScan",
+            "enabled": true,
+            "status": "research",
+            "version": null,
+            "last_update": null
+        },
+        {
+            "id": "canonn",
+            "name": "Canonn Research",
+            "enabled": true,
+            "status": "research",
+            "version": null,
+            "last_update": null
+        },
+        {
+            "id": "dsn",
+            "name": "Deep Space Network",
+            "enabled": true,
+            "status": "research",
+            "version": null,
+            "last_update": null
+        },
+        {
+            "id": "edsm",
+            "name": "EDSM",
+            "enabled": true,
+            "status": "research",
+            "version": null,
+            "last_update": null
+        }
+    ]
+}

@@ -1,34 +1,64 @@
 {
-    "schema_version": "1.0",
+    "schema_version": "1.0.0",
     "generated_by": "HUGINN",
+    "source": {
+        "id": "bioscan",
+        "file": "knowledge\\external\\bioscan\\EDMC-BioScan-master\\src\\bio_scan\\bio_data\\rulesets\\stratum.py"
+    },
     "species": [
         {
-            "id": "stratum_tectonicas",
+            "id": "stratum_aranaemus",
+            "name": "Stratum Aranaemus",
             "genus": "Stratum",
-            "species": "Tectonicas",
-            "variant": "",
-            "rarity": "Common",
-            "source": "Deep Space Network",
-            "raw": {
-                "genus": "Stratum",
-                "species": "Tectonicas",
-                "variant": "",
-                "rarity": "Common"
-            }
+            "value": 2448900
         },
         {
-            "id": "bacterium_cerbrus",
-            "genus": "Bacterium",
-            "species": "Cerbrus",
-            "variant": "",
-            "rarity": "Rare",
-            "source": "Deep Space Network",
-            "raw": {
-                "genus": "Bacterium",
-                "species": "Cerbrus",
-                "variant": "",
-                "rarity": "Rare"
-            }
+            "id": "stratum_excutitus",
+            "name": "Stratum Excutitus",
+            "genus": "Stratum",
+            "value": 2448900
+        },
+        {
+            "id": "stratum_paleas",
+            "name": "Stratum Paleas",
+            "genus": "Stratum",
+            "value": 1362000
+        },
+        {
+            "id": "stratum_laminamus",
+            "name": "Stratum Laminamus",
+            "genus": "Stratum",
+            "value": 2788300
+        },
+        {
+            "id": "stratum_araneamus",
+            "name": "Stratum Araneamus",
+            "genus": "Stratum",
+            "value": 2448900
+        },
+        {
+            "id": "stratum_limaxus",
+            "name": "Stratum Limaxus",
+            "genus": "Stratum",
+            "value": 1362000
+        },
+        {
+            "id": "stratum_cucumisis",
+            "name": "Stratum Cucumisis",
+            "genus": "Stratum",
+            "value": 16202800
+        },
+        {
+            "id": "stratum_tectonicas",
+            "name": "Stratum Tectonicas",
+            "genus": "Stratum",
+            "value": 19010800
+        },
+        {
+            "id": "stratum_frigus",
+            "name": "Stratum Frigus",
+            "genus": "Stratum",
+            "value": 2637500
         }
     ]
 }

@@ -21,6 +21,9 @@ from core.processors.exploration_context_builder import (
     ExplorationContextBuilder,
 )
 from core.processors.exploration_processor import ExplorationProcessor
+from mimir.event_subscriber import MimirEventSubscriber
+from mimir.officer_handler import MimirOfficerHandler
+from mimir.scientific_officer import ScientificOfficer
 from core.processors.jump_advisor import JumpAdvisor
 from core.processors.jump_processor import JumpProcessor
 from core.processors.jump_store import JumpStore
@@ -143,6 +146,21 @@ class CommandCenter:
             self.event_bus
         )
 
+        scientific_officer = ScientificOfficer(
+            species_file=self.config.project_root / "knowledge" / "biology" / "species.json",
+            rules_file=self.config.project_root / "knowledge" / "biology" / "prediction_rules.json",
+        )
+
+        mimir_handler = MimirOfficerHandler(
+            scientific_officer
+        )
+
+        MimirEventSubscriber(
+            self.event_bus,
+            mimir_handler,
+        )
+
+
         # Eventos de salto
         self.event_bus.subscribe(
             "FSDJump",
@@ -219,6 +237,11 @@ class CommandCenter:
         self.event_bus.subscribe(
             InternalEvent.EXPLORATION_REPORT_READY,
             self.console_presenter.show_exploration_report
+        )
+
+        self.event_bus.subscribe(
+            InternalEvent.SCIENTIFIC_ANALYSIS_READY,
+            self.console_presenter.show_scientific_report
         )
 
     def _run_event_loop(self) -> None:
