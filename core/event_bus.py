@@ -7,6 +7,11 @@ Distribuye eventos externos de Elite Dangerous
 y eventos internos generados por ODIN.
 """
 
+import logging
+
+
+logger = logging.getLogger("odin.events")
+
 
 class EventBus:
     """
@@ -50,4 +55,11 @@ class EventBus:
         callbacks = self.subscribers.get(event_name, [])
 
         for callback in callbacks:
-            callback(payload)
+            try:
+                callback(payload)
+            except Exception:
+                logger.exception(
+                    "Fallo procesando evento %s en %s",
+                    event_name,
+                    getattr(callback, "__qualname__", repr(callback)),
+                )

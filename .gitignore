@@ -18,6 +18,10 @@ database/*.db
 # Archivos temporales
 *.tmp
 
+# Compilación distribuible
+build/
+dist/
+
 # Descargas externas duplicadas
 knowledge/external/bioscan/*.zip
 

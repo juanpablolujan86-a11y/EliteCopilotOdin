@@ -16,10 +16,15 @@ científico y publica el resultado para el resto
 del sistema.
 """
 
+import logging
+
 from core.event_bus import EventBus
 from core.internal_events import InternalEvent
 from mimir.officer_handler import MimirOfficerHandler
 from models.events.planet_scan_ready import PlanetScanReady
+
+
+logger = logging.getLogger("mimir.activity")
 
 
 class MimirEventSubscriber:
@@ -49,15 +54,27 @@ class MimirEventSubscriber:
         Ejecuta el análisis científico del planeta.
         """
 
-        report = self.handler.handle_planet_scan(
-            event.event,
-            confirmed_genus_ids=event.confirmed_genus_ids,
-            confirmed_genus_names=event.confirmed_genus_names,
-            system_population=event.system_population,
-            scientific_context=event.scientific_context,
+        body_name = event.event.get("BodyName", "Cuerpo desconocido")
+        logger.info(
+            "EVALUACIÓN | cuerpo=%s | géneros_DSS=%s",
+            body_name,
+            ", ".join(event.confirmed_genus_names) or "sin confirmar",
         )
 
+        try:
+            report = self.handler.handle_planet_scan(
+                event.event,
+                confirmed_genus_ids=event.confirmed_genus_ids,
+                confirmed_genus_names=event.confirmed_genus_names,
+                system_population=event.system_population,
+                scientific_context=event.scientific_context,
+            )
+        except Exception:
+            logger.exception("FALLO | cuerpo=%s", body_name)
+            raise
+
         if report is None:
+            logger.info("RESULTADO | cuerpo=%s | sin interés biológico", body_name)
             return
 
         self.event_bus.publish_internal(

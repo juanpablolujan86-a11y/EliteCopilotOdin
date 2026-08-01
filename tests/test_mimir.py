@@ -1,4 +1,5 @@
 import json
+import logging
 import unittest
 from pathlib import Path
 
@@ -397,6 +398,27 @@ class MimirTestCase(unittest.TestCase):
         report = self.handler.handle_planet_scan(event)
 
         self.assertIsNone(report)
+
+    def test_subscriber_logs_silent_planet_evaluation(self) -> None:
+        event_bus = EventBus()
+        subscriber = MimirEventSubscriber(event_bus, self.handler)
+        event = PlanetScanReady(
+            event={
+                "event": "Scan",
+                "BodyName": "Planeta silencioso",
+                "PlanetClass": "Icy body",
+                "AtmosphereType": "None",
+                "SurfaceGravity": 20.0,
+                "SurfaceTemperature": 500.0,
+            }
+        )
+
+        with self.assertLogs("mimir.activity", level=logging.INFO) as records:
+            subscriber.handle_planet_scan(event)
+
+        output = "\n".join(records.output)
+        self.assertIn("EVALUACIÓN | cuerpo=Planeta silencioso", output)
+        self.assertIn("sin interés biológico", output)
 
     def test_populated_system_suppresses_first_logged_estimate(self) -> None:
         event = tectonicas_scan() | {

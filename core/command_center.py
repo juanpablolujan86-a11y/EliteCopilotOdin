@@ -32,6 +32,7 @@ from services.edsm_service import EDSMService
 from state.commander_state import CommanderState
 from ui.console_presenter import ConsolePresenter
 from core.version import CAPABILITY, VERSION
+from core.diagnostics import MimirDiagnostics
 
 class CommandCenter:
     """
@@ -49,7 +50,7 @@ class CommandCenter:
         self.config = Config()
 
         self.database = DatabaseManager(
-            self.config.project_root
+            self.config.data_root
         )
 
         self.event_bus = EventBus()
@@ -177,6 +178,8 @@ class CommandCenter:
             mimir_handler,
         )
 
+        mimir_diagnostics = MimirDiagnostics(self.config.data_root)
+
 
         # Eventos de salto
         self.event_bus.subscribe(
@@ -263,7 +266,17 @@ class CommandCenter:
 
         self.event_bus.subscribe(
             InternalEvent.SCIENTIFIC_ANALYSIS_READY,
+            mimir_diagnostics.record_scientific_report,
+        )
+
+        self.event_bus.subscribe(
+            InternalEvent.SCIENTIFIC_ANALYSIS_READY,
             self.console_presenter.show_scientific_report
+        )
+
+        self.event_bus.subscribe(
+            InternalEvent.ORGANIC_SCAN_UPDATED,
+            mimir_diagnostics.record_organic_scan,
         )
 
         self.event_bus.subscribe(

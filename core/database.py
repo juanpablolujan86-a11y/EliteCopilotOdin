@@ -16,9 +16,9 @@ class DatabaseManager:
     Gestiona la base de datos local de ODIN.
     """
 
-    def __init__(self, project_root: Path):
-        self.database_folder = project_root / "database"
-        self.database_folder.mkdir(exist_ok=True)
+    def __init__(self, data_root: Path):
+        self.database_folder = data_root / "database"
+        self.database_folder.mkdir(parents=True, exist_ok=True)
 
         self.database_file = self.database_folder / "odin.db"
         self.connection: Connection | None = None

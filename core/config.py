@@ -9,8 +9,10 @@ Toda la configuración se guarda en config.json para evitar
 tener rutas o valores escritos directamente en el código.
 """
 
-from pathlib import Path
 import json
+import os
+import sys
+from pathlib import Path
 
 
 class Config:
@@ -19,20 +21,22 @@ class Config:
     """
 
     def __init__(self):
+        self.project_root = Path(
+            getattr(sys, "_MEIPASS", Path(__file__).parent.parent)
+        )
+        local_app_data = Path(
+            os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")
+        )
+        self.data_root = local_app_data / "ODIN"
+        self.data_root.mkdir(parents=True, exist_ok=True)
 
-        # Carpeta raíz del proyecto
-        self.project_root = Path(__file__).parent.parent
-
-        # Archivo de configuración
+        # Durante el desarrollo se respeta config.json. La distribución no
+        # lo incluye: detecta automáticamente el Journal de cada usuario.
         self.config_file = self.project_root / "config.json"
-
-        if not self.config_file.exists():
-            raise FileNotFoundError(
-                f"No existe el archivo {self.config_file}"
-            )
-
-        with open(self.config_file, "r", encoding="utf-8") as file:
-            self.data = json.load(file)
+        self.data = {}
+        if self.config_file.exists() and not getattr(sys, "frozen", False):
+            with self.config_file.open("r", encoding="utf-8") as file:
+                self.data = json.load(file)
 
     @property
     def journal_path(self) -> Path:
@@ -40,4 +44,13 @@ class Config:
         Devuelve la carpeta donde Elite Dangerous guarda los Journals.
         """
 
-        return Path(self.data["journal_path"])
+        configured = self.data.get("journal_path")
+        if configured:
+            return Path(configured)
+
+        return (
+            Path.home()
+            / "Saved Games"
+            / "Frontier Developments"
+            / "Elite Dangerous"
+        )
