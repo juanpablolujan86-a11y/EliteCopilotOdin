@@ -16,6 +16,19 @@ class RuleEngine:
     Evalúa si un planeta cumple una regla biológica.
     """
 
+    SUPPORTED_CONDITIONS = {
+        "atmosphere",
+        "body_type",
+        "max_gravity",
+        "max_pressure",
+        "max_temperature",
+        "min_gravity",
+        "min_pressure",
+        "min_temperature",
+        "regions",
+        "volcanism",
+    }
+
     def evaluate(
         self,
         planet: dict[str, Any],
@@ -27,6 +40,10 @@ class RuleEngine:
 
         Si una condición requerida falla, devuelve 0.
         """
+
+        unsupported = set(rule) - self.SUPPORTED_CONDITIONS
+        if unsupported:
+            return 0, []
 
         checks: list[tuple[str, bool]] = []
 
@@ -120,12 +137,29 @@ class RuleEngine:
             expected = rule["volcanism"]
             actual = planet.get("volcanism")
 
+            actual_text = "" if actual in (None, "None") else str(actual)
+            actual_normalized = actual_text.lower()
+
             if isinstance(expected, list):
-                volcanism_matches = actual in expected
+                volcanism_matches = any(
+                    (
+                        actual_normalized == item[1:].lower()
+                        if item.startswith("=")
+                        else item.lower() in actual_normalized
+                    )
+                    for item in expected
+                )
             elif expected == "Any":
-                volcanism_matches = actual is not None
+                volcanism_matches = bool(actual_normalized)
+            elif expected == "None":
+                volcanism_matches = not actual_normalized
+            elif expected.startswith("!"):
+                volcanism_matches = (
+                    bool(actual_normalized)
+                    and expected[1:].lower() not in actual_normalized
+                )
             else:
-                volcanism_matches = actual == expected
+                volcanism_matches = expected.lower() in actual_normalized
 
             checks.append(
                 (
@@ -137,10 +171,30 @@ class RuleEngine:
         if "regions" in rule:
             region = planet.get("region")
 
+            included_regions = {
+                item
+                for item in rule["regions"]
+                if not item.startswith("!")
+            }
+            excluded_regions = {
+                item.removeprefix("!")
+                for item in rule["regions"]
+                if item.startswith("!")
+            }
+
+            region_matches = (
+                region is not None
+                and region not in excluded_regions
+                and (
+                    not included_regions
+                    or region in included_regions
+                )
+            )
+
             checks.append(
                 (
                     "Region",
-                    region in rule["regions"],
+                    region_matches,
                 )
             )
 

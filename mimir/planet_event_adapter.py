@@ -17,6 +17,7 @@ from typing import Any
 
 
 STANDARD_GRAVITY = 9.80665
+BIOSCAN_STANDARD_PRESSURE = 101_231.65625
 
 
 class PlanetEventAdapter:
@@ -55,6 +56,10 @@ class PlanetEventAdapter:
             event.get("Volcanism")
         )
 
+        pressure = self._convert_pressure(
+            event.get("SurfacePressure")
+        )
+
         return {
             "atmosphere": atmosphere,
             "body_type": body_type,
@@ -63,7 +68,27 @@ class PlanetEventAdapter:
                 "SurfaceTemperature"
             ),
             "volcanism": volcanism,
+            "pressure": pressure,
         }
+
+    def _convert_pressure(
+        self,
+        value: Any,
+    ) -> float | None:
+        """Convierte la presión del Journal de pascales a atmósferas."""
+
+        if value is None:
+            return None
+
+        try:
+            pressure_pascals = float(value)
+        except (TypeError, ValueError):
+            return None
+
+        return round(
+            pressure_pascals / BIOSCAN_STANDARD_PRESSURE,
+            8,
+        )
 
     def _convert_gravity(
         self,

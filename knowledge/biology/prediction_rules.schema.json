@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ODIN Biological Prediction Rules",
+  "type": "object",
+  "required": ["schema_version", "generated_by", "source", "rules"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "generated_by": {"const": "HUGINN"},
+    "source": {"type": "object"},
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["species", "rule_id", "conditions", "source_file"],
+        "properties": {
+          "species": {"type": "string", "minLength": 1},
+          "rule_id": {"type": "string", "minLength": 1},
+          "conditions": {"type": "object", "minProperties": 1},
+          "source_file": {"type": "string", "pattern": "\\.py$"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

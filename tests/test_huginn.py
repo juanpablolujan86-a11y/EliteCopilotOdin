@@ -1,8 +1,15 @@
 import importlib.util
+import json
 import unittest
 from pathlib import Path
 
 from knowledge.engine import KnowledgeEngine
+from knowledge.importer.biology_validator import (
+    BiologyKnowledgeValidator,
+)
+from knowledge.importer.bioscan_biology_importer import (
+    BioScanBiologyImporter,
+)
 from knowledge.importer.stratum_importer import StratumImporter
 
 
@@ -19,6 +26,7 @@ STRATUM_SOURCE = (
     / "rulesets"
     / "stratum.py"
 )
+RULESETS_DIRECTORY = STRATUM_SOURCE.parent
 
 
 def load_stratum_catalog() -> dict:
@@ -35,6 +43,46 @@ def load_stratum_catalog() -> dict:
 
 
 class HuginnTestCase(unittest.TestCase):
+    def test_yggdrasil_imports_every_bioscan_catalog(self) -> None:
+        importer = BioScanBiologyImporter(RULESETS_DIRECTORY)
+        species, rules = importer.import_all()
+        report = BiologyKnowledgeValidator().validate(species, rules)
+
+        self.assertEqual(len(importer.source_files()), 19)
+        self.assertEqual(report.genus_count, 19)
+        self.assertEqual(report.species_count, 116)
+        self.assertEqual(report.rules_count, 254)
+        self.assertEqual(
+            report.species_without_rules,
+            ("stratum_aranaemus",),
+        )
+        self.assertEqual(report.duplicate_species_ids, ())
+        self.assertEqual(report.duplicate_rule_ids, ())
+        self.assertEqual(report.rules_without_species, ())
+        self.assertEqual(report.empty_rule_ids, ())
+        self.assertTrue(report.valid)
+
+    def test_yggdrasil_output_matches_fresh_import(self) -> None:
+        imported_species, imported_rules = BioScanBiologyImporter(
+            RULESETS_DIRECTORY
+        ).import_all()
+        generated_species = json.loads(
+            (ROOT / "knowledge" / "biology" / "species.json").read_text(
+                encoding="utf-8"
+            )
+        )["species"]
+        generated_rules = json.loads(
+            (
+                ROOT
+                / "knowledge"
+                / "biology"
+                / "prediction_rules.json"
+            ).read_text(encoding="utf-8")
+        )["rules"]
+
+        self.assertEqual(generated_species, imported_species)
+        self.assertEqual(generated_rules, imported_rules)
+
     def test_stratum_import_is_complete_and_deterministic(self) -> None:
         species, rules = StratumImporter().convert(
             load_stratum_catalog()

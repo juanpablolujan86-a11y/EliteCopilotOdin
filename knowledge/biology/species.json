@@ -1,64 +1,959 @@
 {
-    "schema_version": "1.0.0",
+    "schema_version": "1.1.0",
     "generated_by": "HUGINN",
     "source": {
         "id": "bioscan",
-        "file": "knowledge\\external\\bioscan\\EDMC-BioScan-master\\src\\bio_scan\\bio_data\\rulesets\\stratum.py"
+        "rulesets_directory": "knowledge\\external\\bioscan\\EDMC-BioScan-master\\src\\bio_scan\\bio_data\\rulesets",
+        "files": [
+            "aleoida.py",
+            "anemone.py",
+            "bacterium.py",
+            "brain_tree.py",
+            "cactoida.py",
+            "clypeus.py",
+            "concha.py",
+            "electricae.py",
+            "fonticulua.py",
+            "frutexa.py",
+            "fumerola.py",
+            "fungoida.py",
+            "osseus.py",
+            "recepta.py",
+            "shard.py",
+            "stratum.py",
+            "tubers.py",
+            "tubus.py",
+            "tussock.py"
+        ]
     },
     "species": [
+        {
+            "id": "albidum_sinuous_tubers",
+            "name": "Albidum Sinuous Tubers",
+            "genus": "Sinuous Tubers",
+            "value": 1514500,
+            "codex_id": "$Codex_Ent_TubeABCD_02_Name;",
+            "source_file": "tubers.py"
+        },
+        {
+            "id": "aleoida_arcus",
+            "name": "Aleoida Arcus",
+            "genus": "Aleoida",
+            "value": 7252500,
+            "codex_id": "$Codex_Ent_Aleoids_01_Name;",
+            "source_file": "aleoida.py"
+        },
+        {
+            "id": "aleoida_coronamus",
+            "name": "Aleoida Coronamus",
+            "genus": "Aleoida",
+            "value": 6284600,
+            "codex_id": "$Codex_Ent_Aleoids_02_Name;",
+            "source_file": "aleoida.py"
+        },
+        {
+            "id": "aleoida_gravis",
+            "name": "Aleoida Gravis",
+            "genus": "Aleoida",
+            "value": 12934900,
+            "codex_id": "$Codex_Ent_Aleoids_05_Name;",
+            "source_file": "aleoida.py"
+        },
+        {
+            "id": "aleoida_laminiae",
+            "name": "Aleoida Laminiae",
+            "genus": "Aleoida",
+            "value": 3385200,
+            "codex_id": "$Codex_Ent_Aleoids_04_Name;",
+            "source_file": "aleoida.py"
+        },
+        {
+            "id": "aleoida_spica",
+            "name": "Aleoida Spica",
+            "genus": "Aleoida",
+            "value": 3385200,
+            "codex_id": "$Codex_Ent_Aleoids_03_Name;",
+            "source_file": "aleoida.py"
+        },
+        {
+            "id": "aureum_brain_tree",
+            "name": "Aureum Brain Tree",
+            "genus": "Brain Tree",
+            "value": 1593700,
+            "codex_id": "$Codex_Ent_SeedEFGH_01_Name;",
+            "source_file": "brain_tree.py"
+        },
+        {
+            "id": "bacterium_acies",
+            "name": "Bacterium Acies",
+            "genus": "Bacterium",
+            "value": 1000000,
+            "codex_id": "$Codex_Ent_Bacterial_04_Name;",
+            "source_file": "bacterium.py"
+        },
+        {
+            "id": "bacterium_alcyoneum",
+            "name": "Bacterium Alcyoneum",
+            "genus": "Bacterium",
+            "value": 1658500,
+            "codex_id": "$Codex_Ent_Bacterial_06_Name;",
+            "source_file": "bacterium.py"
+        },
+        {
+            "id": "bacterium_aurasus",
+            "name": "Bacterium Aurasus",
+            "genus": "Bacterium",
+            "value": 1000000,
+            "codex_id": "$Codex_Ent_Bacterial_01_Name;",
+            "source_file": "bacterium.py"
+        },
+        {
+            "id": "bacterium_bullaris",
+            "name": "Bacterium Bullaris",
+            "genus": "Bacterium",
+            "value": 1152500,
+            "codex_id": "$Codex_Ent_Bacterial_10_Name;",
+            "source_file": "bacterium.py"
+        },
+        {
+            "id": "bacterium_cerbrus",
+            "name": "Bacterium Cerbrus",
+            "genus": "Bacterium",
+            "value": 1689800,
+            "codex_id": "$Codex_Ent_Bacterial_12_Name;",
+            "source_file": "bacterium.py"
+        },
+        {
+            "id": "bacterium_informem",
+            "name": "Bacterium Informem",
+            "genus": "Bacterium",
+            "value": 8418000,
+            "codex_id": "$Codex_Ent_Bacterial_08_Name;",
+            "source_file": "bacterium.py"
+        },
+        {
+            "id": "bacterium_nebulus",
+            "name": "Bacterium Nebulus",
+            "genus": "Bacterium",
+            "value": 5289900,
+            "codex_id": "$Codex_Ent_Bacterial_02_Name;",
+            "source_file": "bacterium.py"
+        },
+        {
+            "id": "bacterium_omentum",
+            "name": "Bacterium Omentum",
+            "genus": "Bacterium",
+            "value": 4638900,
+            "codex_id": "$Codex_Ent_Bacterial_11_Name;",
+            "source_file": "bacterium.py"
+        },
+        {
+            "id": "bacterium_scopulum",
+            "name": "Bacterium Scopulum",
+            "genus": "Bacterium",
+            "value": 4934500,
+            "codex_id": "$Codex_Ent_Bacterial_03_Name;",
+            "source_file": "bacterium.py"
+        },
+        {
+            "id": "bacterium_tela",
+            "name": "Bacterium Tela",
+            "genus": "Bacterium",
+            "value": 1949000,
+            "codex_id": "$Codex_Ent_Bacterial_07_Name;",
+            "source_file": "bacterium.py"
+        },
+        {
+            "id": "bacterium_verrata",
+            "name": "Bacterium Verrata",
+            "genus": "Bacterium",
+            "value": 3897000,
+            "codex_id": "$Codex_Ent_Bacterial_13_Name;",
+            "source_file": "bacterium.py"
+        },
+        {
+            "id": "bacterium_vesicula",
+            "name": "Bacterium Vesicula",
+            "genus": "Bacterium",
+            "value": 1000000,
+            "codex_id": "$Codex_Ent_Bacterial_05_Name;",
+            "source_file": "bacterium.py"
+        },
+        {
+            "id": "bacterium_volu",
+            "name": "Bacterium Volu",
+            "genus": "Bacterium",
+            "value": 7774700,
+            "codex_id": "$Codex_Ent_Bacterial_09_Name;",
+            "source_file": "bacterium.py"
+        },
+        {
+            "id": "blatteum_bioluminescent_anemone",
+            "name": "Blatteum Bioluminescent Anemone",
+            "genus": "Anemone",
+            "value": 1499900,
+            "codex_id": "$Codex_Ent_SphereEFGH_Name;",
+            "source_file": "anemone.py"
+        },
+        {
+            "id": "blatteum_sinuous_tubers",
+            "name": "Blatteum Sinuous Tubers",
+            "genus": "Sinuous Tubers",
+            "value": 1514500,
+            "codex_id": "$Codex_Ent_TubeEFGH_Name;",
+            "source_file": "tubers.py"
+        },
+        {
+            "id": "cactoida_cortexum",
+            "name": "Cactoida Cortexum",
+            "genus": "Cactoida",
+            "value": 3667600,
+            "codex_id": "$Codex_Ent_Cactoid_01_Name;",
+            "source_file": "cactoida.py"
+        },
+        {
+            "id": "cactoida_lapis",
+            "name": "Cactoida Lapis",
+            "genus": "Cactoida",
+            "value": 2483600,
+            "codex_id": "$Codex_Ent_Cactoid_02_Name;",
+            "source_file": "cactoida.py"
+        },
+        {
+            "id": "cactoida_peperatis",
+            "name": "Cactoida Peperatis",
+            "genus": "Cactoida",
+            "value": 2483600,
+            "codex_id": "$Codex_Ent_Cactoid_05_Name;",
+            "source_file": "cactoida.py"
+        },
+        {
+            "id": "cactoida_pullulanta",
+            "name": "Cactoida Pullulanta",
+            "genus": "Cactoida",
+            "value": 3667600,
+            "codex_id": "$Codex_Ent_Cactoid_04_Name;",
+            "source_file": "cactoida.py"
+        },
+        {
+            "id": "cactoida_vermis",
+            "name": "Cactoida Vermis",
+            "genus": "Cactoida",
+            "value": 16202800,
+            "codex_id": "$Codex_Ent_Cactoid_03_Name;",
+            "source_file": "cactoida.py"
+        },
+        {
+            "id": "caeruleum_sinuous_tubers",
+            "name": "Caeruleum Sinuous Tubers",
+            "genus": "Sinuous Tubers",
+            "value": 1514500,
+            "codex_id": "$Codex_Ent_TubeABCD_03_Name;",
+            "source_file": "tubers.py"
+        },
+        {
+            "id": "clypeus_lacrimam",
+            "name": "Clypeus Lacrimam",
+            "genus": "Clypeus",
+            "value": 8418000,
+            "codex_id": "$Codex_Ent_Clypeus_01_Name;",
+            "source_file": "clypeus.py"
+        },
+        {
+            "id": "clypeus_margaritus",
+            "name": "Clypeus Margaritus",
+            "genus": "Clypeus",
+            "value": 11873200,
+            "codex_id": "$Codex_Ent_Clypeus_02_Name;",
+            "source_file": "clypeus.py"
+        },
+        {
+            "id": "clypeus_speculumi",
+            "name": "Clypeus Speculumi",
+            "genus": "Clypeus",
+            "value": 16202800,
+            "codex_id": "$Codex_Ent_Clypeus_03_Name;",
+            "source_file": "clypeus.py"
+        },
+        {
+            "id": "concha_aureolas",
+            "name": "Concha Aureolas",
+            "genus": "Concha",
+            "value": 7774700,
+            "codex_id": "$Codex_Ent_Conchas_02_Name;",
+            "source_file": "concha.py"
+        },
+        {
+            "id": "concha_biconcavis",
+            "name": "Concha Biconcavis",
+            "genus": "Concha",
+            "value": 16777215,
+            "codex_id": "$Codex_Ent_Conchas_04_Name;",
+            "source_file": "concha.py"
+        },
+        {
+            "id": "concha_labiata",
+            "name": "Concha Labiata",
+            "genus": "Concha",
+            "value": 2352400,
+            "codex_id": "$Codex_Ent_Conchas_03_Name;",
+            "source_file": "concha.py"
+        },
+        {
+            "id": "concha_renibus",
+            "name": "Concha Renibus",
+            "genus": "Concha",
+            "value": 4572400,
+            "codex_id": "$Codex_Ent_Conchas_01_Name;",
+            "source_file": "concha.py"
+        },
+        {
+            "id": "croceum_anemone",
+            "name": "Croceum Anemone",
+            "genus": "Anemone",
+            "value": 1499900,
+            "codex_id": "$Codex_Ent_SphereABCD_01_Name;",
+            "source_file": "anemone.py"
+        },
+        {
+            "id": "crystalline_shards",
+            "name": "Crystalline Shards",
+            "genus": "Crystalline Shards",
+            "value": 1628800,
+            "codex_id": "$Codex_Ent_Ground_Struct_Ice_Name;",
+            "source_file": "shard.py"
+        },
+        {
+            "id": "electricae_pluma",
+            "name": "Electricae Pluma",
+            "genus": "Electricae",
+            "value": 6284600,
+            "codex_id": "$Codex_Ent_Electricae_01_Name;",
+            "source_file": "electricae.py"
+        },
+        {
+            "id": "electricae_radialem",
+            "name": "Electricae Radialem",
+            "genus": "Electricae",
+            "value": 6284600,
+            "codex_id": "$Codex_Ent_Electricae_02_Name;",
+            "source_file": "electricae.py"
+        },
+        {
+            "id": "fonticulua_campestris",
+            "name": "Fonticulua Campestris",
+            "genus": "Fonticulua",
+            "value": 1000000,
+            "codex_id": "$Codex_Ent_Fonticulus_02_Name;",
+            "source_file": "fonticulua.py"
+        },
+        {
+            "id": "fonticulua_digitos",
+            "name": "Fonticulua Digitos",
+            "genus": "Fonticulua",
+            "value": 1804100,
+            "codex_id": "$Codex_Ent_Fonticulus_06_Name;",
+            "source_file": "fonticulua.py"
+        },
+        {
+            "id": "fonticulua_fluctus",
+            "name": "Fonticulua Fluctus",
+            "genus": "Fonticulua",
+            "value": 20000000,
+            "codex_id": "$Codex_Ent_Fonticulus_05_Name;",
+            "source_file": "fonticulua.py"
+        },
+        {
+            "id": "fonticulua_lapida",
+            "name": "Fonticulua Lapida",
+            "genus": "Fonticulua",
+            "value": 3111000,
+            "codex_id": "$Codex_Ent_Fonticulus_04_Name;",
+            "source_file": "fonticulua.py"
+        },
+        {
+            "id": "fonticulua_segmentatus",
+            "name": "Fonticulua Segmentatus",
+            "genus": "Fonticulua",
+            "value": 19010800,
+            "codex_id": "$Codex_Ent_Fonticulus_01_Name;",
+            "source_file": "fonticulua.py"
+        },
+        {
+            "id": "fonticulua_upupam",
+            "name": "Fonticulua Upupam",
+            "genus": "Fonticulua",
+            "value": 5727600,
+            "codex_id": "$Codex_Ent_Fonticulus_03_Name;",
+            "source_file": "fonticulua.py"
+        },
+        {
+            "id": "frutexa_acus",
+            "name": "Frutexa Acus",
+            "genus": "Frutexa",
+            "value": 7774700,
+            "codex_id": "$Codex_Ent_Shrubs_02_Name;",
+            "source_file": "frutexa.py"
+        },
+        {
+            "id": "frutexa_collum",
+            "name": "Frutexa Collum",
+            "genus": "Frutexa",
+            "value": 1639800,
+            "codex_id": "$Codex_Ent_Shrubs_07_Name;",
+            "source_file": "frutexa.py"
+        },
+        {
+            "id": "frutexa_fera",
+            "name": "Frutexa Fera",
+            "genus": "Frutexa",
+            "value": 1632500,
+            "codex_id": "$Codex_Ent_Shrubs_05_Name;",
+            "source_file": "frutexa.py"
+        },
+        {
+            "id": "frutexa_flabellum",
+            "name": "Frutexa Flabellum",
+            "genus": "Frutexa",
+            "value": 1808900,
+            "codex_id": "$Codex_Ent_Shrubs_01_Name;",
+            "source_file": "frutexa.py"
+        },
+        {
+            "id": "frutexa_flammasis",
+            "name": "Frutexa Flammasis",
+            "genus": "Frutexa",
+            "value": 10326000,
+            "codex_id": "$Codex_Ent_Shrubs_04_Name;",
+            "source_file": "frutexa.py"
+        },
+        {
+            "id": "frutexa_metallicum",
+            "name": "Frutexa Metallicum",
+            "genus": "Frutexa",
+            "value": 1632500,
+            "codex_id": "$Codex_Ent_Shrubs_03_Name;",
+            "source_file": "frutexa.py"
+        },
+        {
+            "id": "frutexa_sponsae",
+            "name": "Frutexa Sponsae",
+            "genus": "Frutexa",
+            "value": 5988000,
+            "codex_id": "$Codex_Ent_Shrubs_06_Name;",
+            "source_file": "frutexa.py"
+        },
+        {
+            "id": "fumerola_aquatis",
+            "name": "Fumerola Aquatis",
+            "genus": "Fumerola",
+            "value": 6284600,
+            "codex_id": "$Codex_Ent_Fumerolas_04_Name;",
+            "source_file": "fumerola.py"
+        },
+        {
+            "id": "fumerola_carbosis",
+            "name": "Fumerola Carbosis",
+            "genus": "Fumerola",
+            "value": 6284600,
+            "codex_id": "$Codex_Ent_Fumerolas_01_Name;",
+            "source_file": "fumerola.py"
+        },
+        {
+            "id": "fumerola_extremus",
+            "name": "Fumerola Extremus",
+            "genus": "Fumerola",
+            "value": 16202800,
+            "codex_id": "$Codex_Ent_Fumerolas_02_Name;",
+            "source_file": "fumerola.py"
+        },
+        {
+            "id": "fumerola_nitris",
+            "name": "Fumerola Nitris",
+            "genus": "Fumerola",
+            "value": 7500900,
+            "codex_id": "$Codex_Ent_Fumerolas_03_Name;",
+            "source_file": "fumerola.py"
+        },
+        {
+            "id": "fungoida_bullarum",
+            "name": "Fungoida Bullarum",
+            "genus": "Fungoida",
+            "value": 3703200,
+            "codex_id": "$Codex_Ent_Fungoids_03_Name;",
+            "source_file": "fungoida.py"
+        },
+        {
+            "id": "fungoida_gelata",
+            "name": "Fungoida Gelata",
+            "genus": "Fungoida",
+            "value": 3330300,
+            "codex_id": "$Codex_Ent_Fungoids_04_Name;",
+            "source_file": "fungoida.py"
+        },
+        {
+            "id": "fungoida_setisis",
+            "name": "Fungoida Setisis",
+            "genus": "Fungoida",
+            "value": 1670100,
+            "codex_id": "$Codex_Ent_Fungoids_01_Name;",
+            "source_file": "fungoida.py"
+        },
+        {
+            "id": "fungoida_stabitis",
+            "name": "Fungoida Stabitis",
+            "genus": "Fungoida",
+            "value": 2680300,
+            "codex_id": "$Codex_Ent_Fungoids_02_Name;",
+            "source_file": "fungoida.py"
+        },
+        {
+            "id": "gypseeum_brain_tree",
+            "name": "Gypseeum Brain Tree",
+            "genus": "Brain Tree",
+            "value": 1593700,
+            "codex_id": "$Codex_Ent_SeedABCD_01_Name;",
+            "source_file": "brain_tree.py"
+        },
+        {
+            "id": "lindigoticum_brain_tree",
+            "name": "Lindigoticum Brain Tree",
+            "genus": "Brain Tree",
+            "value": 1593700,
+            "codex_id": "$Codex_Ent_SeedEFGH_03_Name;",
+            "source_file": "brain_tree.py"
+        },
+        {
+            "id": "lindigoticum_sinuous_tubers",
+            "name": "Lindigoticum Sinuous Tubers",
+            "genus": "Sinuous Tubers",
+            "value": 1514500,
+            "codex_id": "$Codex_Ent_TubeEFGH_01_Name;",
+            "source_file": "tubers.py"
+        },
+        {
+            "id": "lividum_brain_tree",
+            "name": "Lividum Brain Tree",
+            "genus": "Brain Tree",
+            "value": 1593700,
+            "codex_id": "$Codex_Ent_SeedEFGH_Name;",
+            "source_file": "brain_tree.py"
+        },
+        {
+            "id": "luteolum_anemone",
+            "name": "Luteolum Anemone",
+            "genus": "Anemone",
+            "value": 1499900,
+            "codex_id": "$Codex_Ent_Sphere_Name;",
+            "source_file": "anemone.py"
+        },
+        {
+            "id": "osseus_cornibus",
+            "name": "Osseus Cornibus",
+            "genus": "Osseus",
+            "value": 1483000,
+            "codex_id": "$Codex_Ent_Osseus_05_Name;",
+            "source_file": "osseus.py"
+        },
+        {
+            "id": "osseus_discus",
+            "name": "Osseus Discus",
+            "genus": "Osseus",
+            "value": 12934900,
+            "codex_id": "$Codex_Ent_Osseus_02_Name;",
+            "source_file": "osseus.py"
+        },
+        {
+            "id": "osseus_fractus",
+            "name": "Osseus Fractus",
+            "genus": "Osseus",
+            "value": 4027800,
+            "codex_id": "$Codex_Ent_Osseus_01_Name;",
+            "source_file": "osseus.py"
+        },
+        {
+            "id": "osseus_pellebantus",
+            "name": "Osseus Pellebantus",
+            "genus": "Osseus",
+            "value": 9739000,
+            "codex_id": "$Codex_Ent_Osseus_06_Name;",
+            "source_file": "osseus.py"
+        },
+        {
+            "id": "osseus_pumice",
+            "name": "Osseus Pumice",
+            "genus": "Osseus",
+            "value": 3156300,
+            "codex_id": "$Codex_Ent_Osseus_04_Name;",
+            "source_file": "osseus.py"
+        },
+        {
+            "id": "osseus_spiralis",
+            "name": "Osseus Spiralis",
+            "genus": "Osseus",
+            "value": 2404700,
+            "codex_id": "$Codex_Ent_Osseus_03_Name;",
+            "source_file": "osseus.py"
+        },
+        {
+            "id": "ostrinum_brain_tree",
+            "name": "Ostrinum Brain Tree",
+            "genus": "Brain Tree",
+            "value": 1593700,
+            "codex_id": "$Codex_Ent_SeedABCD_02_Name;",
+            "source_file": "brain_tree.py"
+        },
+        {
+            "id": "prasinum_bioluminescent_anemone",
+            "name": "Prasinum Bioluminescent Anemone",
+            "genus": "Anemone",
+            "value": 1499900,
+            "codex_id": "$Codex_Ent_SphereEFGH_02_Name;",
+            "source_file": "anemone.py"
+        },
+        {
+            "id": "prasinum_sinuous_tubers",
+            "name": "Prasinum Sinuous Tubers",
+            "genus": "Sinuous Tubers",
+            "value": 1514500,
+            "codex_id": "$Codex_Ent_TubeABCD_01_Name;",
+            "source_file": "tubers.py"
+        },
+        {
+            "id": "puniceum_anemone",
+            "name": "Puniceum Anemone",
+            "genus": "Anemone",
+            "value": 1499900,
+            "codex_id": "$Codex_Ent_SphereABCD_02_Name;",
+            "source_file": "anemone.py"
+        },
+        {
+            "id": "puniceum_brain_tree",
+            "name": "Puniceum Brain Tree",
+            "genus": "Brain Tree",
+            "value": 1593700,
+            "codex_id": "$Codex_Ent_SeedEFGH_02_Name;",
+            "source_file": "brain_tree.py"
+        },
+        {
+            "id": "recepta_conditivus",
+            "name": "Recepta Conditivus",
+            "genus": "Recepta",
+            "value": 14313700,
+            "codex_id": "$Codex_Ent_Recepta_03_Name;",
+            "source_file": "recepta.py"
+        },
+        {
+            "id": "recepta_deltahedronix",
+            "name": "Recepta Deltahedronix",
+            "genus": "Recepta",
+            "value": 16202800,
+            "codex_id": "$Codex_Ent_Recepta_02_Name;",
+            "source_file": "recepta.py"
+        },
+        {
+            "id": "recepta_umbrux",
+            "name": "Recepta Umbrux",
+            "genus": "Recepta",
+            "value": 12934900,
+            "codex_id": "$Codex_Ent_Recepta_01_Name;",
+            "source_file": "recepta.py"
+        },
+        {
+            "id": "roseum_anemone",
+            "name": "Roseum Anemone",
+            "genus": "Anemone",
+            "value": 1499900,
+            "codex_id": "$Codex_Ent_SphereABCD_03_Name;",
+            "source_file": "anemone.py"
+        },
+        {
+            "id": "roseum_bioluminescent_anemone",
+            "name": "Roseum Bioluminescent Anemone",
+            "genus": "Anemone",
+            "value": 1499900,
+            "codex_id": "$Codex_Ent_SphereEFGH_03_Name;",
+            "source_file": "anemone.py"
+        },
+        {
+            "id": "roseum_brain_tree",
+            "name": "Roseum Brain Tree",
+            "genus": "Brain Tree",
+            "value": 1593700,
+            "codex_id": "$Codex_Ent_Seed_Name;",
+            "source_file": "brain_tree.py"
+        },
+        {
+            "id": "roseum_sinuous_tubers",
+            "name": "Roseum Sinuous Tubers",
+            "genus": "Sinuous Tubers",
+            "value": 1514500,
+            "codex_id": "$Codex_Ent_Tube_Name;",
+            "source_file": "tubers.py"
+        },
+        {
+            "id": "rubeum_bioluminescent_anemone",
+            "name": "Rubeum Bioluminescent Anemone",
+            "genus": "Anemone",
+            "value": 1499900,
+            "codex_id": "$Codex_Ent_SphereEFGH_01_Name;",
+            "source_file": "anemone.py"
+        },
         {
             "id": "stratum_aranaemus",
             "name": "Stratum Aranaemus",
             "genus": "Stratum",
-            "value": 2448900
-        },
-        {
-            "id": "stratum_excutitus",
-            "name": "Stratum Excutitus",
-            "genus": "Stratum",
-            "value": 2448900
-        },
-        {
-            "id": "stratum_paleas",
-            "name": "Stratum Paleas",
-            "genus": "Stratum",
-            "value": 1362000
-        },
-        {
-            "id": "stratum_laminamus",
-            "name": "Stratum Laminamus",
-            "genus": "Stratum",
-            "value": 2788300
+            "value": 2448900,
+            "codex_id": "$Codex_Ent_Stratum_04_Name;",
+            "source_file": "stratum.py"
         },
         {
             "id": "stratum_araneamus",
             "name": "Stratum Araneamus",
             "genus": "Stratum",
-            "value": 2448900
-        },
-        {
-            "id": "stratum_limaxus",
-            "name": "Stratum Limaxus",
-            "genus": "Stratum",
-            "value": 1362000
+            "value": 2448900,
+            "codex_id": "$Codex_Ent_Stratum_04_Name;",
+            "source_file": "stratum.py"
         },
         {
             "id": "stratum_cucumisis",
             "name": "Stratum Cucumisis",
             "genus": "Stratum",
-            "value": 16202800
+            "value": 16202800,
+            "codex_id": "$Codex_Ent_Stratum_06_Name;",
+            "source_file": "stratum.py"
         },
         {
-            "id": "stratum_tectonicas",
-            "name": "Stratum Tectonicas",
+            "id": "stratum_excutitus",
+            "name": "Stratum Excutitus",
             "genus": "Stratum",
-            "value": 19010800
+            "value": 2448900,
+            "codex_id": "$Codex_Ent_Stratum_01_Name;",
+            "source_file": "stratum.py"
         },
         {
             "id": "stratum_frigus",
             "name": "Stratum Frigus",
             "genus": "Stratum",
-            "value": 2637500
+            "value": 2637500,
+            "codex_id": "$Codex_Ent_Stratum_08_Name;",
+            "source_file": "stratum.py"
+        },
+        {
+            "id": "stratum_laminamus",
+            "name": "Stratum Laminamus",
+            "genus": "Stratum",
+            "value": 2788300,
+            "codex_id": "$Codex_Ent_Stratum_03_Name;",
+            "source_file": "stratum.py"
+        },
+        {
+            "id": "stratum_limaxus",
+            "name": "Stratum Limaxus",
+            "genus": "Stratum",
+            "value": 1362000,
+            "codex_id": "$Codex_Ent_Stratum_05_Name;",
+            "source_file": "stratum.py"
+        },
+        {
+            "id": "stratum_paleas",
+            "name": "Stratum Paleas",
+            "genus": "Stratum",
+            "value": 1362000,
+            "codex_id": "$Codex_Ent_Stratum_02_Name;",
+            "source_file": "stratum.py"
+        },
+        {
+            "id": "stratum_tectonicas",
+            "name": "Stratum Tectonicas",
+            "genus": "Stratum",
+            "value": 19010800,
+            "codex_id": "$Codex_Ent_Stratum_07_Name;",
+            "source_file": "stratum.py"
+        },
+        {
+            "id": "tubus_cavas",
+            "name": "Tubus Cavas",
+            "genus": "Tubus",
+            "value": 11873200,
+            "codex_id": "$Codex_Ent_Tubus_03_Name;",
+            "source_file": "tubus.py"
+        },
+        {
+            "id": "tubus_compagibus",
+            "name": "Tubus Compagibus",
+            "genus": "Tubus",
+            "value": 7774700,
+            "codex_id": "$Codex_Ent_Tubus_05_Name;",
+            "source_file": "tubus.py"
+        },
+        {
+            "id": "tubus_conifer",
+            "name": "Tubus Conifer",
+            "genus": "Tubus",
+            "value": 2415500,
+            "codex_id": "$Codex_Ent_Tubus_01_Name;",
+            "source_file": "tubus.py"
+        },
+        {
+            "id": "tubus_rosarium",
+            "name": "Tubus Rosarium",
+            "genus": "Tubus",
+            "value": 2637500,
+            "codex_id": "$Codex_Ent_Tubus_04_Name;",
+            "source_file": "tubus.py"
+        },
+        {
+            "id": "tubus_sororibus",
+            "name": "Tubus Sororibus",
+            "genus": "Tubus",
+            "value": 5727600,
+            "codex_id": "$Codex_Ent_Tubus_02_Name;",
+            "source_file": "tubus.py"
+        },
+        {
+            "id": "tussock_albata",
+            "name": "Tussock Albata",
+            "genus": "Tussock",
+            "value": 3252500,
+            "codex_id": "$Codex_Ent_Tussocks_08_Name;",
+            "source_file": "tussock.py"
+        },
+        {
+            "id": "tussock_capillum",
+            "name": "Tussock Capillum",
+            "genus": "Tussock",
+            "value": 7025800,
+            "codex_id": "$Codex_Ent_Tussocks_15_Name;",
+            "source_file": "tussock.py"
+        },
+        {
+            "id": "tussock_caputus",
+            "name": "Tussock Caputus",
+            "genus": "Tussock",
+            "value": 3472400,
+            "codex_id": "$Codex_Ent_Tussocks_11_Name;",
+            "source_file": "tussock.py"
+        },
+        {
+            "id": "tussock_catena",
+            "name": "Tussock Catena",
+            "genus": "Tussock",
+            "value": 1766600,
+            "codex_id": "$Codex_Ent_Tussocks_05_Name;",
+            "source_file": "tussock.py"
+        },
+        {
+            "id": "tussock_cultro",
+            "name": "Tussock Cultro",
+            "genus": "Tussock",
+            "value": 1766600,
+            "codex_id": "$Codex_Ent_Tussocks_04_Name;",
+            "source_file": "tussock.py"
+        },
+        {
+            "id": "tussock_divisa",
+            "name": "Tussock Divisa",
+            "genus": "Tussock",
+            "value": 1766600,
+            "codex_id": "$Codex_Ent_Tussocks_10_Name;",
+            "source_file": "tussock.py"
+        },
+        {
+            "id": "tussock_ignis",
+            "name": "Tussock Ignis",
+            "genus": "Tussock",
+            "value": 1849000,
+            "codex_id": "$Codex_Ent_Tussocks_03_Name;",
+            "source_file": "tussock.py"
+        },
+        {
+            "id": "tussock_pennata",
+            "name": "Tussock Pennata",
+            "genus": "Tussock",
+            "value": 5853800,
+            "codex_id": "$Codex_Ent_Tussocks_01_Name;",
+            "source_file": "tussock.py"
+        },
+        {
+            "id": "tussock_pennatis",
+            "name": "Tussock Pennatis",
+            "genus": "Tussock",
+            "value": 1000000,
+            "codex_id": "$Codex_Ent_Tussocks_06_Name;",
+            "source_file": "tussock.py"
+        },
+        {
+            "id": "tussock_propagito",
+            "name": "Tussock Propagito",
+            "genus": "Tussock",
+            "value": 1000000,
+            "codex_id": "$Codex_Ent_Tussocks_09_Name;",
+            "source_file": "tussock.py"
+        },
+        {
+            "id": "tussock_serrati",
+            "name": "Tussock Serrati",
+            "genus": "Tussock",
+            "value": 4447100,
+            "codex_id": "$Codex_Ent_Tussocks_07_Name;",
+            "source_file": "tussock.py"
+        },
+        {
+            "id": "tussock_stigmasis",
+            "name": "Tussock Stigmasis",
+            "genus": "Tussock",
+            "value": 19010800,
+            "codex_id": "$Codex_Ent_Tussocks_13_Name;",
+            "source_file": "tussock.py"
+        },
+        {
+            "id": "tussock_triticum",
+            "name": "Tussock Triticum",
+            "genus": "Tussock",
+            "value": 7774700,
+            "codex_id": "$Codex_Ent_Tussocks_12_Name;",
+            "source_file": "tussock.py"
+        },
+        {
+            "id": "tussock_ventusa",
+            "name": "Tussock Ventusa",
+            "genus": "Tussock",
+            "value": 3227700,
+            "codex_id": "$Codex_Ent_Tussocks_02_Name;",
+            "source_file": "tussock.py"
+        },
+        {
+            "id": "tussock_virgam",
+            "name": "Tussock Virgam",
+            "genus": "Tussock",
+            "value": 14313700,
+            "codex_id": "$Codex_Ent_Tussocks_14_Name;",
+            "source_file": "tussock.py"
+        },
+        {
+            "id": "violaceum_sinuous_tubers",
+            "name": "Violaceum Sinuous Tubers",
+            "genus": "Sinuous Tubers",
+            "value": 1514500,
+            "codex_id": "$Codex_Ent_TubeEFGH_02_Name;",
+            "source_file": "tubers.py"
+        },
+        {
+            "id": "viride_brain_tree",
+            "name": "Viride Brain Tree",
+            "genus": "Brain Tree",
+            "value": 1593700,
+            "codex_id": "$Codex_Ent_SeedABCD_03_Name;",
+            "source_file": "brain_tree.py"
+        },
+        {
+            "id": "viride_sinuous_tubers",
+            "name": "Viride Sinuous Tubers",
+            "genus": "Sinuous Tubers",
+            "value": 1514500,
+            "codex_id": "$Codex_Ent_TubeEFGH_03_Name;",
+            "source_file": "tubers.py"
         }
     ]
 }

@@ -42,6 +42,6 @@ Las pruebas no modifican la biblioteca de conocimiento.
 
 ## Próximo objetivo
 
-**Operación Yggdrasil:** generalizar HUGINN para importar todos los
-géneros biológicos disponibles en EDMC BioScan y validar la biblioteca
-completa antes de entregarla a MÍMIR.
+**Operación Yggdrasil:** validar en el juego la biblioteca completa
+generada por HUGINN: 19 géneros, 116 especies y 254 reglas procedentes
+de EDMC BioScan.

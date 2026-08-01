@@ -8,6 +8,7 @@ from core.officer_dispatcher import OfficerDispatcher
 from mimir.event_subscriber import MimirEventSubscriber
 from mimir.officer_handler import MimirOfficerHandler
 from mimir.planet_event_adapter import PlanetEventAdapter
+from mimir.rule_engine import RuleEngine
 from mimir.scientific_officer import ScientificOfficer
 from models.events.planet_scan_ready import PlanetScanReady
 
@@ -25,6 +26,7 @@ def tectonicas_scan() -> dict:
         "AtmosphereType": "Carbon dioxide atmosphere",
         "SurfaceGravity": 3.138128,
         "SurfaceTemperature": 220.0,
+        "SurfacePressure": 10_123.165625,
         "Volcanism": "No volcanism",
     }
 
@@ -50,6 +52,7 @@ class MimirTestCase(unittest.TestCase):
                 "gravity": 0.32,
                 "temperature": 220.0,
                 "volcanism": "None",
+                "pressure": 0.1,
             },
         )
 
@@ -61,7 +64,11 @@ class MimirTestCase(unittest.TestCase):
         predictions = self.officer.predict_species(planet)
         recommendation = self.officer.analyze_planet(planet)
 
-        self.assertEqual(len(predictions), 1)
+        self.assertEqual(len(predictions), 2)
+        self.assertEqual(
+            {prediction.species.name for prediction in predictions},
+            {"Bacterium Aurasus", "Stratum Tectonicas"},
+        )
         self.assertEqual(
             predictions[0].species.name,
             "Stratum Tectonicas",
@@ -112,6 +119,57 @@ class MimirTestCase(unittest.TestCase):
         )
 
         self.assertIsNone(report)
+
+    def test_unknown_rule_condition_fails_closed(self) -> None:
+        score, matches = RuleEngine().evaluate(
+            {"atmosphere": "CarbonDioxide"},
+            {
+                "atmosphere": ["CarbonDioxide"],
+                "parent_star": ["A"],
+            },
+        )
+
+        self.assertEqual(score, 0)
+        self.assertEqual(matches, [])
+
+    def test_excluded_region_is_evaluated(self) -> None:
+        engine = RuleEngine()
+        rule = {"regions": ["!orion-cygnus-core"]}
+
+        excluded_score, _ = engine.evaluate(
+            {"region": "orion-cygnus-core"},
+            rule,
+        )
+        allowed_score, _ = engine.evaluate(
+            {"region": "sagittarius-carina"},
+            rule,
+        )
+
+        self.assertEqual(excluded_score, 0)
+        self.assertEqual(allowed_score, 100)
+
+    def test_volcanism_list_uses_partial_matching(self) -> None:
+        score, _ = RuleEngine().evaluate(
+            {"volcanism": "minor silicate vapour geysers"},
+            {"volcanism": ["metallic", "silicate", "rocky"]},
+        )
+
+        self.assertEqual(score, 100)
+
+    def test_any_volcanism_requires_activity(self) -> None:
+        engine = RuleEngine()
+
+        inactive_score, _ = engine.evaluate(
+            {"volcanism": "None"},
+            {"volcanism": "Any"},
+        )
+        active_score, _ = engine.evaluate(
+            {"volcanism": "water geysers"},
+            {"volcanism": "Any"},
+        )
+
+        self.assertEqual(inactive_score, 0)
+        self.assertEqual(active_score, 100)
 
 
 class BiologyKnowledgeTestCase(unittest.TestCase):

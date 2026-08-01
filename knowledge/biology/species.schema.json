@@ -1,82 +1,35 @@
 {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-
-    "title": "ODIN Biological Species",
-
-    "type": "object",
-
-    "required": [
-        "id",
-        "genus",
-        "species"
-    ],
-
-    "properties": {
-
-        "id": {
-            "type": "string"
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ODIN Biological Species",
+  "type": "object",
+  "required": ["schema_version", "generated_by", "source", "species"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "generated_by": {"const": "HUGINN"},
+    "source": {"type": "object"},
+    "species": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "genus",
+          "value",
+          "codex_id",
+          "source_file"
+        ],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "name": {"type": "string", "minLength": 1},
+          "genus": {"type": "string", "minLength": 1},
+          "value": {"type": "integer", "minimum": 0},
+          "codex_id": {"type": "string", "minLength": 1},
+          "source_file": {"type": "string", "pattern": "\\.py$"}
         },
-
-        "genus": {
-            "type": "string"
-        },
-
-        "species": {
-            "type": "string"
-        },
-
-        "variant": {
-            "type": [
-                "string",
-                "null"
-            ]
-        },
-
-        "rarity": {
-            "type": [
-                "string",
-                "null"
-            ]
-        },
-
-        "estimated_value": {
-            "type": "number"
-        },
-
-        "sampling_distance": {
-            "type": "number"
-        },
-
-        "planet_classes": {
-            "type": "array"
-        },
-
-        "atmospheres": {
-            "type": "array"
-        },
-
-        "gravity": {
-            "type": "object"
-        },
-
-        "temperature": {
-            "type": "object"
-        },
-
-        "volcanism": {
-            "type": "array"
-        },
-
-        "star_types": {
-            "type": "array"
-        },
-
-        "sources": {
-            "type": "array"
-        },
-
-        "confidence": {
-            "type": "number"
-        }
+        "additionalProperties": false
+      }
     }
+  },
+  "additionalProperties": false
 }
