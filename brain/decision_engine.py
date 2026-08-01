@@ -52,7 +52,9 @@ class DecisionEngine:
                     f"Comandante, {context.system_name} "
                     "no figura en nuestra memoria previa ni posee "
                     "información disponible en EDSM. "
-                    "Recomiendo realizar un escaneo completo."
+                    "Esto indica una posible oportunidad de primer "
+                    "descubrimiento, no una certeza. Recomiendo realizar "
+                    "un escaneo completo."
                 ),
                 reasons=reasons,
             )

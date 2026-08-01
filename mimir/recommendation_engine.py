@@ -1,17 +1,4 @@
-# ============================================================
-# ODIN
-#
-# Versión : 0.1.0
-#
-# Sprint  : 4 - MÍMIR
-# ============================================================
-
-"""
-mimir.recommendation_engine
-
-Transforma una decisión científica en una recomendación
-clara para el comandante.
-"""
+"""Transforma decisiones científicas en recomendaciones para el comandante."""
 
 from dataclasses import dataclass
 
@@ -20,41 +7,25 @@ from mimir.decision_engine import ScientificDecision
 
 @dataclass(slots=True)
 class ScientificRecommendation:
-    """
-    Recomendación final emitida por MÍMIR.
-    """
-
     title: str
-
     message: str
-
     priority: str
-
     reasons: list[str]
 
 
 class ScientificRecommendationEngine:
-    """
-    Genera recomendaciones científicas legibles
-    a partir de decisiones de MÍMIR.
-    """
+    """Genera recomendaciones científicas legibles."""
 
     def build(
         self,
         decision: ScientificDecision,
     ) -> ScientificRecommendation:
-        """
-        Convierte una decisión científica en una
-        recomendación para el comandante.
-        """
-
         if not decision.recommended:
             return ScientificRecommendation(
                 title="Descenso no recomendado",
                 message=(
-                    "Comandante, no se detectaron "
-                    "indicios científicos suficientes "
-                    "para justificar un descenso."
+                    "Comandante, no se detectaron indicios científicos "
+                    "suficientes para justificar un descenso."
                 ),
                 priority=decision.priority,
                 reasons=decision.reasons,
@@ -66,22 +37,51 @@ class ScientificRecommendationEngine:
             return ScientificRecommendation(
                 title="Evaluación incompleta",
                 message=(
-                    "Comandante, el análisis científico "
-                    "no produjo una especie principal."
+                    "Comandante, el análisis científico no produjo una "
+                    "especie principal."
                 ),
                 priority="LOW",
                 reasons=decision.reasons,
             )
 
+        value_text = f"{decision.estimated_value:,} créditos"
+
+        if decision.minimum_estimated_value != decision.estimated_value:
+            value_text = (
+                f"entre {decision.minimum_estimated_value:,} y "
+                f"{decision.estimated_value:,} créditos"
+            )
+
         message = (
-            "Comandante, las condiciones del planeta "
-            f"son compatibles con "
-            f"{best_prediction.species.name}. "
-            f"El valor científico estimado es de "
-            f"{decision.estimated_value:,} créditos. "
-            "Recomiendo proceder con el descenso "
-            "y realizar un reconocimiento biológico."
+            "Comandante, las condiciones del planeta son compatibles con "
+            f"{best_prediction.species.name}. El valor científico estimado "
+            f"es de {value_text}. Recomiendo "
+            "proceder con el descenso y realizar un reconocimiento biológico."
         )
+
+        context = decision.discovery_context
+
+        if context and context.first_footfall_available:
+            potential_text = (
+                f"{decision.potential_first_logged_value:,} créditos"
+            )
+
+            if (
+                decision.minimum_potential_first_logged_value
+                != decision.potential_first_logged_value
+            ):
+                potential_text = (
+                    f"entre "
+                    f"{decision.minimum_potential_first_logged_value:,} y "
+                    f"{decision.potential_first_logged_value:,} créditos"
+                )
+
+            message += (
+                " El Journal indica que la primera pisada todavía está "
+                "disponible. Si las muestras obtienen First Logged, el "
+                "valor potencial asciende a "
+                f"{potential_text} (×5)."
+            )
 
         return ScientificRecommendation(
             title="Descenso científico recomendado",

@@ -45,4 +45,6 @@ class InternalEvent:
 
     BIOLOGY_DETECTED = "BiologyDetected"
 
+    ORGANIC_SCAN_UPDATED = "OrganicScanUpdated"
+
     DOCKING_REQUESTED = "DockingRequested"

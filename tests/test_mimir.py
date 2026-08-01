@@ -11,6 +11,7 @@ from mimir.planet_event_adapter import PlanetEventAdapter
 from mimir.rule_engine import RuleEngine
 from mimir.scientific_officer import ScientificOfficer
 from models.events.planet_scan_ready import PlanetScanReady
+from mimir.galactic_region import find_region
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -70,8 +71,135 @@ class MimirTestCase(unittest.TestCase):
                 "temperature": 220.0,
                 "volcanism": "None",
                 "pressure": 0.1,
+                "atmosphere_composition": {},
+                "materials": {},
+                "orbital_period": None,
+                "distance_from_arrival": None,
+                "region_id": None,
+                "region_name": None,
+                "stars": [],
+                "system_position": None,
+                "body_types": [],
+                "system_name": "",
             },
         )
+
+    def test_real_system_region_is_sanguineous_rim(self) -> None:
+        self.assertEqual(
+            find_region(5344.6875, 194.46875, -2523.375),
+            (34, "Sanguineous Rim"),
+        )
+
+    def test_dss_tussock_is_resolved_with_regional_context(self) -> None:
+        event = {
+            "event": "Scan",
+            "BodyName": "Hegai ZL-D d12-5 4",
+            "PlanetClass": "High metal content body",
+            "AtmosphereType": "Ammonia",
+            "AtmosphereComposition": [
+                {"Name": "Ammonia", "Percent": 100.0}
+            ],
+            "SurfaceGravity": 2.235064,
+            "SurfaceTemperature": 161.398331,
+            "SurfacePressure": 238.103516,
+            "Volcanism": "",
+            "Landable": True,
+        }
+        planet = PlanetEventAdapter().from_scan_event(
+            event,
+            scientific_context={
+                "region_id": 34,
+                "region_name": "Sanguineous Rim",
+                "stars": [{"type": "F", "luminosity": "Vb"}],
+            },
+        )
+        predictions = self.officer.predict_species(
+            planet,
+            confirmed_genus_ids=(
+                "$Codex_Ent_Tussocks_Genus_Name;",
+            ),
+        )
+
+        self.assertEqual(
+            [prediction.species.name for prediction in predictions],
+            ["Tussock Divisa"],
+        )
+
+    def test_real_five_genus_dss_scan_keeps_every_confirmed_genus(self) -> None:
+        event = {
+            "event": "Scan",
+            "BodyName": "Hegai ZL-D d12-5 4",
+            "PlanetClass": "High metal content body",
+            "AtmosphereType": "Ammonia",
+            "AtmosphereComposition": [
+                {"Name": "Ammonia", "Percent": 100.0}
+            ],
+            "SurfaceGravity": 2.235064,
+            "SurfaceTemperature": 161.398331,
+            "SurfacePressure": 238.103516,
+            "Volcanism": "",
+            "Landable": True,
+            "WasDiscovered": False,
+            "WasMapped": False,
+            "WasFootfalled": False,
+        }
+        genus_ids = (
+            "$Codex_Ent_Bacterial_Genus_Name;",
+            "$Codex_Ent_Fungoids_Genus_Name;",
+            "$Codex_Ent_Osseus_Genus_Name;",
+            "$Codex_Ent_Shrubs_Genus_Name;",
+            "$Codex_Ent_Tussocks_Genus_Name;",
+        )
+        genus_names = ("Bacteria", "Fungoida", "Osseus", "Frutexa", "Tusoc")
+        context = {
+            "region_id": 34,
+            "region_name": "Sanguineous Rim",
+            "stars": [{"type": "F", "luminosity": "Vb"}],
+        }
+
+        report = self.handler.handle_planet_scan(
+            event,
+            confirmed_genus_ids=genus_ids,
+            confirmed_genus_names=genus_names,
+            scientific_context=context,
+        )
+
+        self.assertIsNotNone(report)
+        self.assertIn(
+            "Género confirmado por DSS: Bacteria, Fungoida, Osseus, Frutexa, Tusoc",
+            report.details,
+        )
+        self.assertTrue(any("Tussock Divisa" in item for item in report.details))
+        self.assertIn("(×5)", report.message)
+
+    def test_real_informem_variant_is_predicted_from_materials(self) -> None:
+        event = {
+            "event": "Scan",
+            "BodyName": "Hegai YA-L c22-0 7",
+            "PlanetClass": "Rocky ice body",
+            "AtmosphereType": "Nitrogen",
+            "SurfaceGravity": 3.09248,
+            "SurfaceTemperature": 77.780975,
+            "SurfacePressure": 969.983398,
+            "Volcanism": "",
+            "Materials": [
+                {"Name": "polonium", "Percent": 0.493638}
+            ],
+        }
+        planet = PlanetEventAdapter().from_scan_event(event)
+        predictions = self.officer.predict_species(
+            planet,
+            confirmed_genus_ids=(
+                "$Codex_Ent_Bacterial_Genus_Name;",
+            ),
+        )
+        informem = next(
+            prediction
+            for prediction in predictions
+            if prediction.species.name == "Bacterium Informem"
+        )
+
+        self.assertEqual(informem.variants, ("Lime",))
 
     def test_scientific_officer_recommends_tectonicas(self) -> None:
         planet = PlanetEventAdapter().from_scan_event(
@@ -94,6 +222,30 @@ class MimirTestCase(unittest.TestCase):
         self.assertEqual(
             recommendation.title,
             "Descenso científico recomendado",
+        )
+
+    def test_recommendation_lists_all_probable_samples(self) -> None:
+        planet = PlanetEventAdapter().from_scan_event(
+            tectonicas_scan()
+        )
+
+        recommendation = self.officer.analyze_planet(planet)
+
+        self.assertIn(
+            "Muestras biológicas probables:",
+            recommendation.reasons,
+        )
+        self.assertTrue(
+            any(
+                "Stratum Tectonicas" in reason
+                for reason in recommendation.reasons
+            )
+        )
+        self.assertTrue(
+            any(
+                "Bacterium Aurasus" in reason
+                for reason in recommendation.reasons
+            )
         )
 
     def test_dispatcher_returns_mimir_report_for_scan_event(self) -> None:
@@ -177,6 +329,93 @@ class MimirTestCase(unittest.TestCase):
         self.assertIsNotNone(report)
         self.assertIn("Género confirmado por DSS: Bacteria", report.details)
 
+    def test_confirmed_genus_without_species_is_explicit(self) -> None:
+        report = self.handler.handle_planet_scan(
+            bacteria_scan(),
+            confirmed_genus_ids=(
+                "$Codex_Ent_Bacterial_Genus_Name;",
+                "$Codex_Ent_Tussocks_Genus_Name;",
+            ),
+            confirmed_genus_names=("Bacteria", "Tusoc"),
+        )
+
+        self.assertIsNotNone(report)
+        self.assertIn(
+            "Género confirmado con especie todavía indeterminada: Tusoc",
+            report.details,
+        )
+        self.assertIn("DSS también confirmó Tusoc", report.message)
+
+    def test_unfootfalled_planet_reports_first_logged_potential(self) -> None:
+        event = tectonicas_scan() | {
+            "Landable": True,
+            "WasDiscovered": False,
+            "WasMapped": False,
+            "WasFootfalled": False,
+        }
+
+        report = self.handler.handle_planet_scan(event)
+
+        self.assertIsNotNone(report)
+        self.assertIn("primera pisada todavía está disponible", report.message)
+        self.assertIn("100,054,000 créditos (×5)", report.message)
+        self.assertTrue(
+            any(
+                "La bonificación First Logged es potencial" in detail
+                for detail in report.details
+            )
+        )
+
+    def test_prior_footfall_does_not_apply_first_logged_multiplier(self) -> None:
+        event = tectonicas_scan() | {
+            "Landable": True,
+            "WasDiscovered": True,
+            "WasMapped": True,
+            "WasFootfalled": True,
+        }
+
+        report = self.handler.handle_planet_scan(event)
+
+        self.assertIsNotNone(report)
+        self.assertNotIn("(×5)", report.message)
+        self.assertIn("Primera pisada reclamada: Sí", report.details)
+
+    def test_planet_without_biology_remains_silent(self) -> None:
+        event = {
+            "event": "Scan",
+            "BodyName": "Planeta sin biología compatible",
+            "PlanetClass": "Icy body",
+            "AtmosphereType": "None",
+            "SurfaceGravity": 20.0,
+            "SurfaceTemperature": 500.0,
+            "Landable": True,
+            "WasDiscovered": False,
+            "WasMapped": False,
+            "WasFootfalled": False,
+        }
+
+        report = self.handler.handle_planet_scan(event)
+
+        self.assertIsNone(report)
+
+    def test_populated_system_suppresses_first_logged_estimate(self) -> None:
+        event = tectonicas_scan() | {
+            "Landable": True,
+            "WasFootfalled": False,
+        }
+
+        report = self.handler.handle_planet_scan(
+            event,
+            system_population=1000,
+        )
+
+        self.assertIsNotNone(report)
+        self.assertNotIn("(×5)", report.message)
+        self.assertIn(
+            "Sistema habitado: no se estima bonificación First Logged",
+            report.details,
+        )
+
     def test_excluded_region_is_evaluated(self) -> None:
         engine = RuleEngine()
         rule = {"regions": ["!orion-cygnus-core"]}
@@ -257,6 +496,18 @@ class BiologyKnowledgeTestCase(unittest.TestCase):
 
         self.assertIn("stratum_aranaemus", species_by_id)
         self.assertNotIn("stratum_aranaemus", referenced_species)
+
+    def test_mimir_supports_every_imported_bioscan_condition(self) -> None:
+        condition_names = {
+            condition
+            for rule in self.rules_document["rules"]
+            for condition in rule["conditions"]
+        }
+
+        self.assertEqual(
+            condition_names - RuleEngine.SUPPORTED_CONDITIONS,
+            set(),
+        )
 
 
 if __name__ == "__main__":

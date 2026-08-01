@@ -11,12 +11,34 @@ from models.events.exploration_report_ready import (
     ExplorationReportReady,
 )
 from models.officer_report import OfficerReport
+from models.events.organic_scan_updated import OrganicScanUpdated
 from core.localization import priority_label
 
 class ConsolePresenter:
     """
     Muestra información útil en la consola.
     """
+
+    def show_organic_scan(self, scan: OrganicScanUpdated) -> None:
+        """Muestra el progreso real del muestreo exobiológico."""
+
+        target = scan.variant or scan.species or scan.genus or "Muestra"
+        status = "completada" if scan.completed else "en progreso"
+
+        print()
+        print("-" * 50)
+        print("MÍMIR — MUESTREO EXOBIOLÓGICO")
+        print(f"Especie              : {target}")
+        print(f"Progreso             : {scan.progress}/3 ({status})")
+
+        if scan.was_logged is True:
+            print("First Logged          : No disponible")
+        elif scan.was_logged is False:
+            print("First Logged          : Candidato confirmado")
+        else:
+            print("First Logged          : Pendiente de confirmación")
+
+        print("-" * 50)
 
     def show_recommendation(
         self,

@@ -29,3 +29,7 @@ class PlanetScanReady:
     confirmed_genus_ids: tuple[str, ...] = ()
 
     confirmed_genus_names: tuple[str, ...] = ()
+
+    system_population: int = 0
+
+    scientific_context: dict[str, Any] | None = None

@@ -31,6 +31,7 @@ from models.events.exploration_report_ready import (
 from models.events.planet_scan_ready import (
     PlanetScanReady,
 )
+from models.events.organic_scan_updated import OrganicScanUpdated
 from state.commander_state import CommanderState
 
 
@@ -57,6 +58,10 @@ class ExplorationProcessor:
             tuple[str, ...],
         ] = {}
         self._completed_system_reports: set[int] = set()
+        self._organic_scan_progress: dict[
+            tuple[int, int | None, str, str],
+            int,
+        ] = {}
 
     def handle_fsd_jump(self, event: dict) -> None:
         """
@@ -78,6 +83,7 @@ class ExplorationProcessor:
         self.commander_state.last_scanned_body = ""
         self._confirmed_genus_ids.clear()
         self._confirmed_genus_names.clear()
+        self._organic_scan_progress.clear()
         self._completed_system_reports.discard(system_address)
 
         self.database.execute(
@@ -136,6 +142,27 @@ class ExplorationProcessor:
 
         body_type, subtype, is_moon = self._classify_body(event)
 
+        if body_type == "Estrella":
+            star = {
+                "type": event.get("StarType", ""),
+                "luminosity": event.get("Luminosity", ""),
+            }
+            existing_index = next(
+                (
+                    index
+                    for index, item in enumerate(
+                        self.commander_state.system_stars
+                    )
+                    if item.get("type") == star["type"]
+                    and item.get("luminosity") == star["luminosity"]
+                ),
+                None,
+            )
+            if existing_index is None:
+                self.commander_state.system_stars.append(star)
+        elif subtype and subtype not in self.commander_state.system_body_types:
+            self.commander_state.system_body_types.append(subtype)
+
         terraform_state = str(
             event.get("TerraformState", "")
         ).lower()
@@ -168,10 +195,12 @@ class ExplorationProcessor:
                 distance_from_arrival,
                 was_discovered,
                 was_mapped,
+                was_footfalled,
+                landable,
                 raw_json,
                 scanned_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(system_address, body_id)
             DO UPDATE SET
                 body_name = excluded.body_name,
@@ -186,6 +215,8 @@ class ExplorationProcessor:
                 distance_from_arrival = excluded.distance_from_arrival,
                 was_discovered = excluded.was_discovered,
                 was_mapped = excluded.was_mapped,
+                was_footfalled = excluded.was_footfalled,
+                landable = excluded.landable,
                 raw_json = excluded.raw_json,
                 scanned_at = excluded.scanned_at
             """,
@@ -211,6 +242,8 @@ class ExplorationProcessor:
                 event.get("DistanceFromArrivalLS"),
                 int(bool(event.get("WasDiscovered", False))),
                 int(bool(event.get("WasMapped", False))),
+                int(bool(event.get("WasFootfalled", False))),
+                int(bool(event.get("Landable", False))),
                 raw_json,
                 timestamp,
             ),
@@ -234,6 +267,15 @@ class ExplorationProcessor:
                 (system_address, body_id),
                 (),
             ),
+            system_population=self.commander_state.population,
+            scientific_context={
+                "region_id": self.commander_state.galactic_region_id,
+                "region_name": self.commander_state.galactic_region_name,
+                "stars": list(self.commander_state.system_stars),
+                "system_position": self.commander_state.star_position,
+                "body_types": list(self.commander_state.system_body_types),
+                "system_name": self.commander_state.current_system,
+            },
         )
 
         self.event_bus.publish_internal(
@@ -483,6 +525,22 @@ class ExplorationProcessor:
         if not system_address:
             return
 
+        source_event = event.get("event", "SAASignalsFound")
+
+        if body_id is not None:
+            self.database.execute(
+                """
+                DELETE FROM biological_signals
+                WHERE system_address = ?
+                  AND body_id = ?
+                  AND source_event IN (
+                      'FSSBodySignals',
+                      'SAASignalsFound'
+                  )
+                """,
+                (system_address, body_id),
+            )
+
         biology_total = 0
         confirmed_genus_ids = tuple(
             dict.fromkeys(
@@ -538,7 +596,7 @@ class ExplorationProcessor:
                     system_address,
                     body_id,
                     body_name,
-                    "SAASignalsFound",
+                    source_event,
                     signal_type,
                     signal_count,
                     ", ".join(confirmed_genus_names) or None,
@@ -607,6 +665,7 @@ class ExplorationProcessor:
         )
 
         scan_type = event.get("ScanType")
+        was_logged = event.get("WasLogged")
 
         self.database.execute(
             """
@@ -619,11 +678,12 @@ class ExplorationProcessor:
                 species,
                 variant,
                 scan_type,
+                was_logged,
                 signal_count,
                 recorded_at,
                 raw_json
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
             """,
             (
                 system_address,
@@ -633,6 +693,7 @@ class ExplorationProcessor:
                 species,
                 variant,
                 scan_type,
+                None if was_logged is None else int(bool(was_logged)),
                 timestamp,
                 json.dumps(
                     event,
@@ -640,6 +701,47 @@ class ExplorationProcessor:
                 ),
             ),
         )
+
+        progress_by_type = {
+            "Log": 1,
+            "Sample": 2,
+            "Analyse": 3,
+        }
+        progress = progress_by_type.get(scan_type, 0)
+        progress_key = (
+            system_address,
+            body_id,
+            str(event.get("Species", species or "")),
+            str(event.get("Variant", variant or "")),
+        )
+        previous_progress = self._organic_scan_progress.get(
+            progress_key,
+            0,
+        )
+
+        if progress <= previous_progress:
+            return
+
+        self._organic_scan_progress[progress_key] = progress
+
+        self.event_bus.publish_internal(
+            InternalEvent.ORGANIC_SCAN_UPDATED,
+            OrganicScanUpdated(
+                body_id=body_id,
+                genus=genus or "",
+                species=species or "",
+                variant=variant or "",
+                scan_type=scan_type or "",
+                progress=progress,
+                completed=scan_type == "Analyse",
+                was_logged=(
+                    None if was_logged is None else bool(was_logged)
+                ),
+            ),
+        )
+
+        if scan_type != "Analyse":
+            return
 
         system_name = self.commander_state.current_system
 
@@ -751,7 +853,10 @@ class ExplorationProcessor:
                 COALESCE(
                     SUM(
                         CASE
-                            WHEN source_event = 'SAASignalsFound'
+                            WHEN source_event IN (
+                                'FSSBodySignals',
+                                'SAASignalsFound'
+                            )
                             THEN signal_count
                             ELSE 0
                         END
@@ -763,6 +868,7 @@ class ExplorationProcessor:
                     SUM(
                         CASE
                             WHEN source_event = 'ScanOrganic'
+                             AND scan_type = 'Analyse'
                             THEN 1
                             ELSE 0
                         END

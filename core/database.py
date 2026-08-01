@@ -98,12 +98,25 @@ class DatabaseManager:
                 distance_from_arrival REAL,
                 was_discovered INTEGER NOT NULL DEFAULT 0,
                 was_mapped INTEGER NOT NULL DEFAULT 0,
+                was_footfalled INTEGER NOT NULL DEFAULT 0,
+                landable INTEGER NOT NULL DEFAULT 0,
                 raw_json TEXT NOT NULL,
                 scanned_at TEXT NOT NULL,
 
                 UNIQUE(system_address, body_id)
             )
             """
+        )
+
+        self._ensure_column(
+            "stellar_bodies",
+            "was_footfalled",
+            "INTEGER NOT NULL DEFAULT 0",
+        )
+        self._ensure_column(
+            "stellar_bodies",
+            "landable",
+            "INTEGER NOT NULL DEFAULT 0",
         )
 
         self.execute(
@@ -160,8 +173,47 @@ class DatabaseManager:
                 species TEXT,
                 variant TEXT,
                 scan_type TEXT,
+                was_logged INTEGER,
                 recorded_at TEXT NOT NULL,
                 raw_json TEXT NOT NULL
             )
             """
         )
+
+        self._ensure_column(
+            "biological_signals",
+            "was_logged",
+            "INTEGER",
+        )
+
+        self.execute(
+            """
+            UPDATE system_exploration
+            SET organic_sample_count = (
+                SELECT COUNT(*)
+                FROM biological_signals
+                WHERE biological_signals.system_address =
+                    system_exploration.system_address
+                  AND source_event = 'ScanOrganic'
+                  AND scan_type = 'Analyse'
+            )
+            """
+        )
+
+    def _ensure_column(
+        self,
+        table: str,
+        column: str,
+        definition: str,
+    ) -> None:
+        """Añade una columna a bases existentes sin perder datos."""
+
+        existing = {
+            row["name"]
+            for row in self.query(f"PRAGMA table_info({table})")
+        }
+
+        if column not in existing:
+            self.execute(
+                f"ALTER TABLE {table} ADD COLUMN {column} {definition}"
+            )

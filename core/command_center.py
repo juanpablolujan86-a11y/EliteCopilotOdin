@@ -241,6 +241,11 @@ class CommandCenter:
         )
 
         self.event_bus.subscribe(
+            "FSSBodySignals",
+            exploration_processor.handle_saa_signals_found
+        )
+
+        self.event_bus.subscribe(
             "ScanOrganic",
             exploration_processor.handle_scan_organic
         )
@@ -259,6 +264,11 @@ class CommandCenter:
         self.event_bus.subscribe(
             InternalEvent.SCIENTIFIC_ANALYSIS_READY,
             self.console_presenter.show_scientific_report
+        )
+
+        self.event_bus.subscribe(
+            InternalEvent.ORGANIC_SCAN_UPDATED,
+            self.console_presenter.show_organic_scan
         )
 
     def _run_event_loop(self) -> None:

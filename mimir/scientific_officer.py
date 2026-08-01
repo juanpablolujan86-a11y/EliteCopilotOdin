@@ -29,6 +29,7 @@ from mimir.recommendation_engine import (
 )
 from mimir.species_predictor import SpeciesPredictor
 from models.prediction import Prediction
+from mimir.discovery_context import DiscoveryContext
 
 
 class ScientificOfficer:
@@ -75,13 +76,15 @@ class ScientificOfficer:
     def make_decision(
         self,
         predictions: list[Prediction],
+        discovery_context: DiscoveryContext | None = None,
     ) -> ScientificDecision:
         """
         Convierte las predicciones en una decisión científica.
         """
 
         return self.decision_engine.decide(
-            predictions
+            predictions,
+            discovery_context=discovery_context,
         )
 
     def build_recommendation(
@@ -100,6 +103,7 @@ class ScientificOfficer:
         self,
         planet: dict[str, Any],
         confirmed_genus_ids: tuple[str, ...] = (),
+        discovery_context: DiscoveryContext | None = None,
     ) -> ScientificRecommendation:
         """
         Ejecuta el análisis científico completo.
@@ -119,7 +123,8 @@ class ScientificOfficer:
         )
 
         decision = self.make_decision(
-            predictions
+            predictions,
+            discovery_context=discovery_context,
         )
 
         return self.build_recommendation(

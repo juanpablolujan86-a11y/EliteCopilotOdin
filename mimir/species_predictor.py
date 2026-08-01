@@ -20,6 +20,7 @@ from typing import Any
 from mimir.rule_engine import RuleEngine
 from models.prediction import Prediction
 from models.species import Species
+from knowledge.external.explodata.genus_data import data as genus_data
 
 
 class SpeciesPredictor:
@@ -78,6 +79,7 @@ class SpeciesPredictor:
                 name=item["name"],
                 genus=item["genus"],
                 genus_codex_id=item["genus_codex_id"],
+                codex_id=item.get("codex_id", ""),
                 value=item.get(
                     "value",
                     0,
@@ -155,6 +157,7 @@ class SpeciesPredictor:
                     "rule_id"
                 ],
                 matches=matches,
+                variants=self._predict_variants(species, planet),
             )
 
             current = best_results.get(
@@ -183,3 +186,35 @@ class SpeciesPredictor:
         )
 
         return results
+
+    def _predict_variants(
+        self,
+        species: Species,
+        planet: dict[str, Any],
+    ) -> tuple[str, ...]:
+        """Predice colores usando estrella o materiales, como BioScan."""
+
+        genus = genus_data.get(species.genus_codex_id, {})
+        colors = genus.get("colors", {})
+        species_colors = colors.get("species", {}).get(
+            species.codex_id,
+            {},
+        )
+        color_rules = species_colors or colors
+        variants: set[str] = set()
+
+        star_colors = color_rules.get("star", {})
+        for expected_star, color in star_colors.items():
+            if self.rule_engine._stars_match(
+                planet.get("stars", []),
+                [expected_star],
+            ):
+                variants.add(str(color))
+
+        element_colors = color_rules.get("element", {})
+        materials = planet.get("materials", {})
+        for element, color in element_colors.items():
+            if float(materials.get(element.lower(), 0)) > 0:
+                variants.add(str(color))
+
+        return tuple(sorted(variants))

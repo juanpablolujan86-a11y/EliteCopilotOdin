@@ -29,6 +29,7 @@ class PlanetEventAdapter:
     def from_scan_event(
         self,
         event: dict[str, Any],
+        scientific_context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Convierte un evento Scan en un planeta
@@ -60,6 +61,20 @@ class PlanetEventAdapter:
             event.get("SurfacePressure")
         )
 
+        context = scientific_context or {}
+        atmosphere_composition = {
+            str(item.get("Name", "")): float(item.get("Percent", 0))
+            for item in event.get("AtmosphereComposition", [])
+            if item.get("Name")
+        }
+        materials = {
+            str(item.get("Name", "")).lower(): float(
+                item.get("Percent", 0)
+            )
+            for item in event.get("Materials", [])
+            if item.get("Name")
+        }
+
         return {
             "atmosphere": atmosphere,
             "body_type": body_type,
@@ -69,6 +84,16 @@ class PlanetEventAdapter:
             ),
             "volcanism": volcanism,
             "pressure": pressure,
+            "atmosphere_composition": atmosphere_composition,
+            "materials": materials,
+            "orbital_period": event.get("OrbitalPeriod"),
+            "distance_from_arrival": event.get("DistanceFromArrivalLS"),
+            "region_id": context.get("region_id"),
+            "region_name": context.get("region_name"),
+            "stars": context.get("stars", []),
+            "system_position": context.get("system_position"),
+            "body_types": context.get("body_types", []),
+            "system_name": context.get("system_name", ""),
         }
 
     def _convert_pressure(

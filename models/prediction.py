@@ -22,3 +22,5 @@ class Prediction:
     rule_id: str
 
     matches: list[str]
+
+    variants: tuple[str, ...] = ()

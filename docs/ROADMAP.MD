@@ -46,7 +46,21 @@
 - [x] Centralizar las prioridades visibles en español
 - [x] Validar MÍMIR dentro de Elite Dangerous
 
+## Cierre científico de MÍMIR — v0.6.0
+
+**Estado: Completado**
+
+- [x] Evaluar todas las condiciones importadas de BioScan
+- [x] Incorporar región galáctica, estrellas, materiales y nebulosas
+- [x] Predecir variantes biológicas cuando existen datos suficientes
+- [x] Informar descubrimiento, cartografiado y primera pisada
+- [x] Estimar el potencial de First Logged (×5) sin presentarlo como certeza
+- [x] Seguir el progreso orgánico real de 1/3 a 3/3
+- [x] Procesar `FSSBodySignals` y `SAASignalsFound` sin duplicados
+- [x] Mantener silencio en planetas sin candidatos biológicos
+- [x] Validar un DSS real con cinco géneros confirmados
+
 ## Próximo objetivo
 
-Ampliar el contexto científico de MÍMIR y definir el segundo oficial
-especializado de ODIN.
+Incorporar asistencia de navegación exobiológica sobre la superficie y
+definir el segundo oficial especializado de ODIN.

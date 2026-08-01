@@ -25,6 +25,12 @@ class CommanderState:
 
     population: int = 0
 
+    star_position: tuple[float, float, float] | None = None
+    galactic_region_id: int | None = None
+    galactic_region_name: str = ""
+    system_stars: list[dict] | None = None
+    system_body_types: list[str] | None = None
+
     docked: bool = False
     landed: bool = False
     supercruise: bool = False
@@ -41,3 +47,9 @@ class CommanderState:
     organic_sample_count: int = 0
 
     last_scanned_body: str = ""
+
+    def __post_init__(self) -> None:
+        if self.system_stars is None:
+            self.system_stars = []
+        if self.system_body_types is None:
+            self.system_body_types = []

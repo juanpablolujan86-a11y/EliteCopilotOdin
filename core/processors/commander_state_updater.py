@@ -8,6 +8,7 @@ de los eventos recibidos desde Elite Dangerous.
 """
 
 from state.commander_state import CommanderState
+from mimir.galactic_region import find_region
 
 
 class CommanderStateUpdater:
@@ -48,6 +49,25 @@ class CommanderStateUpdater:
             self.commander_state.population,
         )
 
+        star_position = event.get("StarPos")
+        if isinstance(star_position, list) and len(star_position) == 3:
+            self.commander_state.star_position = tuple(star_position)
+            region = find_region(*self.commander_state.star_position)
+            self.commander_state.galactic_region_id = (
+                region[0] if region else None
+            )
+            self.commander_state.galactic_region_name = (
+                region[1] if region else ""
+            )
+
+        self.commander_state.system_stars = [
+            {
+                "type": event.get("StarClass", ""),
+                "luminosity": "",
+            }
+        ]
+        self.commander_state.system_body_types = []
+
         self.commander_state.last_jump = event.get(
             "timestamp",
             self.commander_state.last_jump,
@@ -84,6 +104,21 @@ class CommanderStateUpdater:
             "Population",
             self.commander_state.population,
         )
+        star_position = context.get("StarPos")
+        if isinstance(star_position, list) and len(star_position) == 3:
+            self.commander_state.star_position = tuple(star_position)
+            region = find_region(*self.commander_state.star_position)
+            self.commander_state.galactic_region_id = (
+                region[0] if region else None
+            )
+            self.commander_state.galactic_region_name = (
+                region[1] if region else ""
+            )
+        star_class = context.get("StarClass")
+        if star_class:
+            self.commander_state.system_stars = [
+                {"type": star_class, "luminosity": ""}
+            ]
         self.commander_state.last_jump = context.get(
             "timestamp",
             self.commander_state.last_jump,

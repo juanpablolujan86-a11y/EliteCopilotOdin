@@ -121,6 +121,127 @@ class ExplorationProcessorTestCase(unittest.TestCase):
             )
         )
 
+    def test_scan_persists_landable_and_first_footfall_flags(self) -> None:
+        database = FakeDatabase()
+        event_bus = EventBus()
+        processor = ExplorationProcessor(
+            database,
+            CommanderState(),
+            event_bus,
+        )
+        processor._refresh_system_totals = lambda *args: None
+
+        event = bacteria_scan() | {
+            "Landable": True,
+            "WasDiscovered": False,
+            "WasMapped": False,
+            "WasFootfalled": False,
+        }
+        processor.handle_scan(event)
+
+        insert_query, parameters = database.executions[0]
+        self.assertIn("was_footfalled", insert_query)
+        self.assertIn("landable", insert_query)
+        self.assertEqual(parameters[-4:-2], (0, 1))
+
+    def test_fss_body_signals_are_recorded_without_dss_genus(self) -> None:
+        database = FakeDatabase()
+        processor = ExplorationProcessor(
+            database,
+            CommanderState(),
+            EventBus(),
+        )
+        processor._refresh_system_totals = lambda *args: None
+        processor._publish_report = lambda *args: None
+
+        processor.handle_saa_signals_found(
+            {
+                "event": "FSSBodySignals",
+                "SystemAddress": 42,
+                "BodyID": 7,
+                "BodyName": "Test 1",
+                "Signals": [
+                    {
+                        "Type": "$SAA_SignalType_Biological;",
+                        "Type_Localised": "Biológica",
+                        "Count": 3,
+                    }
+                ],
+            }
+        )
+
+        self.assertTrue(
+            any(
+                "FSSBodySignals" in parameters
+                for _, parameters in database.executions
+            )
+        )
+
+    def test_scan_organic_publishes_three_step_progress(self) -> None:
+        database = FakeDatabase()
+        event_bus = EventBus()
+        processor = ExplorationProcessor(
+            database,
+            CommanderState(system_address=42),
+            event_bus,
+        )
+        processor._refresh_system_totals = lambda *args: None
+        processor._publish_report = lambda *args: None
+        updates = []
+        event_bus.subscribe(
+            InternalEvent.ORGANIC_SCAN_UPDATED,
+            updates.append,
+        )
+
+        processor.handle_scan_organic(
+            {
+                "event": "ScanOrganic",
+                "Body": 7,
+                "ScanType": "Analyse",
+                "Species_Localised": "Concha Aureolas",
+                "WasLogged": False,
+            }
+        )
+
+        self.assertEqual(len(updates), 1)
+        self.assertEqual(updates[0].progress, 3)
+        self.assertTrue(updates[0].completed)
+        self.assertFalse(updates[0].was_logged)
+
+    def test_duplicate_organic_progress_is_silent(self) -> None:
+        database = FakeDatabase()
+        event_bus = EventBus()
+        processor = ExplorationProcessor(
+            database,
+            CommanderState(system_address=42),
+            event_bus,
+        )
+        refreshes = []
+        reports = []
+        processor._refresh_system_totals = lambda *args: refreshes.append(args)
+        processor._publish_report = lambda *args: reports.append(args)
+        updates = []
+        event_bus.subscribe(
+            InternalEvent.ORGANIC_SCAN_UPDATED,
+            updates.append,
+        )
+        sample = {
+            "event": "ScanOrganic",
+            "Body": 7,
+            "ScanType": "Sample",
+            "Species": "$Codex_Ent_Bacterial_Informem_Name;",
+            "Species_Localised": "Bacterium Informem",
+            "Variant": "$Codex_Ent_Bacterial_Informem_Lime_Name;",
+        }
+
+        processor.handle_scan_organic(sample)
+        processor.handle_scan_organic(sample)
+
+        self.assertEqual(len(updates), 1)
+        self.assertEqual(updates[0].progress, 2)
+        self.assertEqual(refreshes, [])
+        self.assertEqual(reports, [])
+
 
 if __name__ == "__main__":
     unittest.main()

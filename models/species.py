@@ -22,4 +22,6 @@ class Species:
 
     genus_codex_id: str
 
+    codex_id: str = ""
+
     value: int = 0

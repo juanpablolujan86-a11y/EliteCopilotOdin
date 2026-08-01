@@ -6,12 +6,15 @@ comandante y coordina oficiales especializados mediante un EventBus.
 
 ## Estado actual
 
-Versión actual: **v0.5.0 — Operación Yggdrasil**.
+Versión actual: **v0.6.0 — MÍMIR Científico**.
 
 MÍMIR, el oficial científico, recibe eventos `Scan` planetarios,
 normaliza sus datos, predice especies biológicas y publica una
-recomendación de descenso. Su conocimiento actual incluye el género
-Stratum importado desde EDMC BioScan mediante HUGINN.
+recomendación de descenso. Su conocimiento incluye 116 especies de 19
+géneros importadas desde EDMC BioScan mediante HUGINN. El análisis usa
+el contexto galáctico de ExploData, los géneros confirmados por DSS,
+las condiciones planetarias y el estado de descubrimiento y primera
+pisada informado por el Journal.
 
 ## Flujo científico
 
@@ -42,5 +45,5 @@ Las pruebas no modifican la biblioteca de conocimiento.
 
 ## Próximo objetivo
 
-**Siguiente etapa:** ampliar el contexto científico de MÍMIR y comenzar
-el diseño del próximo oficial especializado de ODIN.
+**Siguiente etapa:** navegación exobiológica de superficie y diseño del
+próximo oficial especializado de ODIN.
