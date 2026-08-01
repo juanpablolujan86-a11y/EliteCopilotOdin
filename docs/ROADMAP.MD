@@ -21,7 +21,7 @@
 
 ## Sprint 4.0 — MÍMIR Operativo
 
-**Estado: En cierre**
+**Estado: Completado en v0.4.0**
 
 - [x] Implementar el oficial científico MÍMIR
 - [x] Adaptar eventos `Scan` del Journal
@@ -31,7 +31,22 @@
 - [x] Validar el flujo con un Journal real
 - [x] Incorporar pruebas automáticas de regresión
 
+## Operación Yggdrasil — v0.5.0
+
+**Estado: Completado**
+
+- [x] Importar 19 catálogos biológicos de EDMC BioScan
+- [x] Generar 116 especies y 254 reglas trazables
+- [x] Validar duplicados, referencias y reglas vacías
+- [x] Filtrar predicciones mediante el género confirmado por DSS
+- [x] Corregir el cálculo de valores por género
+- [x] Excluir Belt Clusters de los conteos FSS
+- [x] Evitar informes duplicados de FSSAllBodiesFound
+- [x] Restaurar el sistema actual al reiniciar ODIN
+- [x] Centralizar las prioridades visibles en español
+- [x] Validar MÍMIR dentro de Elite Dangerous
+
 ## Próximo objetivo
 
-Operación Yggdrasil — importar y validar toda la biología disponible
-en EDMC BioScan.
+Ampliar el contexto científico de MÍMIR y definir el segundo oficial
+especializado de ODIN.

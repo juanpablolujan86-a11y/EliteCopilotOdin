@@ -14,8 +14,8 @@ class LocalizationTestCase(unittest.TestCase):
     def test_unknown_priority_is_preserved(self) -> None:
         self.assertEqual(priority_label("UNKNOWN"), "UNKNOWN")
 
-    def test_development_header_identifies_yggdrasil(self) -> None:
-        self.assertEqual(VERSION, "0.5.0-dev")
+    def test_header_identifies_yggdrasil(self) -> None:
+        self.assertEqual(VERSION, "0.5.0")
         self.assertEqual(CAPABILITY, "Operación Yggdrasil")
 
 

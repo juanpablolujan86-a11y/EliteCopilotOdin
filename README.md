@@ -6,7 +6,7 @@ comandante y coordina oficiales especializados mediante un EventBus.
 
 ## Estado actual
 
-Versión en preparación: **v0.4 — MÍMIR Operativo**.
+Versión actual: **v0.5.0 — Operación Yggdrasil**.
 
 MÍMIR, el oficial científico, recibe eventos `Scan` planetarios,
 normaliza sus datos, predice especies biológicas y publica una
@@ -42,6 +42,5 @@ Las pruebas no modifican la biblioteca de conocimiento.
 
 ## Próximo objetivo
 
-**Operación Yggdrasil:** validar en el juego la biblioteca completa
-generada por HUGINN: 19 géneros, 116 especies y 254 reglas procedentes
-de EDMC BioScan.
+**Siguiente etapa:** ampliar el contexto científico de MÍMIR y comenzar
+el diseño del próximo oficial especializado de ODIN.
