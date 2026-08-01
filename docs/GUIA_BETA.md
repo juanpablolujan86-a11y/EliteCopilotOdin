@@ -14,6 +14,17 @@ el ejecutable debe obtenerse únicamente del archivo compartido por el autor.
 ODIN detecta automáticamente el Journal del usuario. No necesita Python ni
 Elite Dangerous Market Connector.
 
+## Información visible durante el vuelo
+
+La pantalla se mantiene deliberadamente silenciosa. Sólo muestra:
+
+- si el sistema figura previamente en EDSM o no posee un registro disponible;
+- el nombre del planeta cuando se detecta biología;
+- los géneros confirmados por DSS y las especies probables calculadas por MÍMIR.
+
+Los resúmenes FSS, valores, reglas, progreso orgánico y explicaciones extensas
+se guardan en los registros para diagnóstico y futura comunicación por voz.
+
 ## Qué conviene probar
 
 - Escaneo FSS completo de un sistema.

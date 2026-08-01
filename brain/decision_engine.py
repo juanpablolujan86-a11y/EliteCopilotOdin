@@ -41,48 +41,23 @@ class DecisionEngine:
                 "EDSM no posee información del sistema"
             )
 
-        if (
-            context.first_visit
-            and context.population == 0
-            and not context.edsm_found
-        ):
-            return RecommendationReady(
-                priority="HIGH",
-                message=(
-                    f"Comandante, {context.system_name} "
-                    "no figura en nuestra memoria previa ni posee "
-                    "información disponible en EDSM. "
-                    "Esto indica una posible oportunidad de primer "
-                    "descubrimiento, no una certeza. Recomiendo realizar "
-                    "un escaneo completo."
-                ),
-                reasons=reasons,
-            )
-
-        if context.first_visit and context.population == 0:
+        if context.edsm_found:
             return RecommendationReady(
                 priority="MEDIUM",
                 message=(
-                    f"Comandante, primera visita a "
-                    f"{context.system_name}. "
-                    "Es un sistema no habitado. "
-                    "Recomiendo iniciar el FSS."
+                    f"Sistema: {context.system_name}\n"
+                    "Estado: registrado previamente en EDSM por otro comandante."
                 ),
-                reasons=reasons,
+                reasons=["EDSM posee información pública del sistema"],
             )
 
-        if context.first_visit:
+        if not context.edsm_found:
             return RecommendationReady(
-                priority="LOW",
+                priority="HIGH",
                 message=(
-                    f"Comandante, primera visita registrada "
-                    f"a {context.system_name}."
+                    f"Sistema: {context.system_name}\n"
+                    "Estado: sin registro disponible en EDSM. "
+                    "Posible primer descubrimiento; no es una certeza."
                 ),
                 reasons=reasons,
             )
-
-        return RecommendationReady(
-            priority="NONE",
-            message="",
-            reasons=reasons,
-        )

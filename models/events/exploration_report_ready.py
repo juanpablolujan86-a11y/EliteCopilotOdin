@@ -30,3 +30,5 @@ class ExplorationReportReady:
     recommendation: str
 
     reasons: list[str] = field(default_factory=list)
+
+    biological_bodies: tuple[str, ...] = ()

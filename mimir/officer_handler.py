@@ -139,4 +139,12 @@ class MimirOfficerHandler:
             message=recommendation.message,
             priority=recommendation.priority,
             details=details,
+            body_name=str(body_name),
+            confirmed_genus_names=confirmed_genus_names,
+            probable_species=tuple(
+                dict.fromkeys(
+                    prediction.species.name
+                    for prediction in predictions
+                )
+            ),
         )

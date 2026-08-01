@@ -32,7 +32,7 @@ from services.edsm_service import EDSMService
 from state.commander_state import CommanderState
 from ui.console_presenter import ConsolePresenter
 from core.version import CAPABILITY, VERSION
-from core.diagnostics import MimirDiagnostics
+from core.diagnostics import MimirDiagnostics, OdinDiagnostics
 
 class CommandCenter:
     """
@@ -179,6 +179,7 @@ class CommandCenter:
         )
 
         mimir_diagnostics = MimirDiagnostics(self.config.data_root)
+        odin_diagnostics = OdinDiagnostics()
 
 
         # Eventos de salto
@@ -256,7 +257,17 @@ class CommandCenter:
         # Eventos internos
         self.event_bus.subscribe(
             InternalEvent.RECOMMENDATION_READY,
+            odin_diagnostics.record_recommendation,
+        )
+
+        self.event_bus.subscribe(
+            InternalEvent.RECOMMENDATION_READY,
             self.console_presenter.show_recommendation
+        )
+
+        self.event_bus.subscribe(
+            InternalEvent.EXPLORATION_REPORT_READY,
+            odin_diagnostics.record_exploration_report,
         )
 
         self.event_bus.subscribe(

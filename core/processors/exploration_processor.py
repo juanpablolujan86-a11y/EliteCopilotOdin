@@ -378,6 +378,12 @@ class ExplorationProcessor:
         if body_count:
             self.commander_state.expected_body_count = body_count
 
+        self._refresh_system_totals(
+            system_address,
+            system_name,
+            timestamp,
+        )
+
         self.database.execute(
             """
             UPDATE system_exploration
@@ -999,6 +1005,24 @@ class ExplorationProcessor:
             data["all_bodies_found"]
         )
 
+        biology_body_rows = self.database.query(
+            """
+            SELECT DISTINCT body_name
+            FROM biological_signals
+            WHERE system_address = ?
+              AND body_name IS NOT NULL
+              AND body_name != ''
+              AND signal_count > 0
+              AND LOWER(COALESCE(signal_type, '')) LIKE '%biolog%'
+            ORDER BY body_name
+            """,
+            (system_address,),
+        )
+        biological_bodies = tuple(
+            str(row["body_name"])
+            for row in biology_body_rows
+        )
+
         reasons: list[str] = []
 
         if biological:
@@ -1087,6 +1111,7 @@ class ExplorationProcessor:
             priority=priority,
             recommendation=recommendation,
             reasons=reasons,
+            biological_bodies=biological_bodies,
         )
 
         self.event_bus.publish_internal(

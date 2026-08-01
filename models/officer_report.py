@@ -31,3 +31,9 @@ class OfficerReport:
     priority: str
 
     details: list[str]
+
+    body_name: str = ""
+
+    confirmed_genus_names: tuple[str, ...] = ()
+
+    probable_species: tuple[str, ...] = ()

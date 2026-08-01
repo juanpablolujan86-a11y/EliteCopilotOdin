@@ -24,6 +24,8 @@ class ExplorationProcessorTestCase(unittest.TestCase):
             EventBus(),
         )
         reports = []
+        refreshes = []
+        processor._refresh_system_totals = lambda *args: refreshes.append(args)
         processor._publish_report = lambda *args: reports.append(args)
         event = {
             "event": "FSSAllBodiesFound",
@@ -36,6 +38,7 @@ class ExplorationProcessorTestCase(unittest.TestCase):
         processor.handle_fss_all_bodies_found(event)
 
         self.assertEqual(len(reports), 1)
+        self.assertEqual(len(refreshes), 1)
 
     def test_belt_cluster_is_not_registered_or_published(self) -> None:
         database = FakeDatabase()

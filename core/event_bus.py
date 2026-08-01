@@ -8,6 +8,9 @@ y eventos internos generados por ODIN.
 """
 
 import logging
+import sys
+from contextlib import redirect_stdout
+from io import StringIO
 
 
 logger = logging.getLogger("odin.events")
@@ -20,6 +23,7 @@ class EventBus:
 
     def __init__(self) -> None:
         self.subscribers: dict[str, list] = {}
+        self.output_stream = sys.stdout
 
     def subscribe(self, event_name: str, callback) -> None:
         """
@@ -55,11 +59,24 @@ class EventBus:
         callbacks = self.subscribers.get(event_name, [])
 
         for callback in callbacks:
+            callback_module = str(getattr(callback, "__module__", "") or "")
+            visible = callback_module.startswith("ui.")
+            captured = StringIO()
             try:
-                callback(payload)
+                stream = self.output_stream if visible else captured
+                with redirect_stdout(stream):
+                    callback(payload)
             except Exception:
                 logger.exception(
                     "Fallo procesando evento %s en %s",
                     event_name,
                     getattr(callback, "__qualname__", repr(callback)),
                 )
+            finally:
+                technical_output = captured.getvalue().strip()
+                if technical_output:
+                    logger.info(
+                        "Salida interna de %s: %s",
+                        getattr(callback, "__qualname__", repr(callback)),
+                        technical_output.replace("\n", " | "),
+                    )
