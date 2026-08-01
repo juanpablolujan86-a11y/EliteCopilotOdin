@@ -16,6 +16,56 @@ class FakeDatabase:
 
 
 class ExplorationProcessorTestCase(unittest.TestCase):
+    def test_duplicate_all_bodies_found_report_is_ignored(self) -> None:
+        database = FakeDatabase()
+        processor = ExplorationProcessor(
+            database,
+            CommanderState(),
+            EventBus(),
+        )
+        reports = []
+        processor._publish_report = lambda *args: reports.append(args)
+        event = {
+            "event": "FSSAllBodiesFound",
+            "SystemAddress": 149224998987,
+            "SystemName": "Hegai SS-K d8-4",
+            "Count": 20,
+        }
+
+        processor.handle_fss_all_bodies_found(event)
+        processor.handle_fss_all_bodies_found(event)
+
+        self.assertEqual(len(reports), 1)
+
+    def test_belt_cluster_is_not_registered_or_published(self) -> None:
+        database = FakeDatabase()
+        event_bus = EventBus()
+        processor = ExplorationProcessor(
+            database,
+            CommanderState(),
+            event_bus,
+        )
+        planet_events = []
+        event_bus.subscribe(
+            InternalEvent.PLANET_SCAN_READY,
+            planet_events.append,
+        )
+
+        processor.handle_scan(
+            {
+                "event": "Scan",
+                "ScanType": "AutoScan",
+                "BodyName": "Hegai OM-M d7-2 A Belt Cluster 1",
+                "BodyID": 2,
+                "StarSystem": "Hegai OM-M d7-2",
+                "SystemAddress": 80505522243,
+                "Parents": [{"Ring": 1}, {"Star": 0}],
+            }
+        )
+
+        self.assertEqual(database.executions, [])
+        self.assertEqual(planet_events, [])
+
     def test_dss_genus_is_propagated_to_following_planet_scan(self) -> None:
         database = FakeDatabase()
         event_bus = EventBus()

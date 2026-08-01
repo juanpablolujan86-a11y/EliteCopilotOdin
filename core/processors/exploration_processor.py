@@ -56,6 +56,7 @@ class ExplorationProcessor:
             tuple[int, int],
             tuple[str, ...],
         ] = {}
+        self._completed_system_reports: set[int] = set()
 
     def handle_fsd_jump(self, event: dict) -> None:
         """
@@ -77,6 +78,7 @@ class ExplorationProcessor:
         self.commander_state.last_scanned_body = ""
         self._confirmed_genus_ids.clear()
         self._confirmed_genus_names.clear()
+        self._completed_system_reports.discard(system_address)
 
         self.database.execute(
             """
@@ -123,6 +125,13 @@ class ExplorationProcessor:
             or body_id is None
             or not body_name
         ):
+            return
+
+        if self._is_belt_cluster(event):
+            print(
+                "Exploración           : "
+                f"Belt Cluster ignorado — {body_name}"
+            )
             return
 
         body_type, subtype, is_moon = self._classify_body(event)
@@ -317,6 +326,13 @@ class ExplorationProcessor:
         if not system_address:
             return
 
+        if system_address in self._completed_system_reports:
+            print(
+                "FSS                   : "
+                "Informe completo duplicado ignorado"
+            )
+            return
+
         if body_count:
             self.commander_state.expected_body_count = body_count
 
@@ -345,6 +361,8 @@ class ExplorationProcessor:
             "FSS                   : "
             "Todos los cuerpos fueron identificados"
         )
+
+        self._completed_system_reports.add(system_address)
 
         self._publish_report(
             system_address,
@@ -642,6 +660,13 @@ class ExplorationProcessor:
         )
 
     @staticmethod
+    def _is_belt_cluster(event: dict) -> bool:
+        """Identifica agregados de asteroides que FSS no cuenta como cuerpos."""
+
+        body_name = str(event.get("BodyName", ""))
+        return "Belt Cluster" in body_name
+
+    @staticmethod
     def _classify_body(
         event: dict,
     ) -> tuple[str, str, int]:
@@ -706,6 +731,7 @@ class ExplorationProcessor:
                 SUM(terraformable) AS terraformables
             FROM stellar_bodies
             WHERE system_address = ?
+              AND body_name NOT LIKE '% Belt Cluster %'
             """,
             (system_address,),
         )
