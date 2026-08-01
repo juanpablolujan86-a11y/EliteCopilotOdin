@@ -11,6 +11,7 @@ from models.events.exploration_report_ready import (
     ExplorationReportReady,
 )
 from models.officer_report import OfficerReport
+from core.localization import priority_label
 
 class ConsolePresenter:
     """
@@ -28,7 +29,7 @@ class ConsolePresenter:
         print("-" * 50)
         print(
             f"RECOMENDACIÓN ODIN "
-            f"[{recommendation.priority}]"
+            f"[{priority_label(recommendation.priority)}]"
         )
         print(recommendation.message)
 
@@ -99,7 +100,7 @@ class ConsolePresenter:
 
         print()
         print(
-            f"RECOMENDACIÓN [{report.priority}]"
+            f"RECOMENDACIÓN [{priority_label(report.priority)}]"
         )
         print(report.recommendation)
 
@@ -128,17 +129,10 @@ class ConsolePresenter:
         print()
         print(report.message)
 
-        priority_map = {
-            "LOW": "Bajo",
-            "MEDIUM": "Moderado",
-            "HIGH": "Muy alto",
-            "CRITICAL": "Crítico",
-        }
-
         print()
         print(
-            "Interés científico : "
-            f"{priority_map.get(report.priority, report.priority)}"
+            "Prioridad científica: "
+            f"{priority_label(report.priority)}"
         )
 
         if report.details:

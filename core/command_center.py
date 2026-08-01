@@ -31,6 +31,7 @@ from core.processors.system_memory import SystemMemory
 from services.edsm_service import EDSMService
 from state.commander_state import CommanderState
 from ui.console_presenter import ConsolePresenter
+from core.version import CAPABILITY, VERSION
 
 class CommandCenter:
     """
@@ -285,6 +286,6 @@ class CommandCenter:
         """
 
         print("=" * 50)
-        print("ODIN v0.4 - Exploration Capability")
+        print(f"ODIN v{VERSION} - {CAPABILITY}")
         print("Orbital Data Intelligence Nexus")
         print("=" * 50)
