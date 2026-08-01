@@ -37,6 +37,8 @@ class MimirOfficerHandler:
     def handle_planet_scan(
         self,
         payload: dict[str, Any],
+        confirmed_genus_ids: tuple[str, ...] = (),
+        confirmed_genus_names: tuple[str, ...] = (),
     ) -> OfficerReport | None:
         """
         Procesa un evento Scan planetario y devuelve
@@ -58,7 +60,8 @@ class MimirOfficerHandler:
 
         recommendation = (
             self.officer.analyze_planet(
-                planet
+                planet,
+                confirmed_genus_ids=confirmed_genus_ids,
             )
         )
 
@@ -71,6 +74,13 @@ class MimirOfficerHandler:
             f"Cuerpo analizado: {body_name}",
             *recommendation.reasons,
         ]
+
+        if confirmed_genus_names:
+            details.insert(
+                1,
+                "Género confirmado por DSS: "
+                + ", ".join(confirmed_genus_names),
+            )
 
         return OfficerReport(
             officer="MÍMIR",

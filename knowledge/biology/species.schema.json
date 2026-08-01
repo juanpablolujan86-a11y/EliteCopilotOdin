@@ -15,6 +15,7 @@
           "id",
           "name",
           "genus",
+          "genus_codex_id",
           "value",
           "codex_id",
           "source_file"
@@ -23,6 +24,7 @@
           "id": {"type": "string", "minLength": 1},
           "name": {"type": "string", "minLength": 1},
           "genus": {"type": "string", "minLength": 1},
+          "genus_codex_id": {"type": "string", "minLength": 1},
           "value": {"type": "integer", "minimum": 0},
           "codex_id": {"type": "string", "minLength": 1},
           "source_file": {"type": "string", "pattern": "\\.py$"}

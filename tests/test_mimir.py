@@ -31,6 +31,23 @@ def tectonicas_scan() -> dict:
     }
 
 
+def bacteria_scan() -> dict:
+    return {
+        "event": "Scan",
+        "ScanType": "Detailed",
+        "BodyName": "Hegai SS-K d8-4 B 2",
+        "BodyID": 13,
+        "SystemAddress": 149224998987,
+        "StarSystem": "Hegai SS-K d8-4",
+        "PlanetClass": "High metal content body",
+        "AtmosphereType": "SulphurDioxide",
+        "SurfaceGravity": 4.862442,
+        "SurfaceTemperature": 337.126892,
+        "SurfacePressure": 337.015808,
+        "Volcanism": "",
+    }
+
+
 class MimirTestCase(unittest.TestCase):
     def setUp(self) -> None:
         self.officer = ScientificOfficer(
@@ -131,6 +148,34 @@ class MimirTestCase(unittest.TestCase):
 
         self.assertEqual(score, 0)
         self.assertEqual(matches, [])
+
+    def test_confirmed_bacteria_filters_out_stratum(self) -> None:
+        genus_id = "$Codex_Ent_Bacterial_Genus_Name;"
+        planet = PlanetEventAdapter().from_scan_event(bacteria_scan())
+
+        predictions = self.officer.predict_species(
+            planet,
+            confirmed_genus_ids=(genus_id,),
+        )
+        recommendation = self.officer.analyze_planet(
+            planet,
+            confirmed_genus_ids=(genus_id,),
+        )
+        report = self.handler.handle_planet_scan(
+            bacteria_scan(),
+            confirmed_genus_ids=(genus_id,),
+            confirmed_genus_names=("Bacteria",),
+        )
+
+        self.assertEqual(
+            {prediction.species.name for prediction in predictions},
+            {"Bacterium Tela", "Bacterium Cerbrus"},
+        )
+        self.assertEqual(predictions[0].species.name, "Bacterium Tela")
+        self.assertIn("1,949,000", recommendation.message)
+        self.assertNotIn("Stratum", recommendation.message)
+        self.assertIsNotNone(report)
+        self.assertIn("Género confirmado por DSS: Bacteria", report.details)
 
     def test_excluded_region_is_evaluated(self) -> None:
         engine = RuleEngine()

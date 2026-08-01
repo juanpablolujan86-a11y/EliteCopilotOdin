@@ -71,10 +71,16 @@ class ScientificDecisionEngine:
 
         best_prediction = predictions[0]
 
-        estimated_value = sum(
-            prediction.species.value
-            for prediction in predictions
-        )
+        best_value_by_genus: dict[str, int] = {}
+
+        for prediction in predictions:
+            genus = prediction.species.genus
+            best_value_by_genus[genus] = max(
+                best_value_by_genus.get(genus, 0),
+                prediction.species.value,
+            )
+
+        estimated_value = sum(best_value_by_genus.values())
 
         reasons = [
             (

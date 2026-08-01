@@ -48,6 +48,14 @@ class ExplorationProcessor:
         self.database = database
         self.commander_state = commander_state
         self.event_bus = event_bus
+        self._confirmed_genus_ids: dict[
+            tuple[int, int],
+            tuple[str, ...],
+        ] = {}
+        self._confirmed_genus_names: dict[
+            tuple[int, int],
+            tuple[str, ...],
+        ] = {}
 
     def handle_fsd_jump(self, event: dict) -> None:
         """
@@ -67,6 +75,8 @@ class ExplorationProcessor:
         self.commander_state.biology_signal_count = 0
         self.commander_state.organic_sample_count = 0
         self.commander_state.last_scanned_body = ""
+        self._confirmed_genus_ids.clear()
+        self._confirmed_genus_names.clear()
 
         self.database.execute(
             """
@@ -207,6 +217,14 @@ class ExplorationProcessor:
 
         planet_scan = PlanetScanReady(
             event=event,
+            confirmed_genus_ids=self._confirmed_genus_ids.get(
+                (system_address, body_id),
+                (),
+            ),
+            confirmed_genus_names=self._confirmed_genus_names.get(
+                (system_address, body_id),
+                (),
+            ),
         )
 
         self.event_bus.publish_internal(
@@ -442,11 +460,34 @@ class ExplorationProcessor:
         body_name = event.get("BodyName")
         timestamp = event.get("timestamp", "")
         signals = event.get("Signals", [])
+        genuses = event.get("Genuses", [])
 
         if not system_address:
             return
 
         biology_total = 0
+        confirmed_genus_ids = tuple(
+            dict.fromkeys(
+                genus.get("Genus")
+                for genus in genuses
+                if genus.get("Genus")
+            )
+        )
+        confirmed_genus_names = tuple(
+            dict.fromkeys(
+                genus.get("Genus_Localised", genus.get("Genus"))
+                for genus in genuses
+                if genus.get("Genus_Localised", genus.get("Genus"))
+            )
+        )
+
+        if body_id is not None and confirmed_genus_ids:
+            self._confirmed_genus_ids[
+                (system_address, body_id)
+            ] = confirmed_genus_ids
+            self._confirmed_genus_names[
+                (system_address, body_id)
+            ] = confirmed_genus_names
 
         for signal in signals:
             signal_type = signal.get(
@@ -469,10 +510,11 @@ class ExplorationProcessor:
                     source_event,
                     signal_type,
                     signal_count,
+                    genus,
                     recorded_at,
                     raw_json
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     system_address,
@@ -481,6 +523,7 @@ class ExplorationProcessor:
                     "SAASignalsFound",
                     signal_type,
                     signal_count,
+                    ", ".join(confirmed_genus_names) or None,
                     timestamp,
                     json.dumps(
                         event,
@@ -501,6 +544,12 @@ class ExplorationProcessor:
             print(
                 "Exobiología           : "
                 f"{biology_total} señales biológicas detectadas"
+            )
+
+        if confirmed_genus_names:
+            print(
+                "Género confirmado     : "
+                + ", ".join(confirmed_genus_names)
             )
 
         self._publish_report(

@@ -60,3 +60,31 @@ class CommanderStateUpdater:
             "Estado ODIN           : "
             f"Sistema actual {self.commander_state.current_system}"
         )
+
+    def restore_context(self, context: dict) -> None:
+        """Restaura el estado mínimo al iniciar ODIN a mitad de sesión."""
+
+        self.commander_state.current_system = context.get(
+            "StarSystem",
+            self.commander_state.current_system,
+        )
+        self.commander_state.system_address = context.get(
+            "SystemAddress",
+            self.commander_state.system_address,
+        )
+        self.commander_state.current_body = context.get(
+            "Body",
+            self.commander_state.current_body,
+        )
+        self.commander_state.fuel_level = context.get(
+            "FuelLevel",
+            self.commander_state.fuel_level,
+        )
+        self.commander_state.population = context.get(
+            "Population",
+            self.commander_state.population,
+        )
+        self.commander_state.last_jump = context.get(
+            "timestamp",
+            self.commander_state.last_jump,
+        )

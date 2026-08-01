@@ -61,13 +61,15 @@ class ScientificOfficer:
     def predict_species(
         self,
         planet: dict[str, Any],
+        confirmed_genus_ids: tuple[str, ...] = (),
     ) -> list[Prediction]:
         """
         Predice las especies compatibles con un planeta.
         """
 
         return self.predictor.predict(
-            planet
+            planet,
+            confirmed_genus_ids=confirmed_genus_ids,
         )
 
     def make_decision(
@@ -97,6 +99,7 @@ class ScientificOfficer:
     def analyze_planet(
         self,
         planet: dict[str, Any],
+        confirmed_genus_ids: tuple[str, ...] = (),
     ) -> ScientificRecommendation:
         """
         Ejecuta el análisis científico completo.
@@ -111,7 +114,8 @@ class ScientificOfficer:
         """
 
         predictions = self.predict_species(
-            planet
+            planet,
+            confirmed_genus_ids=confirmed_genus_ids,
         )
 
         decision = self.make_decision(

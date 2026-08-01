@@ -76,6 +76,8 @@ class CommandCenter:
         self.database.connect()
         self.database.create_tables()
 
+        self._restore_commander_state(journal)
+
         self._configure_processors()
 
         self.watcher = JournalWatcher(journal)
@@ -105,6 +107,20 @@ class CommandCenter:
         )
 
         return reader.latest_file()
+
+    def _restore_commander_state(self, journal) -> None:
+        """Recupera el sistema actual antes de observar eventos nuevos."""
+
+        reader = JournalReader(self.config.journal_path)
+        context = reader.current_system_context(journal)
+        if context is None:
+            return
+
+        CommanderStateUpdater(self.commander_state).restore_context(context)
+        print(
+            "Estado restaurado     : "
+            f"Sistema actual {self.commander_state.current_system}"
+        )
 
     def _configure_processors(self) -> None:
         """

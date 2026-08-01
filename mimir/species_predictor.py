@@ -77,6 +77,7 @@ class SpeciesPredictor:
                 id=item["id"],
                 name=item["name"],
                 genus=item["genus"],
+                genus_codex_id=item["genus_codex_id"],
                 value=item.get(
                     "value",
                     0,
@@ -107,6 +108,7 @@ class SpeciesPredictor:
     def predict(
         self,
         planet: dict[str, Any],
+        confirmed_genus_ids: tuple[str, ...] = (),
     ) -> list[Prediction]:
         """
         Devuelve una sola predicción por especie,
@@ -138,6 +140,12 @@ class SpeciesPredictor:
             )
 
             if species is None:
+                continue
+
+            if (
+                confirmed_genus_ids
+                and species.genus_codex_id not in confirmed_genus_ids
+            ):
                 continue
 
             prediction = Prediction(

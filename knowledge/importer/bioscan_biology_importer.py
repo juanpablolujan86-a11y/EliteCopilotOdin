@@ -105,7 +105,7 @@ class BioScanBiologyImporter:
         species: list[dict] = []
         rules: list[dict] = []
 
-        for genus_catalog in catalog.values():
+        for genus_codex_id, genus_catalog in catalog.items():
             if not isinstance(genus_catalog, dict):
                 raise ValueError(
                     f"Grupo inválido en {source_file}"
@@ -129,6 +129,7 @@ class BioScanBiologyImporter:
                         "id": species_id,
                         "name": name,
                         "genus": genus,
+                        "genus_codex_id": genus_codex_id,
                         "value": int(data.get("value", 0)),
                         "codex_id": codex_id,
                         "source_file": source_file,

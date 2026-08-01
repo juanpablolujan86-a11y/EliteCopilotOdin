@@ -64,3 +64,48 @@ class JournalReader:
             return None
 
         return json.loads(lines[-1])
+
+    def current_system_context(
+        self,
+        journal: Path | None = None,
+    ) -> dict | None:
+        """Reconstruye el último sistema conocido sin reproducir eventos."""
+
+        journal_path = journal or self.latest_file()
+        if journal_path is None:
+            return None
+
+        context: dict = {}
+
+        with journal_path.open(
+            "r",
+            encoding="utf-8",
+            errors="ignore",
+        ) as file:
+            for line in file:
+                try:
+                    event = json.loads(line)
+                except (json.JSONDecodeError, TypeError):
+                    continue
+
+                system_name = event.get("StarSystem") or event.get(
+                    "SystemName"
+                )
+                if system_name:
+                    context["StarSystem"] = system_name
+
+                if event.get("SystemAddress") is not None:
+                    context["SystemAddress"] = event["SystemAddress"]
+
+                current_body = event.get("Body") or event.get("BodyName")
+                if current_body:
+                    context["Body"] = current_body
+
+                for key in ("FuelLevel", "Population", "timestamp"):
+                    if event.get(key) is not None:
+                        context[key] = event[key]
+
+        if not context.get("StarSystem"):
+            return None
+
+        return context

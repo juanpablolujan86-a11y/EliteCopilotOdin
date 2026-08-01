@@ -25,3 +25,7 @@ class PlanetScanReady:
     """
 
     event: dict[str, Any]
+
+    confirmed_genus_ids: tuple[str, ...] = ()
+
+    confirmed_genus_names: tuple[str, ...] = ()

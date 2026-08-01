@@ -51,6 +51,8 @@ class MimirEventSubscriber:
 
         report = self.handler.handle_planet_scan(
             event.event,
+            confirmed_genus_ids=event.confirmed_genus_ids,
+            confirmed_genus_names=event.confirmed_genus_names,
         )
 
         if report is None:
