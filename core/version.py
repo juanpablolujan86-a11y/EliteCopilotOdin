@@ -1,5 +1,5 @@
 """Versión visible de ODIN durante el desarrollo."""
 
 
-VERSION = "0.6.0"
-CAPABILITY = "MÍMIR Científico"
+VERSION = "0.7.0"
+CAPABILITY = "HEIMDALL Navegante"

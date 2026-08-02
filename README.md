@@ -6,7 +6,14 @@ comandante y coordina oficiales especializados mediante un EventBus.
 
 ## Estado actual
 
-Versión actual: **v0.6.0 — MÍMIR Científico**.
+Versión actual: **v0.7.0 — HEIMDALL Navegante**.
+
+HEIMDALL conserva el contexto de navegación de la nave, audita los controles,
+evalúa combustible y autonomía, reconoce cargas de cono y saltos potenciados,
+y sigue rutas convencionales o de neutrones. Puede solicitar rutas a Spansh,
+copiar el siguiente waypoint al portapapeles y avanzar al confirmarse cada
+`FSDJump`. Si el comandante recalcula la ruta en el juego, archiva el plan
+anterior para no mantener instrucciones obsoletas.
 
 MÍMIR, el oficial científico, recibe eventos `Scan` planetarios,
 normaliza sus datos, predice especies biológicas y publica una

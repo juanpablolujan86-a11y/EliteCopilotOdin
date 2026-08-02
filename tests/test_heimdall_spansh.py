@@ -160,6 +160,54 @@ class SpanshRoutePlannerTestCase(unittest.TestCase):
         )
         self.assertEqual(rows[0]["status"], "completed")
 
+    def test_recalculated_game_route_abandons_stale_plan(self) -> None:
+        copied = []
+        planner = HeimdallRoutePlanner(
+            self.database,
+            SpanshClient(FakeSession([{"status": "ok", "result": RESULT}])),
+            clipboard_writer=copied.append,
+        )
+        planner.plan_fastest(
+            NavigationContext(current_system="Origen", max_jump_range=66.12),
+            "Destino",
+        )
+
+        update = planner.advance_if_arrived(
+            "Sistema alternativo",
+            ["Sistema alternativo", "Nuevo destino"],
+        )
+
+        self.assertIsNotNone(update)
+        self.assertTrue(update.route_abandoned)
+        self.assertFalse(update.route_complete)
+        self.assertIsNone(update.copied_system)
+        rows = self.database.query(
+            "SELECT status FROM heimdall_planned_routes ORDER BY id DESC LIMIT 1"
+        )
+        self.assertEqual(rows[0]["status"], "abandoned")
+
+    def test_intermediate_jump_keeps_plan_when_waypoint_remains_in_game_route(self) -> None:
+        planner = HeimdallRoutePlanner(
+            self.database,
+            SpanshClient(FakeSession([{"status": "ok", "result": RESULT}])),
+            clipboard_writer=lambda _: None,
+        )
+        planner.plan_fastest(
+            NavigationContext(current_system="Origen", max_jump_range=66.12),
+            "Destino",
+        )
+
+        update = planner.advance_if_arrived(
+            "Sistema intermedio",
+            ["Sistema intermedio", "Neutrón", "Destino"],
+        )
+
+        self.assertIsNone(update)
+        rows = self.database.query(
+            "SELECT status FROM heimdall_planned_routes ORDER BY id DESC LIMIT 1"
+        )
+        self.assertEqual(rows[0]["status"], "active")
+
     def test_pending_waypoint_can_be_restored_without_advancing(self) -> None:
         copied = []
         planner = HeimdallRoutePlanner(

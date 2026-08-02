@@ -274,9 +274,11 @@ class HeimdallDiagnostics:
 
     def record_route_clipboard_update(self, update) -> None:
         self.logger.info(
-            "ROUTE_CLIPBOARD | llegada=%s | copiado=%s | indice=%s | completa=%s",
+            "ROUTE_CLIPBOARD | llegada=%s | copiado=%s | indice=%s | "
+            "completa=%s | abandonada=%s",
             update.arrived_system,
             update.copied_system or "ninguno",
             update.waypoint_index,
             update.route_complete,
+            update.route_abandoned,
         )

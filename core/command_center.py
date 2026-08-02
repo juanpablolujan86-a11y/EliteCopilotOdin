@@ -554,8 +554,13 @@ class CommandCenter:
             return
         self.navigation_manager.handle_event(event)
         if event.get("event") == "FSDJump":
+            route_systems = tuple(
+                waypoint.system
+                for waypoint in self.navigation_manager.context.route
+            )
             route_update = self.heimdall_route_planner.advance_if_arrived(
-                event.get("StarSystem", "")
+                event.get("StarSystem", ""),
+                route_systems,
             )
             if route_update is not None:
                 self.heimdall_diagnostics.record_route_clipboard_update(

@@ -79,6 +79,7 @@ class RouteClipboardUpdate:
     copied_system: str | None
     route_complete: bool
     waypoint_index: int
+    route_abandoned: bool = False
 
 
 class SpanshClient:
@@ -245,8 +246,12 @@ class HeimdallRoutePlanner:
             ),
         )
 
-    def advance_if_arrived(self, system: str) -> RouteClipboardUpdate | None:
-        """Avanza solamente cuando un FSDJump confirma el waypoint esperado."""
+    def advance_if_arrived(
+        self,
+        system: str,
+        current_route: tuple[str, ...] | list[str] | None = None,
+    ) -> RouteClipboardUpdate | None:
+        """Avanza al llegar o archiva el plan si el juego recalculó la ruta."""
 
         rows = self.database.query(
             """
@@ -265,6 +270,27 @@ class HeimdallRoutePlanner:
             return None
         expected = plan.waypoints[index]
         if expected.system.casefold() != system.strip().casefold():
+            route_systems = {
+                item.strip().casefold()
+                for item in (current_route or ())
+                if item and item.strip()
+            }
+            if route_systems and expected.system.casefold() not in route_systems:
+                self.database.execute(
+                    """
+                    UPDATE heimdall_planned_routes
+                    SET status='abandoned'
+                    WHERE id=?
+                    """,
+                    (row["id"],),
+                )
+                return RouteClipboardUpdate(
+                    arrived_system=system,
+                    copied_system=None,
+                    route_complete=False,
+                    waypoint_index=index,
+                    route_abandoned=True,
+                )
             return None
 
         next_index = index + 1
