@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass, field
+from math import dist
 from pathlib import Path
 
 from core.database import DatabaseManager
@@ -21,6 +22,18 @@ class RouteWaypoint:
     @property
     def scoopable(self) -> bool:
         return self.star_class in SCOOPABLE_STARS
+
+
+@dataclass(frozen=True, slots=True)
+class RouteProgress:
+    current_index: int | None
+    completed_jumps: int
+    remaining_jumps: int | None
+    remaining_distance_ly: float | None
+    next_waypoint: RouteWaypoint | None
+    final_waypoint: RouteWaypoint | None
+    off_route: bool
+    route_complete: bool
 
 
 @dataclass(slots=True)
@@ -60,6 +73,50 @@ class NavigationContext:
         if not self.target_star_class:
             return None
         return self.target_star_class in SCOOPABLE_STARS
+
+    def route_progress(self) -> RouteProgress:
+        """Calcula el progreso sin asumir que la ruta empieza en el sistema actual."""
+
+        if not self.route:
+            return RouteProgress(None, 0, None, None, None, None, False, False)
+
+        current_index = self._current_route_index()
+        final = self.route[-1]
+        if current_index is None:
+            return RouteProgress(None, 0, None, None, None, final, True, False)
+
+        remaining = len(self.route) - current_index - 1
+        route_slice = self.route[current_index:]
+        distance = 0.0
+        for origin, destination in zip(route_slice, route_slice[1:]):
+            if origin.position is None or destination.position is None:
+                distance = None
+                break
+            distance += dist(origin.position, destination.position)
+
+        return RouteProgress(
+            current_index=current_index,
+            completed_jumps=current_index,
+            remaining_jumps=remaining,
+            remaining_distance_ly=distance,
+            next_waypoint=(
+                self.route[current_index + 1] if remaining > 0 else None
+            ),
+            final_waypoint=final,
+            off_route=False,
+            route_complete=remaining == 0,
+        )
+
+    def _current_route_index(self) -> int | None:
+        if self.current_address is not None:
+            for index, waypoint in enumerate(self.route):
+                if waypoint.address == self.current_address:
+                    return index
+        if self.current_system:
+            for index, waypoint in enumerate(self.route):
+                if waypoint.system.casefold() == self.current_system.casefold():
+                    return index
+        return None
 
 
 class NavigationContextManager:

@@ -192,10 +192,12 @@ class HeimdallDiagnostics:
         )
 
     def record_navigation_context(self, context, *, reason: str) -> None:
+        progress = context.route_progress()
         self.logger.info(
             "NAVIGATION | motivo=%s | nave=%s | identificador=%s | "
             "rango=%.2f ly | combustible=%.2f/%.2f t | sistema=%s | "
-            "destino=%s | clase=%s | saltos_restantes=%s | ruta=%s",
+            "destino=%s | clase=%s | saltos_journal=%s | puntos_ruta=%s | "
+            "saltos_ruta=%s | distancia_ruta=%s | fuera_ruta=%s",
             reason,
             context.ship_name or context.ship_type or "desconocida",
             context.ship_ident or "sin identificador",
@@ -207,4 +209,10 @@ class HeimdallDiagnostics:
             context.target_star_class or "desconocida",
             context.remaining_jumps if context.remaining_jumps is not None else "?",
             len(context.route),
+            progress.remaining_jumps if progress.remaining_jumps is not None else "?",
+            (
+                f"{progress.remaining_distance_ly:.2f} ly"
+                if progress.remaining_distance_ly is not None else "?"
+            ),
+            progress.off_route,
         )

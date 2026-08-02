@@ -76,6 +76,7 @@ class CommandCenter:
         )
         self.binding_audit: BindingAudit | None = None
         self.navigation_manager: NavigationContextManager | None = None
+        self.heimdall_diagnostics = HeimdallDiagnostics(self.config.data_root)
         self.exploration_processor: ExplorationProcessor | None = None
 
     def start(self) -> None:
@@ -125,7 +126,7 @@ class CommandCenter:
         """Audita y respalda bindings sin modificar los originales."""
 
         self.binding_audit = self.binding_custodian.audit(create_snapshot=True)
-        HeimdallDiagnostics(self.config.data_root).record_binding_audit(
+        self.heimdall_diagnostics.record_binding_audit(
             self.binding_audit
         )
         configured_actions = sum(
@@ -165,7 +166,7 @@ class CommandCenter:
             self.config.navroute_file,
         )
         context = self.navigation_manager.restore(journal)
-        HeimdallDiagnostics(self.config.data_root).record_navigation_context(
+        self.heimdall_diagnostics.record_navigation_context(
             context,
             reason="inicio",
         )
@@ -179,6 +180,18 @@ class CommandCenter:
             "HEIMDALL navegación  : "
             f"{ship}, combustible {fuel}, destino {destination}"
         )
+        progress = context.route_progress()
+        if progress.remaining_jumps is not None:
+            distance = (
+                f", {progress.remaining_distance_ly:.1f} ly"
+                if progress.remaining_distance_ly is not None else ""
+            )
+            print(
+                "HEIMDALL ruta        : "
+                f"{progress.remaining_jumps} saltos restantes{distance}"
+            )
+        elif progress.off_route:
+            print("HEIMDALL ruta        : sistema actual fuera de la ruta cargada")
 
     def _restore_commander_state(self, journal) -> None:
         """Recupera el sistema actual antes de observar eventos nuevos."""
@@ -271,7 +284,7 @@ class CommandCenter:
             ):
                 self.event_bus.subscribe(
                     event_name,
-                    self.navigation_manager.handle_event,
+                    self._handle_heimdall_navigation_event,
                 )
 
 
@@ -529,6 +542,16 @@ class CommandCenter:
                 self.event_bus.publish(event)
 
             time.sleep(0.1)
+
+    def _handle_heimdall_navigation_event(self, event: dict) -> None:
+        if self.navigation_manager is None:
+            return
+        self.navigation_manager.handle_event(event)
+        if event.get("event") in {"FSDJump", "FSDTarget"}:
+            self.heimdall_diagnostics.record_navigation_context(
+                self.navigation_manager.context,
+                reason=event.get("event", "evento"),
+            )
 
     @staticmethod
     def _show_header() -> None:

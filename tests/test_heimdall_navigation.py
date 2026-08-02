@@ -95,6 +95,49 @@ class NavigationContextManagerTestCase(unittest.TestCase):
         self.assertEqual(restored.context.target_system, "Sistema")
         self.assertEqual(restored.context.route[0].position, (1.0, 2.0, 3.0))
 
+    def test_route_progress_starts_at_current_system(self) -> None:
+        self.manager.context.current_address = 2
+        self.manager.context.route = (
+            RouteWaypoint("Recorrido", 1, (0.0, 0.0, 0.0), "M"),
+            RouteWaypoint("Actual", 2, (3.0, 0.0, 0.0), "K"),
+            RouteWaypoint("Siguiente", 3, (6.0, 4.0, 0.0), "L"),
+            RouteWaypoint("Final", 4, (6.0, 4.0, 12.0), "G"),
+        )
+
+        progress = self.manager.context.route_progress()
+
+        self.assertEqual(progress.completed_jumps, 1)
+        self.assertEqual(progress.remaining_jumps, 2)
+        self.assertEqual(progress.remaining_distance_ly, 17.0)
+        self.assertEqual(progress.next_waypoint.system, "Siguiente")
+        self.assertFalse(progress.off_route)
+
+    def test_route_progress_detects_deviation_without_false_empty_route_alarm(self) -> None:
+        empty = self.manager.context.route_progress()
+        self.assertFalse(empty.off_route)
+
+        self.manager.context.current_system = "Sistema ajeno"
+        self.manager.context.route = (
+            RouteWaypoint("Ruta", 10, (0.0, 0.0, 0.0), "M"),
+        )
+        deviated = self.manager.context.route_progress()
+
+        self.assertTrue(deviated.off_route)
+        self.assertIsNone(deviated.remaining_jumps)
+
+    def test_route_progress_marks_destination_complete(self) -> None:
+        self.manager.context.current_address = 20
+        self.manager.context.route = (
+            RouteWaypoint("Inicio", 10, (0.0, 0.0, 0.0), "M"),
+            RouteWaypoint("Final", 20, (1.0, 0.0, 0.0), "G"),
+        )
+
+        progress = self.manager.context.route_progress()
+
+        self.assertTrue(progress.route_complete)
+        self.assertEqual(progress.remaining_jumps, 0)
+        self.assertIsNone(progress.next_waypoint)
+
 
 if __name__ == "__main__":
     unittest.main()
