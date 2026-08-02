@@ -13,6 +13,7 @@ from models.events.organic_scan_updated import OrganicScanUpdated
 from models.events.recommendation_ready import RecommendationReady
 from models.events.surface_navigation_updated import SurfaceNavigationUpdated
 from models.officer_report import OfficerReport
+from heimdall.bindings import BindingAudit
 
 
 def _handler(path: Path) -> RotatingFileHandler:
@@ -163,3 +164,29 @@ class MimirDiagnostics:
         for handler in list(self.logger.handlers):
             handler.close()
             self.logger.removeHandler(handler)
+
+
+class HeimdallDiagnostics:
+    """Registro propio del oficial de navegación HEIMDALL."""
+
+    def __init__(self, data_root: Path) -> None:
+        logs = data_root / "logs"
+        logs.mkdir(parents=True, exist_ok=True)
+        self.logger = logging.getLogger("heimdall.activity")
+        self.logger.setLevel(logging.INFO)
+        self.logger.propagate = False
+        if not self.logger.handlers:
+            self.logger.addHandler(_handler(logs / "heimdall.log"))
+
+    def record_binding_audit(self, audit: BindingAudit) -> None:
+        self.logger.info(
+            "BINDINGS | perfiles=%s | activos=%s | snapshot=%s | errores=%s",
+            ", ".join(
+                f"{profile.preset_name} {profile.major_version}.{profile.minor_version} "
+                f"({profile.keyboard_layout})"
+                for profile in audit.profiles
+            ) or "ninguno",
+            ", ".join(audit.active_presets) or "ninguno",
+            audit.snapshot_path or "sin snapshot",
+            " | ".join(audit.loading_errors) or "ninguno",
+        )

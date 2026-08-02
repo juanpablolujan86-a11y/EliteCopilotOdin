@@ -63,3 +63,22 @@
 - [ ] Voz
 - [ ] Comandos
 - [ ] Automatización
+
+---
+
+## HEIMDALL - Navegación y asistencia mínima
+
+- [ ] Contexto de nave, FSD, combustible y destino
+- [x] Descubrir y respaldar perfiles `.binds`
+- [x] Detectar perfil activo, errores y dispositivos ausentes
+- [x] Resolver teclas por acción sin modificar originales
+- [ ] Restaurar bindings solamente con autorización explícita
+- [ ] Planificador de rutas convencionales
+- [ ] Autonomía y estrellas scoopables
+- [ ] Autopistas de neutrones
+- [ ] Síntesis de salto autorizada
+- [ ] Replanificación por desvío
+- [ ] Luces y visión nocturna opcionales
+- [ ] Solicitud contextual de aterrizaje
+- [ ] Modo informativo sin pulsaciones
+- [ ] Registro persistente `heimdall.log`

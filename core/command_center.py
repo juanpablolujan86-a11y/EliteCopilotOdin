@@ -37,7 +37,8 @@ from services.edsm_service import EDSMService
 from state.commander_state import CommanderState
 from ui.console_presenter import ConsolePresenter
 from core.version import CAPABILITY, VERSION
-from core.diagnostics import MimirDiagnostics, OdinDiagnostics
+from core.diagnostics import HeimdallDiagnostics, MimirDiagnostics, OdinDiagnostics
+from heimdall.bindings import BindingAudit, BindingCustodian
 
 class CommandCenter:
     """
@@ -68,6 +69,11 @@ class CommandCenter:
         self.watcher: JournalWatcher | None = None
         self.status_watcher = StatusWatcher(self.config.status_file)
         self.surface_navigation = SurfaceNavigationTracker()
+        self.binding_custodian = BindingCustodian(
+            self.config.bindings_path,
+            self.config.data_root,
+        )
+        self.binding_audit: BindingAudit | None = None
         self.exploration_processor: ExplorationProcessor | None = None
 
     def start(self) -> None:
@@ -85,6 +91,8 @@ class CommandCenter:
 
         self.database.connect()
         self.database.create_tables()
+
+        self._initialize_heimdall()
 
         self._restore_commander_state(journal)
 
@@ -108,6 +116,31 @@ class CommandCenter:
         finally:
             self.database.disconnect()
             print("Base de datos desconectada correctamente.")
+
+    def _initialize_heimdall(self) -> None:
+        """Audita y respalda bindings sin modificar los originales."""
+
+        self.binding_audit = self.binding_custodian.audit(create_snapshot=True)
+        HeimdallDiagnostics(self.config.data_root).record_binding_audit(
+            self.binding_audit
+        )
+        configured_actions = sum(
+            1
+            for profile in self.binding_audit.profiles
+            for action in profile.actions.values()
+            if action.configured
+        )
+        print(
+            "HEIMDALL bindings    : "
+            f"{len(self.binding_audit.profiles)} perfiles, "
+            f"{configured_actions} acciones relevantes configuradas"
+        )
+        if self.binding_audit.loading_errors:
+            print(
+                "HEIMDALL advertencia : "
+                f"{len(self.binding_audit.loading_errors)} mensajes en "
+                "BindingLoadingErrors.log"
+            )
 
     def _find_active_journal(self):
         """

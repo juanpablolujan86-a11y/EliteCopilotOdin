@@ -58,3 +58,13 @@ class Config:
     @property
     def status_file(self) -> Path:
         return self.journal_path / "Status.json"
+
+    @property
+    def bindings_path(self) -> Path:
+        configured = self.data.get("bindings_path")
+        if configured:
+            return Path(configured)
+        return (
+            Path.home() / "AppData" / "Local" / "Frontier Developments"
+            / "Elite Dangerous" / "Options" / "Bindings"
+        )

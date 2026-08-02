@@ -238,7 +238,7 @@ Los oficiales compartirán una Biblioteca del Conocimiento común y una Memoria 
 * BROKK — Mining Officer
 * FREYJA — Commerce Officer
 * TYR — Tactical Officer
-* HEIMDALL — Situational Awareness Officer
+* HEIMDALL — Navigation and Minimal Cockpit Assistance Officer
 
 ---
 
