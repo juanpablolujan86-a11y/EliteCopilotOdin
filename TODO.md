@@ -80,6 +80,9 @@
   - [x] Registrar carga de cono y salto potenciado sin duplicados
   - [x] Conservar salud real conocida del FSD y exposiciones de sesión
   - [ ] Comparar ruta convencional y ruta de neutrones
+    - [x] Integrar planificador comunitario Spansh y persistir resultados
+    - [x] Usar automáticamente sistema actual y alcance real de la nave
+    - [ ] Incorporar parámetros físicos completos para Galaxy Plotter exacto
   - [ ] Guiar la secuencia segura de sobrecarga
 - [ ] Síntesis de salto autorizada
 - [ ] Replanificación por desvío

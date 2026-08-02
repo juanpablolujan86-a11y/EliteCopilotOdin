@@ -142,6 +142,24 @@ MÍMIR ni a otros oficiales.
 - Comparar tiempo, distancia, seguridad y desgaste.
 - Guiar la secuencia de sobrecarga y siguiente waypoint.
 
+#### Fuente comunitaria de rutas
+
+HEIMDALL utiliza Spansh como proveedor externo de rutas rápidas. No mantiene
+una lista fija de “autopistas”: solicita una ruta nueva desde el sistema real
+del comandante, usando el alcance actual de la nave y el destino indicado.
+
+- API y documentación: https://docs.spansh.co.uk/
+- Planificador: https://spansh.co.uk/
+- Estrategia inicial: `neutron_fastest`, eficiencia 60.
+- Cada resultado se persiste con proveedor, parámetros y respuesta original.
+- El campo `jumps` de cada punto de control indica los saltos convencionales
+  necesarios para alcanzarlo; un waypoint lejano no se interpreta como salto
+  directo.
+
+La segunda etapa integrará Galaxy Plotter (`generic/route`) cuando ODIN pueda
+extraer de forma fiable masa, constantes completas del FSD, depósitos y
+bonificaciones. No se enviarán parámetros estimados a ese calculador.
+
 ### Fase 5 — Asistencia de cabina
 
 - Descubrir y respetar los bindings del comandante.

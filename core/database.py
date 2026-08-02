@@ -228,6 +228,26 @@ class DatabaseManager:
             """
         )
 
+        self.execute(
+            """
+            CREATE TABLE IF NOT EXISTS heimdall_planned_routes
+            (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                source_system TEXT NOT NULL,
+                destination_system TEXT NOT NULL,
+                provider TEXT NOT NULL,
+                strategy TEXT NOT NULL,
+                jump_range REAL NOT NULL,
+                efficiency INTEGER NOT NULL,
+                total_jumps INTEGER NOT NULL,
+                distance REAL NOT NULL,
+                status TEXT NOT NULL DEFAULT 'active',
+                json TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+
         self._ensure_column(
             "biological_signals",
             "was_logged",

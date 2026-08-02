@@ -252,3 +252,22 @@ class HeimdallDiagnostics:
             high_energy.remaining_neutrons,
             high_energy.remaining_white_dwarfs,
         )
+
+    def record_planned_route(self, plan) -> None:
+        next_waypoint = plan.next_waypoint
+        self.logger.info(
+            "ROUTE_PLANNED | proveedor=%s | estrategia=%s | origen=%s | "
+            "destino=%s | alcance=%.2f ly | eficiencia=%s | distancia=%.2f ly | "
+            "saltos=%s | puntos_control=%s | siguiente=%s | siguiente_neutron=%s",
+            plan.provider,
+            plan.strategy,
+            plan.source_system,
+            plan.destination_system,
+            plan.jump_range,
+            plan.efficiency,
+            plan.distance,
+            plan.total_jumps,
+            len(plan.waypoints),
+            next_waypoint.system if next_waypoint else "destino alcanzado",
+            next_waypoint.neutron_star if next_waypoint else False,
+        )

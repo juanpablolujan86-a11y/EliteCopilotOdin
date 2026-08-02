@@ -40,6 +40,7 @@ from core.version import CAPABILITY, VERSION
 from core.diagnostics import HeimdallDiagnostics, MimirDiagnostics, OdinDiagnostics
 from heimdall.bindings import BindingAudit, BindingCustodian
 from heimdall.navigation import NavigationContextManager
+from heimdall.spansh import HeimdallRoutePlanner, SpanshClient
 
 class CommandCenter:
     """
@@ -77,6 +78,10 @@ class CommandCenter:
         self.binding_audit: BindingAudit | None = None
         self.navigation_manager: NavigationContextManager | None = None
         self.heimdall_diagnostics = HeimdallDiagnostics(self.config.data_root)
+        self.heimdall_route_planner = HeimdallRoutePlanner(
+            self.database,
+            SpanshClient(),
+        )
         self.exploration_processor: ExplorationProcessor | None = None
 
     def start(self) -> None:
@@ -553,6 +558,19 @@ class CommandCenter:
                 self.navigation_manager.context,
                 reason=event.get("event", "evento"),
             )
+
+    def plan_heimdall_route(self, destination: str, *, efficiency: int = 60):
+        """Punto de entrada para una futura orden de voz de navegación."""
+
+        if self.navigation_manager is None:
+            raise RuntimeError("El contexto de HEIMDALL no fue inicializado.")
+        plan = self.heimdall_route_planner.plan_fastest(
+            self.navigation_manager.context,
+            destination,
+            efficiency=efficiency,
+        )
+        self.heimdall_diagnostics.record_planned_route(plan)
+        return plan
 
     @staticmethod
     def _show_header() -> None:
