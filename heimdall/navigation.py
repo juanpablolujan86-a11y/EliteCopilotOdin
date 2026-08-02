@@ -36,6 +36,16 @@ class RouteProgress:
     route_complete: bool
 
 
+@dataclass(frozen=True, slots=True)
+class FuelAssessment:
+    jumps_available: int | None
+    jumps_to_refuel: int | None
+    refuel_waypoint: RouteWaypoint | None
+    fuel_margin_t: float | None
+    unsafe: bool | None
+    destination_before_refuel: bool
+
+
 @dataclass(slots=True)
 class NavigationContext:
     ship_type: str = ""
@@ -105,6 +115,41 @@ class NavigationContext:
             final_waypoint=final,
             off_route=False,
             route_complete=remaining == 0,
+        )
+
+    def fuel_assessment(self) -> FuelAssessment:
+        """Evalúa de forma conservadora si alcanza hasta el próximo repostaje."""
+
+        progress = self.route_progress()
+        available = self.conservative_jumps_available
+        if progress.remaining_jumps is None or available is None:
+            return FuelAssessment(available, None, None, None, None, False)
+        if progress.route_complete:
+            return FuelAssessment(available, 0, None, self.fuel_main, False, True)
+
+        assert progress.current_index is not None
+        future = self.route[progress.current_index + 1:]
+        for jumps, waypoint in enumerate(future, start=1):
+            if waypoint.scoopable:
+                required_fuel = jumps * self.max_fuel_per_jump
+                return FuelAssessment(
+                    jumps_available=available,
+                    jumps_to_refuel=jumps,
+                    refuel_waypoint=waypoint,
+                    fuel_margin_t=self.fuel_main - required_fuel,
+                    unsafe=available < jumps,
+                    destination_before_refuel=False,
+                )
+
+        jumps = len(future)
+        required_fuel = jumps * self.max_fuel_per_jump
+        return FuelAssessment(
+            jumps_available=available,
+            jumps_to_refuel=jumps,
+            refuel_waypoint=None,
+            fuel_margin_t=self.fuel_main - required_fuel,
+            unsafe=available < jumps,
+            destination_before_refuel=True,
         )
 
     def _current_route_index(self) -> int | None:

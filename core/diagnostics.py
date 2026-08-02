@@ -193,11 +193,14 @@ class HeimdallDiagnostics:
 
     def record_navigation_context(self, context, *, reason: str) -> None:
         progress = context.route_progress()
+        fuel = context.fuel_assessment()
         self.logger.info(
             "NAVIGATION | motivo=%s | nave=%s | identificador=%s | "
             "rango=%.2f ly | combustible=%.2f/%.2f t | sistema=%s | "
             "destino=%s | clase=%s | saltos_journal=%s | puntos_ruta=%s | "
-            "saltos_ruta=%s | distancia_ruta=%s | fuera_ruta=%s",
+            "saltos_ruta=%s | distancia_ruta=%s | fuera_ruta=%s | "
+            "autonomia_conservadora=%s | saltos_hasta_repostaje=%s | "
+            "proximo_repostaje=%s | margen_combustible=%s | inseguro=%s",
             reason,
             context.ship_name or context.ship_type or "desconocida",
             context.ship_ident or "sin identificador",
@@ -215,4 +218,16 @@ class HeimdallDiagnostics:
                 if progress.remaining_distance_ly is not None else "?"
             ),
             progress.off_route,
+            fuel.jumps_available if fuel.jumps_available is not None else "?",
+            fuel.jumps_to_refuel if fuel.jumps_to_refuel is not None else "?",
+            (
+                fuel.refuel_waypoint.system
+                if fuel.refuel_waypoint is not None
+                else ("destino" if fuel.destination_before_refuel else "?")
+            ),
+            (
+                f"{fuel.fuel_margin_t:.2f} t"
+                if fuel.fuel_margin_t is not None else "?"
+            ),
+            fuel.unsafe if fuel.unsafe is not None else "?",
         )

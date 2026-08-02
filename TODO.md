@@ -74,7 +74,7 @@
 - [x] Resolver teclas por acción sin modificar originales
 - [ ] Restaurar bindings solamente con autorización explícita
 - [ ] Planificador de rutas convencionales
-- [ ] Autonomía y estrellas scoopables
+- [x] Autonomía y estrellas scoopables
 - [ ] Autopistas de neutrones
 - [ ] Síntesis de salto autorizada
 - [ ] Replanificación por desvío

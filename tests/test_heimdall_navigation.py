@@ -138,6 +138,54 @@ class NavigationContextManagerTestCase(unittest.TestCase):
         self.assertEqual(progress.remaining_jumps, 0)
         self.assertIsNone(progress.next_waypoint)
 
+    def test_fuel_assessment_finds_next_scoopable_star(self) -> None:
+        self.manager.context.current_address = 1
+        self.manager.context.fuel_main = 20.0
+        self.manager.context.max_fuel_per_jump = 5.0
+        self.manager.context.route = (
+            RouteWaypoint("Actual", 1, (0.0, 0.0, 0.0), "M"),
+            RouteWaypoint("Seca", 2, (1.0, 0.0, 0.0), "L"),
+            RouteWaypoint("Repostaje", 3, (2.0, 0.0, 0.0), "K"),
+        )
+
+        fuel = self.manager.context.fuel_assessment()
+
+        self.assertEqual(fuel.jumps_available, 4)
+        self.assertEqual(fuel.jumps_to_refuel, 2)
+        self.assertEqual(fuel.refuel_waypoint.system, "Repostaje")
+        self.assertEqual(fuel.fuel_margin_t, 10.0)
+        self.assertFalse(fuel.unsafe)
+
+    def test_fuel_assessment_warns_if_conservative_range_is_insufficient(self) -> None:
+        self.manager.context.current_address = 1
+        self.manager.context.fuel_main = 9.0
+        self.manager.context.max_fuel_per_jump = 5.0
+        self.manager.context.route = (
+            RouteWaypoint("Actual", 1, (0.0, 0.0, 0.0), "M"),
+            RouteWaypoint("Seca", 2, (1.0, 0.0, 0.0), "T"),
+            RouteWaypoint("Repostaje", 3, (2.0, 0.0, 0.0), "G"),
+        )
+
+        fuel = self.manager.context.fuel_assessment()
+
+        self.assertTrue(fuel.unsafe)
+        self.assertEqual(fuel.fuel_margin_t, -1.0)
+
+    def test_fuel_assessment_accepts_reaching_final_non_scoopable_system(self) -> None:
+        self.manager.context.current_address = 1
+        self.manager.context.fuel_main = 10.0
+        self.manager.context.max_fuel_per_jump = 5.0
+        self.manager.context.route = (
+            RouteWaypoint("Actual", 1, (0.0, 0.0, 0.0), "M"),
+            RouteWaypoint("Final seca", 2, (1.0, 0.0, 0.0), "L"),
+        )
+
+        fuel = self.manager.context.fuel_assessment()
+
+        self.assertTrue(fuel.destination_before_refuel)
+        self.assertFalse(fuel.unsafe)
+        self.assertIsNone(fuel.refuel_waypoint)
+
 
 if __name__ == "__main__":
     unittest.main()
