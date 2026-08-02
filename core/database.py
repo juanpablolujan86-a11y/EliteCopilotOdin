@@ -217,6 +217,17 @@ class DatabaseManager:
             """
         )
 
+        self.execute(
+            """
+            CREATE TABLE IF NOT EXISTS heimdall_navigation_state
+            (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                json TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
+
         self._ensure_column(
             "biological_signals",
             "was_logged",

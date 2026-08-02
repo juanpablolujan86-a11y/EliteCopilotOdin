@@ -190,3 +190,21 @@ class HeimdallDiagnostics:
             audit.snapshot_path or "sin snapshot",
             " | ".join(audit.loading_errors) or "ninguno",
         )
+
+    def record_navigation_context(self, context, *, reason: str) -> None:
+        self.logger.info(
+            "NAVIGATION | motivo=%s | nave=%s | identificador=%s | "
+            "rango=%.2f ly | combustible=%.2f/%.2f t | sistema=%s | "
+            "destino=%s | clase=%s | saltos_restantes=%s | ruta=%s",
+            reason,
+            context.ship_name or context.ship_type or "desconocida",
+            context.ship_ident or "sin identificador",
+            context.max_jump_range,
+            context.fuel_main,
+            context.fuel_capacity,
+            context.current_system or "desconocido",
+            context.target_system or "sin destino",
+            context.target_star_class or "desconocida",
+            context.remaining_jumps if context.remaining_jumps is not None else "?",
+            len(context.route),
+        )

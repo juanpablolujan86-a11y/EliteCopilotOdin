@@ -68,7 +68,7 @@
 
 ## HEIMDALL - Navegación y asistencia mínima
 
-- [ ] Contexto de nave, FSD, combustible y destino
+- [x] Contexto de nave, FSD, combustible y destino
 - [x] Descubrir y respaldar perfiles `.binds`
 - [x] Detectar perfil activo, errores y dispositivos ausentes
 - [x] Resolver teclas por acción sin modificar originales
@@ -81,4 +81,4 @@
 - [ ] Luces y visión nocturna opcionales
 - [ ] Solicitud contextual de aterrizaje
 - [ ] Modo informativo sin pulsaciones
-- [ ] Registro persistente `heimdall.log`
+- [x] Registro persistente `heimdall.log`

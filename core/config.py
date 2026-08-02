@@ -68,3 +68,7 @@ class Config:
             Path.home() / "AppData" / "Local" / "Frontier Developments"
             / "Elite Dangerous" / "Options" / "Bindings"
         )
+
+    @property
+    def navroute_file(self) -> Path:
+        return self.journal_path / "NavRoute.json"

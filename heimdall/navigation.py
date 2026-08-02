@@ -1,0 +1,224 @@
+"""Contexto persistente de nave, combustible, destino y ruta."""
+
+from __future__ import annotations
+
+import json
+from dataclasses import asdict, dataclass, field
+from pathlib import Path
+
+from core.database import DatabaseManager
+
+SCOOPABLE_STARS = frozenset({"O", "B", "A", "F", "G", "K", "M"})
+
+
+@dataclass(frozen=True, slots=True)
+class RouteWaypoint:
+    system: str
+    address: int | None
+    position: tuple[float, float, float] | None
+    star_class: str
+
+    @property
+    def scoopable(self) -> bool:
+        return self.star_class in SCOOPABLE_STARS
+
+
+@dataclass(slots=True)
+class NavigationContext:
+    ship_type: str = ""
+    ship_id: int | None = None
+    ship_name: str = ""
+    ship_ident: str = ""
+    max_jump_range: float = 0.0
+    fuel_capacity: float = 0.0
+    reserve_capacity: float = 0.0
+    fuel_main: float = 0.0
+    fuel_reservoir: float = 0.0
+    fsd_item: str = ""
+    fsd_health: float | None = None
+    fsd_engineer: str = ""
+    fsd_blueprint: str = ""
+    fsd_level: int | None = None
+    max_fuel_per_jump: float = 0.0
+    current_system: str = ""
+    current_address: int | None = None
+    current_position: tuple[float, float, float] | None = None
+    target_system: str = ""
+    target_address: int | None = None
+    target_star_class: str = ""
+    remaining_jumps: int | None = None
+    route: tuple[RouteWaypoint, ...] = field(default_factory=tuple)
+
+    @property
+    def conservative_jumps_available(self) -> int | None:
+        if self.max_fuel_per_jump <= 0:
+            return None
+        return int(self.fuel_main // self.max_fuel_per_jump)
+
+    @property
+    def target_is_scoopable(self) -> bool | None:
+        if not self.target_star_class:
+            return None
+        return self.target_star_class in SCOOPABLE_STARS
+
+
+class NavigationContextManager:
+    """Actualiza el contexto usando eventos oficiales y archivos auxiliares."""
+
+    def __init__(self, database: DatabaseManager, navroute_file: Path) -> None:
+        self.database = database
+        self.navroute_file = navroute_file
+        self.context = NavigationContext()
+        self._route_mtime_ns = -1
+
+    def restore(self, journal_file: Path) -> NavigationContext:
+        saved = self.database.query(
+            "SELECT json FROM heimdall_navigation_state WHERE id=1"
+        )
+        if saved:
+            self._load_saved(json.loads(saved[0]["json"]))
+
+        with journal_file.open("r", encoding="utf-8", errors="ignore") as stream:
+            for line in stream:
+                try:
+                    event = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                name = event.get("event")
+                if name in {
+                    "Loadout", "FSDTarget", "FSDJump", "Location",
+                    "FuelScoop", "ReservoirReplenished",
+                }:
+                    # El orden es esencial: un salto posterior debe prevalecer
+                    # sobre un repostaje anterior, y viceversa.
+                    self.handle_event(event, persist=False)
+        self.poll_route(force=True)
+        self.persist()
+        return self.context
+
+    def handle_event(self, event: dict, *, persist: bool = True) -> None:
+        name = event.get("event")
+        if name == "Loadout":
+            self._handle_loadout(event)
+        elif name in {"FSDJump", "Location"}:
+            self.context.current_system = event.get("StarSystem", self.context.current_system)
+            self.context.current_address = event.get("SystemAddress", self.context.current_address)
+            position = event.get("StarPos")
+            if isinstance(position, list) and len(position) == 3:
+                self.context.current_position = tuple(float(item) for item in position)
+            if "FuelLevel" in event:
+                self.context.fuel_main = float(event["FuelLevel"])
+        elif name == "FSDTarget":
+            self.context.target_system = event.get("Name", "")
+            self.context.target_address = event.get("SystemAddress")
+            self.context.target_star_class = event.get("StarClass", "")
+            self.context.remaining_jumps = event.get("RemainingJumpsInRoute")
+        elif name == "FuelScoop":
+            self.context.fuel_main = float(event.get("Total", self.context.fuel_main))
+        elif name == "ReservoirReplenished":
+            self.context.fuel_main = float(event.get("FuelMain", self.context.fuel_main))
+            self.context.fuel_reservoir = float(
+                event.get("FuelReservoir", self.context.fuel_reservoir)
+            )
+        if persist:
+            self.persist()
+
+    def update_status(self, status: dict) -> None:
+        changed = False
+        fuel = status.get("Fuel", {})
+        if "FuelMain" in fuel:
+            value = float(fuel["FuelMain"])
+            changed |= value != self.context.fuel_main
+            self.context.fuel_main = value
+        if "FuelReservoir" in fuel:
+            value = float(fuel["FuelReservoir"])
+            changed |= value != self.context.fuel_reservoir
+            self.context.fuel_reservoir = value
+        destination = status.get("Destination", {})
+        if destination.get("Name"):
+            name = destination["Name"]
+            address = destination.get("System")
+            changed |= name != self.context.target_system
+            changed |= address != self.context.target_address
+            self.context.target_system = name
+            self.context.target_address = address
+        if changed:
+            self.persist()
+
+    def poll_route(self, *, force: bool = False) -> bool:
+        try:
+            mtime = self.navroute_file.stat().st_mtime_ns
+            if not force and mtime == self._route_mtime_ns:
+                return False
+            payload = json.loads(self.navroute_file.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return False
+        self._route_mtime_ns = mtime
+        self.context.route = tuple(
+            RouteWaypoint(
+                system=item.get("StarSystem", ""),
+                address=item.get("SystemAddress"),
+                position=(
+                    tuple(float(value) for value in item["StarPos"])
+                    if len(item.get("StarPos", [])) == 3 else None
+                ),
+                star_class=item.get("StarClass", ""),
+            )
+            for item in payload.get("Route", [])
+        )
+        self.persist()
+        return True
+
+    def persist(self) -> None:
+        payload = asdict(self.context)
+        self.database.execute(
+            """
+            INSERT INTO heimdall_navigation_state (id, json, updated_at)
+            VALUES (1, ?, datetime('now'))
+            ON CONFLICT(id) DO UPDATE SET json=excluded.json, updated_at=excluded.updated_at
+            """,
+            (json.dumps(payload, ensure_ascii=False),),
+        )
+
+    def _handle_loadout(self, event: dict) -> None:
+        context = self.context
+        context.ship_type = event.get("Ship", "")
+        context.ship_id = event.get("ShipID")
+        context.ship_name = event.get("ShipName", "")
+        context.ship_ident = event.get("ShipIdent", "")
+        context.max_jump_range = float(event.get("MaxJumpRange", 0) or 0)
+        capacity = event.get("FuelCapacity", {})
+        context.fuel_capacity = float(capacity.get("Main", 0) or 0)
+        context.reserve_capacity = float(capacity.get("Reserve", 0) or 0)
+        for module in event.get("Modules", []):
+            if module.get("Slot") != "FrameShiftDrive":
+                continue
+            context.fsd_item = module.get("Item", "")
+            context.fsd_health = module.get("Health")
+            engineering = module.get("Engineering", {})
+            context.fsd_engineer = engineering.get("Engineer", "")
+            context.fsd_blueprint = engineering.get("BlueprintName", "")
+            context.fsd_level = engineering.get("Level")
+            for modifier in engineering.get("Modifiers", []):
+                if modifier.get("Label") == "MaxFuelPerJump":
+                    context.max_fuel_per_jump = float(modifier.get("Value", 0) or 0)
+
+    def _load_saved(self, payload: dict) -> None:
+        route = tuple(
+            RouteWaypoint(
+                system=item.get("system", ""),
+                address=item.get("address"),
+                position=(
+                    tuple(item["position"])
+                    if item.get("position") is not None else None
+                ),
+                star_class=item.get("star_class", ""),
+            )
+            for item in payload.pop("route", [])
+        )
+        for name, value in payload.items():
+            if hasattr(self.context, name):
+                if name == "current_position" and value is not None:
+                    value = tuple(value)
+                setattr(self.context, name, value)
+        self.context.route = route

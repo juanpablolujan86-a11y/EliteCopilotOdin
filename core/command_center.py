@@ -39,6 +39,7 @@ from ui.console_presenter import ConsolePresenter
 from core.version import CAPABILITY, VERSION
 from core.diagnostics import HeimdallDiagnostics, MimirDiagnostics, OdinDiagnostics
 from heimdall.bindings import BindingAudit, BindingCustodian
+from heimdall.navigation import NavigationContextManager
 
 class CommandCenter:
     """
@@ -74,6 +75,7 @@ class CommandCenter:
             self.config.data_root,
         )
         self.binding_audit: BindingAudit | None = None
+        self.navigation_manager: NavigationContextManager | None = None
         self.exploration_processor: ExplorationProcessor | None = None
 
     def start(self) -> None:
@@ -93,6 +95,8 @@ class CommandCenter:
         self.database.create_tables()
 
         self._initialize_heimdall()
+
+        self._initialize_heimdall_navigation(journal)
 
         self._restore_commander_state(journal)
 
@@ -152,6 +156,29 @@ class CommandCenter:
         )
 
         return reader.latest_file()
+
+    def _initialize_heimdall_navigation(self, journal) -> None:
+        """Reconstruye nave, combustible, destino y ruta actuales."""
+
+        self.navigation_manager = NavigationContextManager(
+            self.database,
+            self.config.navroute_file,
+        )
+        context = self.navigation_manager.restore(journal)
+        HeimdallDiagnostics(self.config.data_root).record_navigation_context(
+            context,
+            reason="inicio",
+        )
+        ship = context.ship_name or context.ship_type or "nave desconocida"
+        destination = context.target_system or "sin destino fijado"
+        fuel = (
+            f"{context.fuel_main:.1f}/{context.fuel_capacity:.1f} t"
+            if context.fuel_capacity > 0 else "sin datos"
+        )
+        print(
+            "HEIMDALL navegación  : "
+            f"{ship}, combustible {fuel}, destino {destination}"
+        )
 
     def _restore_commander_state(self, journal) -> None:
         """Recupera el sistema actual antes de observar eventos nuevos."""
@@ -232,6 +259,20 @@ class CommandCenter:
 
         mimir_diagnostics = MimirDiagnostics(self.config.data_root)
         odin_diagnostics = OdinDiagnostics()
+
+        if self.navigation_manager is not None:
+            for event_name in (
+                "Loadout",
+                "FSDTarget",
+                "FSDJump",
+                "Location",
+                "FuelScoop",
+                "ReservoirReplenished",
+            ):
+                self.event_bus.subscribe(
+                    event_name,
+                    self.navigation_manager.handle_event,
+                )
 
 
         # Eventos de salto
@@ -470,12 +511,17 @@ class CommandCenter:
         while True:
             status = self.status_watcher.poll()
             if status is not None:
+                if self.navigation_manager is not None:
+                    self.navigation_manager.update_status(status)
                 navigation = self.surface_navigation.update_status(status)
                 if navigation is not None:
                     self.event_bus.publish_internal(
                         InternalEvent.SURFACE_NAVIGATION_UPDATED,
                         navigation,
                     )
+
+            if self.navigation_manager is not None:
+                self.navigation_manager.poll_route()
 
             events = self.watcher.poll()
 
