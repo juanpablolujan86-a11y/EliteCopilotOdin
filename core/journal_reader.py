@@ -75,7 +75,60 @@ class JournalReader:
         if journal_path is None:
             return None
 
+        events = self.current_system_events(journal_path)
+        if not events:
+            return None
+
         context: dict = {}
+        system_address = events[0].get("SystemAddress")
+
+        for event in events:
+            event_address = event.get("SystemAddress")
+            if (
+                system_address is not None
+                and event_address is not None
+                and event_address != system_address
+            ):
+                continue
+
+            system_name = event.get("StarSystem") or event.get("SystemName")
+            if system_name:
+                context["StarSystem"] = system_name
+
+            if event_address is not None:
+                context["SystemAddress"] = event_address
+
+            current_body = event.get("Body") or event.get("BodyName")
+            if current_body:
+                context["Body"] = current_body
+
+            for key in (
+                "FuelLevel",
+                "Population",
+                "timestamp",
+                "StarPos",
+                "StarClass",
+            ):
+                if event.get(key) is not None:
+                    context[key] = event[key]
+
+        if not context.get("StarSystem"):
+            return None
+
+        return context
+
+    def current_system_events(
+        self,
+        journal: Path | None = None,
+    ) -> list[dict]:
+        """Devuelve los eventos desde la última llegada o carga de sistema."""
+
+        journal_path = journal or self.latest_file()
+        if journal_path is None:
+            return []
+
+        events: list[dict] = []
+        anchors = {"FSDJump", "Location", "CarrierJump"}
 
         with journal_path.open(
             "r",
@@ -88,24 +141,12 @@ class JournalReader:
                 except (json.JSONDecodeError, TypeError):
                     continue
 
-                system_name = event.get("StarSystem") or event.get(
-                    "SystemName"
-                )
-                if system_name:
-                    context["StarSystem"] = system_name
+                if (
+                    event.get("event") in anchors
+                    and (event.get("StarSystem") or event.get("SystemName"))
+                ):
+                    events = [event]
+                elif events:
+                    events.append(event)
 
-                if event.get("SystemAddress") is not None:
-                    context["SystemAddress"] = event["SystemAddress"]
-
-                current_body = event.get("Body") or event.get("BodyName")
-                if current_body:
-                    context["Body"] = current_body
-
-                for key in ("FuelLevel", "Population", "timestamp"):
-                    if event.get(key) is not None:
-                        context[key] = event[key]
-
-        if not context.get("StarSystem"):
-            return None
-
-        return context
+        return events

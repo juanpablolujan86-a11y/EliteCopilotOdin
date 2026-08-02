@@ -66,6 +66,7 @@ class MimirEventSubscriber:
                 event.event,
                 confirmed_genus_ids=event.confirmed_genus_ids,
                 confirmed_genus_names=event.confirmed_genus_names,
+                has_biological_signal=event.has_biological_signal,
                 system_population=event.system_population,
                 scientific_context=event.scientific_context,
             )

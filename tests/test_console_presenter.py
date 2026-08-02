@@ -24,6 +24,7 @@ class ConsolePresenterTestCase(unittest.TestCase):
             )
 
         visible = output.getvalue()
+        self.assertTrue(visible.startswith("\033[2J\033[H"))
         self.assertIn("ESTADO DE DESCUBRIMIENTO", visible)
         self.assertIn("registrado previamente", visible)
         self.assertNotIn("detalle interno", visible)
@@ -64,6 +65,7 @@ class ConsolePresenterTestCase(unittest.TestCase):
                     body_name="Prueba 4",
                     confirmed_genus_names=("Bacteria",),
                     probable_species=("Bacterium Informem",),
+                    has_biological_signal=True,
                 )
             )
 
@@ -73,6 +75,43 @@ class ConsolePresenterTestCase(unittest.TestCase):
         self.assertIn("Bacterium Informem", visible)
         self.assertNotIn("Explicación para voz", visible)
         self.assertNotIn("regla interna", visible)
+
+    def test_environmental_prediction_without_signal_is_hidden(self) -> None:
+        output = io.StringIO()
+        with redirect_stdout(output):
+            self.presenter.show_scientific_report(
+                OfficerReport(
+                    officer="MÍMIR",
+                    title="Predicción preliminar",
+                    message="Sólo para voz y log",
+                    priority="HIGH",
+                    details=[],
+                    body_name="Prueba 2",
+                    probable_species=("Stratum Tectonicas",),
+                    has_biological_signal=False,
+                )
+            )
+
+        self.assertEqual(output.getvalue(), "")
+
+    def test_duplicate_biology_state_is_hidden(self) -> None:
+        report = OfficerReport(
+            officer="MÍMIR",
+            title="Biología",
+            message="",
+            priority="HIGH",
+            details=[],
+            body_name="Prueba 4",
+            confirmed_genus_names=("Bacteria",),
+            probable_species=("Bacterium Aurasus",),
+            has_biological_signal=True,
+        )
+        output = io.StringIO()
+        with redirect_stdout(output):
+            self.presenter.show_scientific_report(report)
+            self.presenter.show_scientific_report(report)
+
+        self.assertEqual(output.getvalue().count("Planeta"), 1)
 
 
 if __name__ == "__main__":

@@ -186,6 +186,17 @@ class DatabaseManager:
             "INTEGER",
         )
 
+        # Versiones anteriores guardaban el nombre localizado (Biológica).
+        # Se normaliza para que los filtros sean independientes del idioma.
+        self.execute(
+            """
+            UPDATE biological_signals
+            SET signal_type = 'Biological'
+            WHERE LOWER(COALESCE(signal_type, '')) LIKE 'biol%'
+              AND source_event IN ('FSSBodySignals', 'SAASignalsFound')
+            """
+        )
+
         self.execute(
             """
             UPDATE system_exploration

@@ -21,6 +21,7 @@ Procesa la exploración científica:
 """
 
 import json
+import unicodedata
 
 from core.database import DatabaseManager
 from core.event_bus import EventBus
@@ -62,6 +63,7 @@ class ExplorationProcessor:
             tuple[int, int | None, str, str],
             int,
         ] = {}
+        self._biological_body_ids: set[tuple[int, int]] = set()
 
     def handle_fsd_jump(self, event: dict) -> None:
         """
@@ -83,6 +85,7 @@ class ExplorationProcessor:
         self.commander_state.last_scanned_body = ""
         self._confirmed_genus_ids.clear()
         self._confirmed_genus_names.clear()
+        self._biological_body_ids.clear()
         self._organic_scan_progress.clear()
         self._completed_system_reports.discard(system_address)
 
@@ -266,6 +269,9 @@ class ExplorationProcessor:
             confirmed_genus_names=self._confirmed_genus_names.get(
                 (system_address, body_id),
                 (),
+            ),
+            has_biological_signal=(
+                (system_address, body_id) in self._biological_body_ids
             ),
             system_population=self.commander_state.population,
             scientific_context={
@@ -572,14 +578,21 @@ class ExplorationProcessor:
             ] = confirmed_genus_names
 
         for signal in signals:
-            signal_type = signal.get(
+            localized_signal_type = signal.get(
                 "Type_Localised",
                 signal.get("Type", ""),
             )
 
+            is_biological = self._is_biological_signal(signal)
+            signal_type = (
+                "Biological"
+                if is_biological
+                else localized_signal_type
+            )
+
             signal_count = int(signal.get("Count", 0))
 
-            if "biolog" in signal_type.lower():
+            if is_biological:
                 biology_total += signal_count
 
             self.database.execute(
@@ -613,6 +626,9 @@ class ExplorationProcessor:
                     ),
                 ),
             )
+
+        if body_id is not None and biology_total:
+            self._biological_body_ids.add((system_address, body_id))
 
         system_name = self.commander_state.current_system
 
@@ -775,6 +791,25 @@ class ExplorationProcessor:
         return "Belt Cluster" in body_name
 
     @staticmethod
+    def _is_biological_signal(signal: dict) -> bool:
+        """Reconoce biología con código interno o cualquier localización."""
+
+        values = (
+            str(signal.get("Type", "")),
+            str(signal.get("Type_Localised", "")),
+        )
+        for value in values:
+            normalized = "".join(
+                character
+                for character in unicodedata.normalize("NFKD", value.lower())
+                if not unicodedata.combining(character)
+            )
+            if "biolog" in normalized:
+                return True
+
+        return False
+
+    @staticmethod
     def _classify_body(
         event: dict,
     ) -> tuple[str, str, int]:
@@ -863,6 +898,7 @@ class ExplorationProcessor:
                                 'FSSBodySignals',
                                 'SAASignalsFound'
                             )
+                             AND LOWER(COALESCE(signal_type, '')) LIKE 'biol%'
                             THEN signal_count
                             ELSE 0
                         END
@@ -1013,7 +1049,7 @@ class ExplorationProcessor:
               AND body_name IS NOT NULL
               AND body_name != ''
               AND signal_count > 0
-              AND LOWER(COALESCE(signal_type, '')) LIKE '%biolog%'
+              AND LOWER(COALESCE(signal_type, '')) LIKE 'biol%'
             ORDER BY body_name
             """,
             (system_address,),

@@ -51,3 +51,38 @@ class JournalBootstrapTestCase(unittest.TestCase):
         self.assertEqual(state.system_address, 149224998987)
         self.assertEqual(state.current_body, "Hegai SS-K d8-4 B 2")
         self.assertEqual(state.fuel_level, 119.08)
+
+    def test_current_system_events_ignore_next_jump_target(self) -> None:
+        events = [
+            {
+                "event": "FSDJump",
+                "StarSystem": "Sistema actual",
+                "SystemAddress": 10,
+            },
+            {
+                "event": "Scan",
+                "StarSystem": "Sistema actual",
+                "SystemAddress": 10,
+                "BodyName": "Sistema actual 1",
+            },
+            {
+                "event": "FSDTarget",
+                "Name": "Sistema siguiente",
+                "SystemAddress": 20,
+            },
+        ]
+
+        with tempfile.TemporaryDirectory() as directory:
+            journal = Path(directory) / "Journal.test.log"
+            journal.write_text(
+                "\n".join(json.dumps(event) for event in events),
+                encoding="utf-8",
+            )
+            reader = JournalReader(Path(directory))
+            current_events = reader.current_system_events(journal)
+            context = reader.current_system_context(journal)
+
+        self.assertEqual(len(current_events), 3)
+        self.assertEqual(context["StarSystem"], "Sistema actual")
+        self.assertEqual(context["SystemAddress"], 10)
+        self.assertEqual(context["Body"], "Sistema actual 1")

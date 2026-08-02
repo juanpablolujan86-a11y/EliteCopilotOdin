@@ -40,6 +40,7 @@ class MimirOfficerHandler:
         payload: dict[str, Any],
         confirmed_genus_ids: tuple[str, ...] = (),
         confirmed_genus_names: tuple[str, ...] = (),
+        has_biological_signal: bool = False,
         system_population: int = 0,
         scientific_context: dict[str, Any] | None = None,
     ) -> OfficerReport | None:
@@ -147,4 +148,5 @@ class MimirOfficerHandler:
                     for prediction in predictions
                 )
             ),
+            has_biological_signal=has_biological_signal,
         )

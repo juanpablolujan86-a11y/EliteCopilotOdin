@@ -180,6 +180,31 @@ class ExplorationProcessorTestCase(unittest.TestCase):
             )
         )
 
+        signal_insert = next(
+            parameters
+            for query, parameters in database.executions
+            if "INSERT INTO biological_signals" in query
+        )
+        self.assertIn("Biological", signal_insert)
+
+    def test_localized_biological_signal_is_accent_safe(self) -> None:
+        self.assertTrue(
+            ExplorationProcessor._is_biological_signal(
+                {
+                    "Type": "$SAA_SignalType_Biological;",
+                    "Type_Localised": "Biológica",
+                }
+            )
+        )
+        self.assertFalse(
+            ExplorationProcessor._is_biological_signal(
+                {
+                    "Type": "$SAA_SignalType_Geological;",
+                    "Type_Localised": "Geológica",
+                }
+            )
+        )
+
     def test_scan_organic_publishes_three_step_progress(self) -> None:
         database = FakeDatabase()
         event_bus = EventBus()

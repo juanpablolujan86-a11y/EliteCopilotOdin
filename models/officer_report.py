@@ -37,3 +37,5 @@ class OfficerReport:
     confirmed_genus_names: tuple[str, ...] = ()
 
     probable_species: tuple[str, ...] = ()
+
+    has_biological_signal: bool = False

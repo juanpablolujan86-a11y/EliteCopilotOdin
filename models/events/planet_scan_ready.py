@@ -30,6 +30,8 @@ class PlanetScanReady:
 
     confirmed_genus_names: tuple[str, ...] = ()
 
+    has_biological_signal: bool = False
+
     system_population: int = 0
 
     scientific_context: dict[str, Any] | None = None

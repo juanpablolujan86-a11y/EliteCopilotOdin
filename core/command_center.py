@@ -7,6 +7,8 @@ Inicializa, conecta y coordina los componentes principales de ODIN.
 """
 
 import time
+from contextlib import redirect_stdout
+from io import StringIO
 
 from brain.decision_engine import DecisionEngine
 from core.config import Config
@@ -61,6 +63,7 @@ class CommandCenter:
         self.console_presenter = ConsolePresenter()
 
         self.watcher: JournalWatcher | None = None
+        self.exploration_processor: ExplorationProcessor | None = None
 
     def start(self) -> None:
         """
@@ -81,6 +84,8 @@ class CommandCenter:
         self._restore_commander_state(journal)
 
         self._configure_processors()
+
+        self._rebuild_current_system(journal)
 
         self.watcher = JournalWatcher(journal)
         self.watcher.start()
@@ -177,6 +182,7 @@ class CommandCenter:
             self.event_bus,
             mimir_handler,
         )
+        self.exploration_processor = exploration_processor
 
         mimir_diagnostics = MimirDiagnostics(self.config.data_root)
         odin_diagnostics = OdinDiagnostics()
@@ -294,6 +300,56 @@ class CommandCenter:
             InternalEvent.ORGANIC_SCAN_UPDATED,
             self.console_presenter.show_organic_scan
         )
+
+    def _rebuild_current_system(self, journal) -> None:
+        """Reconstruye el FSS actual sin repetir informes en pantalla."""
+
+        if self.exploration_processor is None:
+            return
+
+        reader = JournalReader(self.config.journal_path)
+        events = reader.current_system_events(journal)
+        if not events:
+            return
+
+        handlers = {
+            "FSDJump": self.exploration_processor.handle_fsd_jump,
+            "Location": self.exploration_processor.handle_fsd_jump,
+            "CarrierJump": self.exploration_processor.handle_fsd_jump,
+            "Scan": self.exploration_processor.handle_scan,
+            "FSSDiscoveryScan": (
+                self.exploration_processor.handle_fss_discovery_scan
+            ),
+            "FSSAllBodiesFound": (
+                self.exploration_processor.handle_fss_all_bodies_found
+            ),
+            "SAAScanComplete": (
+                self.exploration_processor.handle_saa_scan_complete
+            ),
+            "SAASignalsFound": (
+                self.exploration_processor.handle_saa_signals_found
+            ),
+            "FSSBodySignals": (
+                self.exploration_processor.handle_saa_signals_found
+            ),
+        }
+
+        original_output = self.event_bus.output_stream
+        silent_output = StringIO()
+        self.event_bus.output_stream = silent_output
+        restored = 0
+        try:
+            with redirect_stdout(silent_output):
+                for event in events:
+                    handler = handlers.get(event.get("event"))
+                    if handler is None:
+                        continue
+                    handler(event)
+                    restored += 1
+        finally:
+            self.event_bus.output_stream = original_output
+
+        print(f"Contexto reconstruido : {restored} eventos del sistema actual")
 
     def _run_event_loop(self) -> None:
         """
