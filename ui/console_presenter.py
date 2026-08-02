@@ -1,6 +1,7 @@
 """Presentación mínima de ODIN durante el vuelo."""
 
 from models.events.exploration_report_ready import ExplorationReportReady
+from models.events.expedition_balance_updated import ExpeditionBalanceUpdated
 from models.events.organic_scan_updated import OrganicScanUpdated
 from models.events.recommendation_ready import RecommendationReady
 from models.officer_report import OfficerReport
@@ -37,6 +38,41 @@ class ConsolePresenter:
             "Distancia de muestra  : "
             f"{update.distance_m:.0f}/{update.required_distance_m:.0f} m — {state}"
         )
+
+    def show_expedition_balance(
+        self,
+        balance: ExpeditionBalanceUpdated,
+    ) -> None:
+        """Presenta un resumen compacto al completar o vender datos."""
+
+        print()
+        print("=" * 50)
+        print(f"BALANCE DE EXPEDICIÓN  : {balance.reason}")
+        print(
+            "Actividad             : "
+            f"{balance.systems_visited} sistemas, "
+            f"{balance.bodies_scanned} cuerpos, "
+            f"{balance.bodies_mapped} DSS, "
+            f"{balance.species_completed} especies"
+        )
+        print(
+            "Cartografía estimada : "
+            f"~{balance.cartography_estimated:,} CR"
+        )
+        print(f"Exobiología base     : {balance.exobiology_base:,} CR")
+        if balance.exobiology_potential != balance.exobiology_base:
+            print(
+                "Exobiología potencial: "
+                f"{balance.exobiology_potential:,} CR"
+            )
+        print(f"Total base pendiente  : ~{balance.total_base:,} CR")
+        print(f"Total potencial       : ~{balance.total_potential:,} CR")
+        if balance.exploration_sold or balance.exobiology_sold:
+            print(
+                "Cobrado confirmado    : "
+                f"{balance.exploration_sold + balance.exobiology_sold:,} CR"
+            )
+        print("=" * 50)
 
     def show_recommendation(
         self,

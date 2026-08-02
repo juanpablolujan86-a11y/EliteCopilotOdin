@@ -14,6 +14,7 @@ from brain.decision_engine import DecisionEngine
 from core.config import Config
 from core.database import DatabaseManager
 from core.event_bus import EventBus
+from core.expedition_ledger import ExpeditionLedger
 from core.internal_events import InternalEvent
 from core.journal_reader import JournalReader
 from core.journal_watcher import JournalWatcher
@@ -187,6 +188,13 @@ class CommandCenter:
             self.event_bus,
             mimir_handler,
         )
+
+        expedition_ledger = ExpeditionLedger(
+            self.database,
+            self.event_bus,
+            self.config.project_root / "knowledge" / "biology" / "species.json",
+        )
+        expedition_ledger.bootstrap()
         self.exploration_processor = exploration_processor
 
         mimir_diagnostics = MimirDiagnostics(self.config.data_root)
@@ -229,10 +237,20 @@ class CommandCenter:
             jump_advisor.handle
         )
 
+        self.event_bus.subscribe(
+            "FSDJump",
+            expedition_ledger.handle_fsd_jump,
+        )
+
         # Eventos de exploración
         self.event_bus.subscribe(
             "Scan",
             exploration_processor.handle_scan
+        )
+
+        self.event_bus.subscribe(
+            "Scan",
+            expedition_ledger.handle_scan,
         )
 
         self.event_bus.subscribe(
@@ -246,8 +264,18 @@ class CommandCenter:
         )
 
         self.event_bus.subscribe(
+            "FSSAllBodiesFound",
+            expedition_ledger.handle_fss_complete,
+        )
+
+        self.event_bus.subscribe(
             "SAAScanComplete",
             exploration_processor.handle_saa_scan_complete
+        )
+
+        self.event_bus.subscribe(
+            "SAAScanComplete",
+            expedition_ledger.handle_mapping,
         )
 
         self.event_bus.subscribe(
@@ -263,6 +291,26 @@ class CommandCenter:
         self.event_bus.subscribe(
             "ScanOrganic",
             exploration_processor.handle_scan_organic
+        )
+
+        self.event_bus.subscribe(
+            "ScanOrganic",
+            expedition_ledger.handle_organic,
+        )
+
+        self.event_bus.subscribe(
+            "SellExplorationData",
+            expedition_ledger.handle_exploration_sale,
+        )
+
+        self.event_bus.subscribe(
+            "MultiSellExplorationData",
+            expedition_ledger.handle_exploration_sale,
+        )
+
+        self.event_bus.subscribe(
+            "SellOrganicData",
+            expedition_ledger.handle_organic_sale,
         )
 
         # Eventos internos
@@ -314,6 +362,16 @@ class CommandCenter:
         self.event_bus.subscribe(
             InternalEvent.SURFACE_NAVIGATION_UPDATED,
             self.console_presenter.show_surface_navigation,
+        )
+
+        self.event_bus.subscribe(
+            InternalEvent.EXPEDITION_BALANCE_UPDATED,
+            odin_diagnostics.record_expedition_balance,
+        )
+
+        self.event_bus.subscribe(
+            InternalEvent.EXPEDITION_BALANCE_UPDATED,
+            self.console_presenter.show_expedition_balance,
         )
 
     def _rebuild_current_system(self, journal) -> None:

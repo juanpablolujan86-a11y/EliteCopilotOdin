@@ -8,6 +8,7 @@ from pathlib import Path
 
 from core.version import CAPABILITY, VERSION
 from models.events.exploration_report_ready import ExplorationReportReady
+from models.events.expedition_balance_updated import ExpeditionBalanceUpdated
 from models.events.organic_scan_updated import OrganicScanUpdated
 from models.events.recommendation_ready import RecommendationReady
 from models.events.surface_navigation_updated import SurfaceNavigationUpdated
@@ -83,6 +84,27 @@ class OdinDiagnostics:
             ", ".join(report.biological_bodies) or "ninguno",
             report.recommendation,
             " | ".join(report.reasons) or "Sin motivos",
+        )
+
+    def record_expedition_balance(
+        self,
+        balance: ExpeditionBalanceUpdated,
+    ) -> None:
+        self.logger.info(
+            "BALANCE | motivo=%s | sistemas=%s | cuerpos=%s | DSS=%s "
+            "| especies=%s | cartografia_estimada=%s | exobiologia_base=%s "
+            "| exobiologia_potencial=%s | cartografia_cobrada=%s "
+            "| exobiologia_cobrada=%s",
+            balance.reason,
+            balance.systems_visited,
+            balance.bodies_scanned,
+            balance.bodies_mapped,
+            balance.species_completed,
+            balance.cartography_estimated,
+            balance.exobiology_base,
+            balance.exobiology_potential,
+            balance.exploration_sold,
+            balance.exobiology_sold,
         )
 
 

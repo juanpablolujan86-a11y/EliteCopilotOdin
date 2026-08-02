@@ -28,6 +28,15 @@ La pantalla se mantiene deliberadamente silenciosa. Sólo muestra:
 Los resúmenes FSS, valores, reglas, progreso orgánico y explicaciones extensas
 se guardan en los registros para diagnóstico y futura comunicación por voz.
 
+Al completar un FSS, una especie 3/3 o una venta, ODIN muestra también un
+balance compacto. La cartografía se presenta como aproximación (`≈`), la
+exobiología separa valor base y potencial First Logged, y las ventas se
+registran como créditos confirmados por el juego.
+
+Las ventas realizadas antes de instalar esta versión no pueden reconstruirse
+como dinero cobrado; el seguimiento confirmado comienza cuando esta versión
+observa el correspondiente evento de venta.
+
 ## Qué conviene probar
 
 - Escaneo FSS completo de un sistema.

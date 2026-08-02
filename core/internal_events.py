@@ -49,4 +49,6 @@ class InternalEvent:
 
     SURFACE_NAVIGATION_UPDATED = "SurfaceNavigationUpdated"
 
+    EXPEDITION_BALANCE_UPDATED = "ExpeditionBalanceUpdated"
+
     DOCKING_REQUESTED = "DockingRequested"

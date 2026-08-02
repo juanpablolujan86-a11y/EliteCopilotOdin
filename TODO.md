@@ -40,6 +40,16 @@
 
 ---
 
+## Sprint 3.2 - Balance de expedición
+
+- [x] Contar sistemas, cuerpos, DSS y especies completadas
+- [x] Estimar cartografía pendiente
+- [x] Separar exobiología base y potencial First Logged
+- [x] Registrar ventas confirmadas por el Journal
+- [x] Evitar recompensas duplicadas
+
+---
+
 ## Sprint 4 - Oficial Comercial
 
 - [ ] Mercados

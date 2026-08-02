@@ -180,6 +180,43 @@ class DatabaseManager:
             """
         )
 
+        self.execute(
+            """
+            CREATE TABLE IF NOT EXISTS expedition_items
+            (
+                event_key TEXT PRIMARY KEY,
+                category TEXT NOT NULL,
+                system_address INTEGER,
+                system_name TEXT,
+                body_id INTEGER,
+                description TEXT,
+                base_value INTEGER NOT NULL DEFAULT 0,
+                potential_value INTEGER NOT NULL DEFAULT 0,
+                status TEXT NOT NULL DEFAULT 'pending',
+                recorded_at TEXT NOT NULL
+            )
+            """
+        )
+
+        self._ensure_column(
+            "expedition_items",
+            "status",
+            "TEXT NOT NULL DEFAULT 'pending'",
+        )
+
+        self.execute(
+            """
+            CREATE TABLE IF NOT EXISTS expedition_sales
+            (
+                event_key TEXT PRIMARY KEY,
+                category TEXT NOT NULL,
+                value INTEGER NOT NULL DEFAULT 0,
+                recorded_at TEXT NOT NULL,
+                raw_json TEXT NOT NULL
+            )
+            """
+        )
+
         self._ensure_column(
             "biological_signals",
             "was_logged",

@@ -41,6 +41,18 @@ python main.py
 ODIN impide que dos copias se ejecuten simultáneamente para evitar el
 procesamiento duplicado de eventos del Journal.
 
+## Balance de expedición
+
+ODIN conserva un libro persistente con sistemas visitados, cuerpos
+escaneados, cartografías DSS y especies exobiológicas completadas. El valor
+cartográfico previo a la venta es aproximado y se identifica con `≈`. Para
+exobiología se separan el valor base y el potencial First Logged. Los eventos
+de venta del Journal aportan el importe definitivo cobrado.
+
+Los eventos repetidos no duplican recompensas y un DSS actualiza el valor del
+cuerpo que ya había sido escaneado. El balance se reconstruye al iniciar ODIN
+desde la memoria local disponible.
+
 ## Ejecutar las pruebas
 
 La suite utiliza `unittest`, incluido en Python:

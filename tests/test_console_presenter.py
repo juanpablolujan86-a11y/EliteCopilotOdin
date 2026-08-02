@@ -3,6 +3,7 @@ import unittest
 from contextlib import redirect_stdout
 
 from models.events.exploration_report_ready import ExplorationReportReady
+from models.events.expedition_balance_updated import ExpeditionBalanceUpdated
 from models.events.recommendation_ready import RecommendationReady
 from models.officer_report import OfficerReport
 from models.events.organic_scan_updated import OrganicScanUpdated
@@ -147,6 +148,30 @@ class ConsolePresenterTestCase(unittest.TestCase):
         self.assertIn("500 m", visible)
         self.assertIn("500/500 m", visible)
         self.assertIn("LISTA", visible)
+
+    def test_expedition_balance_separates_estimated_and_potential(self) -> None:
+        output = io.StringIO()
+        with redirect_stdout(output):
+            self.presenter.show_expedition_balance(
+                ExpeditionBalanceUpdated(
+                    systems_visited=2,
+                    bodies_scanned=10,
+                    bodies_mapped=1,
+                    species_completed=1,
+                    cartography_estimated=500_000,
+                    exobiology_base=1_000_000,
+                    exobiology_potential=5_000_000,
+                    exploration_sold=0,
+                    exobiology_sold=0,
+                    reason="Exobiología 3/3",
+                )
+            )
+
+        visible = output.getvalue()
+        self.assertIn("BALANCE DE EXPEDICIÓN", visible)
+        self.assertIn("~500,000 CR", visible)
+        self.assertIn("5,000,000 CR", visible)
+        self.assertIn("Total base pendiente", visible)
 
 
 if __name__ == "__main__":
