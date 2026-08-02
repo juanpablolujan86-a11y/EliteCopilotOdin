@@ -39,7 +39,9 @@ se guardan en los registros para diagnóstico y futura comunicación por voz.
 El DSS confirma qué biología informa el juego. Durante la recolección,
 MÍMIR muestra el progreso 1/3, 2/3 y 3/3, calcula la distancia recorrida
 desde las muestras anteriores y avisa cuándo se alcanzó la separación
-mínima exigida para el género activo.
+mínima exigida para el género activo. Al alcanzar el objetivo, el contador
+queda fijado en el límite y no continúa aumentando mientras la posición siga
+siendo válida para la siguiente muestra.
 
 ## Cómo enviar un informe
 

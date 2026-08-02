@@ -38,8 +38,33 @@ class SurfaceNavigationTrackerTestCase(unittest.TestCase):
         )
 
         self.assertIsNotNone(update)
-        self.assertGreater(update.distance_m, 500)
+        self.assertEqual(update.distance_m, 500)
         self.assertTrue(update.ready_for_sample)
+
+        farther = self.tracker.update_status(
+            {"Latitude": 0.0, "Longitude": 0.05, "PlanetRadius": 1_000_000.0}
+        )
+        self.assertIsNone(farther)
+
+    def test_updates_resume_if_commander_returns_inside_sample_radius(self) -> None:
+        self.tracker.record_sample(
+            {
+                "ScanType": "Log",
+                "Genus": "$Codex_Ent_Bacterial_Genus_Name;",
+                "Species": "$Codex_Ent_Bacterial_01_Name;",
+            }
+        )
+        self.tracker.update_status(
+            {"Latitude": 0.0, "Longitude": 0.03, "PlanetRadius": 1_000_000.0}
+        )
+
+        update = self.tracker.update_status(
+            {"Latitude": 0.0, "Longitude": 0.01, "PlanetRadius": 1_000_000.0}
+        )
+
+        self.assertIsNotNone(update)
+        self.assertFalse(update.ready_for_sample)
+        self.assertLess(update.distance_m, 500)
 
     def test_second_sample_uses_nearest_previous_location(self) -> None:
         event = {

@@ -136,7 +136,7 @@ class ConsolePresenterTestCase(unittest.TestCase):
                     genus="Bacterium",
                     species="Bacterium Vesicula",
                     progress=1,
-                    distance_m=510,
+                    distance_m=500,
                     required_distance_m=500,
                     ready_for_sample=True,
                 )
@@ -145,7 +145,7 @@ class ConsolePresenterTestCase(unittest.TestCase):
         visible = output.getvalue()
         self.assertIn("1/3", visible)
         self.assertIn("500 m", visible)
-        self.assertIn("510/500 m", visible)
+        self.assertIn("500/500 m", visible)
         self.assertIn("LISTA", visible)
 
 

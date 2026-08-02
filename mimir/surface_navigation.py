@@ -84,8 +84,14 @@ class SurfaceNavigationTracker:
         required = self.required_distance(self.genus)
         ready = distance >= required
         band = int(distance // 25)
-        if only_when_changed and band == self._last_distance_band and ready == self._last_ready:
-            return None
+        if only_when_changed:
+            # Una vez fuera del radio válido no seguimos aumentando el
+            # contador. Sólo volvemos a informar si el comandante regresa
+            # por debajo de la distancia mínima.
+            if ready and self._last_ready is True:
+                return None
+            if band == self._last_distance_band and ready == self._last_ready:
+                return None
 
         self._last_distance_band = band
         self._last_ready = ready
@@ -93,7 +99,7 @@ class SurfaceNavigationTracker:
             genus=self.genus,
             species=self.species,
             progress=self.progress,
-            distance_m=distance,
+            distance_m=min(distance, required),
             required_distance_m=required,
             ready_for_sample=ready,
         )
@@ -118,4 +124,3 @@ class SurfaceNavigationTracker:
         )
         arc = 2 * math.atan2(math.sqrt(value), math.sqrt(1 - value))
         return radius_m * arc
-
