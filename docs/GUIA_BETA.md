@@ -7,6 +7,9 @@
 3. Ejecutar `ODIN.exe`.
 4. Mantener abierta la ventana de ODIN durante la sesión de juego.
 
+Si ODIN ya está abierto, una segunda ejecución se cerrará automáticamente
+sin volver a procesar los eventos del Journal.
+
 Es necesario conservar juntos `ODIN.exe` y la carpeta `_internal`. Windows
 puede mostrar una advertencia porque esta beta todavía no posee firma digital;
 el ejecutable debe obtenerse únicamente del archivo compartido por el autor.
@@ -31,8 +34,12 @@ se guardan en los registros para diagnóstico y futura comunicación por voz.
 - Escaneo detallado de planetas con DSS.
 - Planetas con una o varias señales biológicas.
 - Predicciones de especies y variantes de MÍMIR.
-- Progreso de muestras orgánicas 1/3, 2/3 y 3/3.
 - Avisos de primera pisada y valor potencial First Logged.
+
+El DSS confirma qué biología informa el juego. Durante la recolección,
+MÍMIR muestra el progreso 1/3, 2/3 y 3/3, calcula la distancia recorrida
+desde las muestras anteriores y avisa cuándo se alcanzó la separación
+mínima exigida para el género activo.
 
 ## Cómo enviar un informe
 

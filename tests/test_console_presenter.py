@@ -5,6 +5,8 @@ from contextlib import redirect_stdout
 from models.events.exploration_report_ready import ExplorationReportReady
 from models.events.recommendation_ready import RecommendationReady
 from models.officer_report import OfficerReport
+from models.events.organic_scan_updated import OrganicScanUpdated
+from models.events.surface_navigation_updated import SurfaceNavigationUpdated
 from ui.console_presenter import ConsolePresenter
 
 
@@ -112,6 +114,39 @@ class ConsolePresenterTestCase(unittest.TestCase):
             self.presenter.show_scientific_report(report)
 
         self.assertEqual(output.getvalue().count("Planeta"), 1)
+
+    def test_organic_progress_and_distance_are_visible(self) -> None:
+        output = io.StringIO()
+        with redirect_stdout(output):
+            self.presenter.show_organic_scan(
+                OrganicScanUpdated(
+                    body_id=7,
+                    genus="Bacterium",
+                    species="Bacterium Vesicula",
+                    variant="Cyan",
+                    scan_type="Log",
+                    progress=1,
+                    completed=False,
+                    was_logged=False,
+                    required_distance_m=500,
+                )
+            )
+            self.presenter.show_surface_navigation(
+                SurfaceNavigationUpdated(
+                    genus="Bacterium",
+                    species="Bacterium Vesicula",
+                    progress=1,
+                    distance_m=510,
+                    required_distance_m=500,
+                    ready_for_sample=True,
+                )
+            )
+
+        visible = output.getvalue()
+        self.assertIn("1/3", visible)
+        self.assertIn("500 m", visible)
+        self.assertIn("510/500 m", visible)
+        self.assertIn("LISTA", visible)
 
 
 if __name__ == "__main__":

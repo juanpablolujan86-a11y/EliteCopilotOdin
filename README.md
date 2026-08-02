@@ -16,6 +16,11 @@ el contexto galáctico de ExploData, los géneros confirmados por DSS,
 las condiciones planetarias y el estado de descubrimiento y primera
 pisada informado por el Journal.
 
+Cuando el DSS confirma los géneros presentes, ODIN actualiza el informe y
+conserva las especies y variantes compatibles. Durante el trabajo de campo,
+MÍMIR cuenta las muestras 1/3, 2/3 y 3/3 y usa `Status.json` para calcular
+la distancia superficial necesaria antes de la siguiente recolección.
+
 ## Flujo científico
 
 ```text
@@ -32,6 +37,9 @@ Journal Scan
 ```powershell
 python main.py
 ```
+
+ODIN impide que dos copias se ejecuten simultáneamente para evitar el
+procesamiento duplicado de eventos del Journal.
 
 ## Ejecutar las pruebas
 

@@ -10,6 +10,7 @@ from core.version import CAPABILITY, VERSION
 from models.events.exploration_report_ready import ExplorationReportReady
 from models.events.organic_scan_updated import OrganicScanUpdated
 from models.events.recommendation_ready import RecommendationReady
+from models.events.surface_navigation_updated import SurfaceNavigationUpdated
 from models.officer_report import OfficerReport
 
 
@@ -118,6 +119,20 @@ class MimirDiagnostics:
             scan.progress,
             scan.completed,
             scan.was_logged,
+        )
+
+    def record_surface_navigation(
+        self,
+        update: SurfaceNavigationUpdated,
+    ) -> None:
+        self.logger.info(
+            "DISTANCIA | especie=%s | progreso=%s/3 | actual=%.1f m "
+            "| requerida=%.1f m | muestra_disponible=%s",
+            update.species or update.genus,
+            update.progress,
+            update.distance_m,
+            update.required_distance_m,
+            update.ready_for_sample,
         )
 
     def close(self) -> None:

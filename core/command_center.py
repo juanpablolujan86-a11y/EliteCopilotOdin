@@ -17,6 +17,7 @@ from core.event_bus import EventBus
 from core.internal_events import InternalEvent
 from core.journal_reader import JournalReader
 from core.journal_watcher import JournalWatcher
+from core.status_watcher import StatusWatcher
 from core.processors.commander_state_updater import CommanderStateUpdater
 from core.processors.edsm_lookup import EDSMLookup
 from core.processors.exploration_context_builder import (
@@ -26,6 +27,7 @@ from core.processors.exploration_processor import ExplorationProcessor
 from mimir.event_subscriber import MimirEventSubscriber
 from mimir.officer_handler import MimirOfficerHandler
 from mimir.scientific_officer import ScientificOfficer
+from mimir.surface_navigation import SurfaceNavigationTracker
 from core.processors.jump_advisor import JumpAdvisor
 from core.processors.jump_processor import JumpProcessor
 from core.processors.jump_store import JumpStore
@@ -63,6 +65,8 @@ class CommandCenter:
         self.console_presenter = ConsolePresenter()
 
         self.watcher: JournalWatcher | None = None
+        self.status_watcher = StatusWatcher(self.config.status_file)
+        self.surface_navigation = SurfaceNavigationTracker()
         self.exploration_processor: ExplorationProcessor | None = None
 
     def start(self) -> None:
@@ -166,7 +170,8 @@ class CommandCenter:
         exploration_processor = ExplorationProcessor(
             self.database,
             self.commander_state,
-            self.event_bus
+            self.event_bus,
+            self.surface_navigation,
         )
 
         scientific_officer = ScientificOfficer(
@@ -301,6 +306,16 @@ class CommandCenter:
             self.console_presenter.show_organic_scan
         )
 
+        self.event_bus.subscribe(
+            InternalEvent.SURFACE_NAVIGATION_UPDATED,
+            mimir_diagnostics.record_surface_navigation,
+        )
+
+        self.event_bus.subscribe(
+            InternalEvent.SURFACE_NAVIGATION_UPDATED,
+            self.console_presenter.show_surface_navigation,
+        )
+
     def _rebuild_current_system(self, journal) -> None:
         """Reconstruye el FSS actual sin repetir informes en pantalla."""
 
@@ -362,6 +377,15 @@ class CommandCenter:
             )
 
         while True:
+            status = self.status_watcher.poll()
+            if status is not None:
+                navigation = self.surface_navigation.update_status(status)
+                if navigation is not None:
+                    self.event_bus.publish_internal(
+                        InternalEvent.SURFACE_NAVIGATION_UPDATED,
+                        navigation,
+                    )
+
             events = self.watcher.poll()
 
             for event in events:

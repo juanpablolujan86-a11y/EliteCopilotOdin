@@ -54,3 +54,7 @@ class Config:
             / "Frontier Developments"
             / "Elite Dangerous"
         )
+
+    @property
+    def status_file(self) -> Path:
+        return self.journal_path / "Status.json"

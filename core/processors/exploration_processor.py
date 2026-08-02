@@ -34,6 +34,7 @@ from models.events.planet_scan_ready import (
 )
 from models.events.organic_scan_updated import OrganicScanUpdated
 from state.commander_state import CommanderState
+from mimir.surface_navigation import SurfaceNavigationTracker
 
 
 class ExplorationProcessor:
@@ -46,10 +47,12 @@ class ExplorationProcessor:
         database: DatabaseManager,
         commander_state: CommanderState,
         event_bus: EventBus,
+        surface_navigation: SurfaceNavigationTracker | None = None,
     ) -> None:
         self.database = database
         self.commander_state = commander_state
         self.event_bus = event_bus
+        self.surface_navigation = surface_navigation
         self._confirmed_genus_ids: dict[
             tuple[int, int],
             tuple[str, ...],
@@ -730,6 +733,11 @@ class ExplorationProcessor:
             "Analyse": 3,
         }
         progress = progress_by_type.get(scan_type, 0)
+        navigation_update = (
+            self.surface_navigation.record_sample(event)
+            if self.surface_navigation is not None
+            else None
+        )
         progress_key = (
             system_address,
             body_id,
@@ -758,6 +766,11 @@ class ExplorationProcessor:
                 completed=scan_type == "Analyse",
                 was_logged=(
                     None if was_logged is None else bool(was_logged)
+                ),
+                required_distance_m=(
+                    navigation_update.required_distance_m
+                    if navigation_update is not None
+                    else None
                 ),
             ),
         )

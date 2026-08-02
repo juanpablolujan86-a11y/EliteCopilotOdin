@@ -47,4 +47,6 @@ class InternalEvent:
 
     ORGANIC_SCAN_UPDATED = "OrganicScanUpdated"
 
+    SURFACE_NAVIGATION_UPDATED = "SurfaceNavigationUpdated"
+
     DOCKING_REQUESTED = "DockingRequested"

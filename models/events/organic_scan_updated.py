@@ -13,3 +13,4 @@ class OrganicScanUpdated:
     progress: int
     completed: bool
     was_logged: bool | None
+    required_distance_m: float | None = None

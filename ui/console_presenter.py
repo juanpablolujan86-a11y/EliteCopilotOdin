@@ -4,6 +4,7 @@ from models.events.exploration_report_ready import ExplorationReportReady
 from models.events.organic_scan_updated import OrganicScanUpdated
 from models.events.recommendation_ready import RecommendationReady
 from models.officer_report import OfficerReport
+from models.events.surface_navigation_updated import SurfaceNavigationUpdated
 
 
 class ConsolePresenter:
@@ -13,9 +14,29 @@ class ConsolePresenter:
         self._shown_biology_states: set[tuple] = set()
 
     def show_organic_scan(self, scan: OrganicScanUpdated) -> None:
-        """El progreso se conserva en el log para la futura salida por voz."""
+        """Muestra el conteo de la recolección activa."""
 
-        return None
+        print()
+        print("-" * 50)
+        print(f"MUESTRA EXOBIOLÓGICA  : {scan.progress}/3")
+        print(f"Especie              : {scan.species or scan.genus}")
+        if scan.completed:
+            print("Estado               : análisis completado")
+        elif scan.required_distance_m is not None:
+            print(
+                "Siguiente muestra     : "
+                f"separación mínima {scan.required_distance_m:.0f} m"
+            )
+        print("-" * 50)
+
+    def show_surface_navigation(self, update: SurfaceNavigationUpdated) -> None:
+        """Informa el avance hacia una posición válida de muestreo."""
+
+        state = "LISTA" if update.ready_for_sample else "demasiado cerca"
+        print(
+            "Distancia de muestra  : "
+            f"{update.distance_m:.0f}/{update.required_distance_m:.0f} m — {state}"
+        )
 
     def show_recommendation(
         self,
