@@ -21,7 +21,9 @@ def _handler(path: Path) -> RotatingFileHandler:
         encoding="utf-8",
     )
     handler.setFormatter(
-        logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
+        logging.Formatter(
+            "%(asctime)s | PID=%(process)d | %(levelname)s | %(message)s"
+        )
     )
     return handler
 
