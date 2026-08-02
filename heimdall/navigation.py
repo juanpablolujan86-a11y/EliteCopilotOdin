@@ -23,6 +23,14 @@ class RouteWaypoint:
     def scoopable(self) -> bool:
         return self.star_class in SCOOPABLE_STARS
 
+    @property
+    def neutron(self) -> bool:
+        return self.star_class == "N"
+
+    @property
+    def white_dwarf(self) -> bool:
+        return self.star_class.startswith("D")
+
 
 @dataclass(frozen=True, slots=True)
 class RouteProgress:
@@ -44,6 +52,20 @@ class FuelAssessment:
     fuel_margin_t: float | None
     unsafe: bool | None
     destination_before_refuel: bool
+
+
+@dataclass(frozen=True, slots=True)
+class HighEnergyAssessment:
+    charged: bool
+    boost_value: float | None
+    last_boost_used: int | None
+    cone_exposures_session: int
+    boosted_jumps_session: int
+    next_neutron: RouteWaypoint | None
+    jumps_to_next_neutron: int | None
+    remaining_neutrons: int
+    remaining_white_dwarfs: int
+    fsd_health: float | None
 
 
 @dataclass(slots=True)
@@ -70,6 +92,13 @@ class NavigationContext:
     target_address: int | None = None
     target_star_class: str = ""
     remaining_jumps: int | None = None
+    boost_charged: bool = False
+    last_boost_value: float | None = None
+    last_boost_used: int | None = None
+    cone_exposures_session: int = 0
+    boosted_jumps_session: int = 0
+    last_jump_distance: float | None = None
+    last_jump_fuel_used: float | None = None
     route: tuple[RouteWaypoint, ...] = field(default_factory=tuple)
 
     @property
@@ -152,6 +181,32 @@ class NavigationContext:
             destination_before_refuel=True,
         )
 
+    def high_energy_assessment(self) -> HighEnergyAssessment:
+        progress = self.route_progress()
+        future = (
+            self.route[progress.current_index + 1:]
+            if progress.current_index is not None else ()
+        )
+        next_neutron = None
+        jumps_to_neutron = None
+        for jumps, waypoint in enumerate(future, start=1):
+            if waypoint.neutron:
+                next_neutron = waypoint
+                jumps_to_neutron = jumps
+                break
+        return HighEnergyAssessment(
+            charged=self.boost_charged,
+            boost_value=self.last_boost_value,
+            last_boost_used=self.last_boost_used,
+            cone_exposures_session=self.cone_exposures_session,
+            boosted_jumps_session=self.boosted_jumps_session,
+            next_neutron=next_neutron,
+            jumps_to_next_neutron=jumps_to_neutron,
+            remaining_neutrons=sum(waypoint.neutron for waypoint in future),
+            remaining_white_dwarfs=sum(waypoint.white_dwarf for waypoint in future),
+            fsd_health=self.fsd_health,
+        )
+
     def _current_route_index(self) -> int | None:
         if self.current_address is not None:
             for index, waypoint in enumerate(self.route):
@@ -180,6 +235,14 @@ class NavigationContextManager:
         if saved:
             self._load_saved(json.loads(saved[0]["json"]))
 
+        # Estos contadores pertenecen al Journal/sesión actual. Se reconstruyen
+        # para que reiniciar ODIN no duplique exposiciones ni saltos.
+        self.context.boost_charged = False
+        self.context.last_boost_value = None
+        self.context.last_boost_used = None
+        self.context.cone_exposures_session = 0
+        self.context.boosted_jumps_session = 0
+
         with journal_file.open("r", encoding="utf-8", errors="ignore") as stream:
             for line in stream:
                 try:
@@ -189,7 +252,7 @@ class NavigationContextManager:
                 name = event.get("event")
                 if name in {
                     "Loadout", "FSDTarget", "FSDJump", "Location",
-                    "FuelScoop", "ReservoirReplenished",
+                    "FuelScoop", "ReservoirReplenished", "JetConeBoost",
                 }:
                     # El orden es esencial: un salto posterior debe prevalecer
                     # sobre un repostaje anterior, y viceversa.
@@ -210,6 +273,13 @@ class NavigationContextManager:
                 self.context.current_position = tuple(float(item) for item in position)
             if "FuelLevel" in event:
                 self.context.fuel_main = float(event["FuelLevel"])
+            if name == "FSDJump":
+                self.context.last_jump_distance = event.get("JumpDist")
+                self.context.last_jump_fuel_used = event.get("FuelUsed")
+                self.context.last_boost_used = event.get("BoostUsed")
+                if event.get("BoostUsed"):
+                    self.context.boosted_jumps_session += 1
+                self.context.boost_charged = False
         elif name == "FSDTarget":
             self.context.target_system = event.get("Name", "")
             self.context.target_address = event.get("SystemAddress")
@@ -222,6 +292,10 @@ class NavigationContextManager:
             self.context.fuel_reservoir = float(
                 event.get("FuelReservoir", self.context.fuel_reservoir)
             )
+        elif name == "JetConeBoost":
+            self.context.boost_charged = True
+            self.context.last_boost_value = float(event.get("BoostValue", 0) or 0)
+            self.context.cone_exposures_session += 1
         if persist:
             self.persist()
 

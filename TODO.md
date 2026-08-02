@@ -76,6 +76,11 @@
 - [ ] Planificador de rutas convencionales
 - [x] Autonomía y estrellas scoopables
 - [ ] Autopistas de neutrones
+  - [x] Detectar waypoints de neutrones y enanas blancas
+  - [x] Registrar carga de cono y salto potenciado sin duplicados
+  - [x] Conservar salud real conocida del FSD y exposiciones de sesión
+  - [ ] Comparar ruta convencional y ruta de neutrones
+  - [ ] Guiar la secuencia segura de sobrecarga
 - [ ] Síntesis de salto autorizada
 - [ ] Replanificación por desvío
 - [ ] Luces y visión nocturna opcionales

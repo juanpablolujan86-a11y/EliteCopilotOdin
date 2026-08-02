@@ -194,13 +194,18 @@ class HeimdallDiagnostics:
     def record_navigation_context(self, context, *, reason: str) -> None:
         progress = context.route_progress()
         fuel = context.fuel_assessment()
+        high_energy = context.high_energy_assessment()
         self.logger.info(
             "NAVIGATION | motivo=%s | nave=%s | identificador=%s | "
             "rango=%.2f ly | combustible=%.2f/%.2f t | sistema=%s | "
             "destino=%s | clase=%s | saltos_journal=%s | puntos_ruta=%s | "
             "saltos_ruta=%s | distancia_ruta=%s | fuera_ruta=%s | "
             "autonomia_conservadora=%s | saltos_hasta_repostaje=%s | "
-            "proximo_repostaje=%s | margen_combustible=%s | inseguro=%s",
+            "proximo_repostaje=%s | margen_combustible=%s | inseguro=%s | "
+            "fsd_salud=%s | cono_cargado=%s | valor_boost=%s | "
+            "boost_usado=%s | exposiciones_sesion=%s | saltos_boost_sesion=%s | "
+            "proximo_neutron=%s | saltos_hasta_neutron=%s | neutrones_ruta=%s | "
+            "enanas_blancas_ruta=%s",
             reason,
             context.ship_name or context.ship_type or "desconocida",
             context.ship_ident or "sin identificador",
@@ -230,4 +235,20 @@ class HeimdallDiagnostics:
                 if fuel.fuel_margin_t is not None else "?"
             ),
             fuel.unsafe if fuel.unsafe is not None else "?",
+            (
+                f"{high_energy.fsd_health * 100:.1f}%"
+                if high_energy.fsd_health is not None else "?"
+            ),
+            high_energy.charged,
+            high_energy.boost_value if high_energy.boost_value is not None else "?",
+            high_energy.last_boost_used if high_energy.last_boost_used is not None else "?",
+            high_energy.cone_exposures_session,
+            high_energy.boosted_jumps_session,
+            high_energy.next_neutron.system if high_energy.next_neutron else "ninguno",
+            (
+                high_energy.jumps_to_next_neutron
+                if high_energy.jumps_to_next_neutron is not None else "?"
+            ),
+            high_energy.remaining_neutrons,
+            high_energy.remaining_white_dwarfs,
         )

@@ -186,6 +186,55 @@ class NavigationContextManagerTestCase(unittest.TestCase):
         self.assertFalse(fuel.unsafe)
         self.assertIsNone(fuel.refuel_waypoint)
 
+    def test_high_energy_route_finds_neutrons_and_white_dwarfs(self) -> None:
+        self.manager.context.current_address = 1
+        self.manager.context.route = (
+            RouteWaypoint("Actual", 1, (0.0, 0.0, 0.0), "M"),
+            RouteWaypoint("Enana", 2, (1.0, 0.0, 0.0), "DA"),
+            RouteWaypoint("Neutrón", 3, (2.0, 0.0, 0.0), "N"),
+            RouteWaypoint("Otro neutrón", 4, (3.0, 0.0, 0.0), "N"),
+        )
+
+        assessment = self.manager.context.high_energy_assessment()
+
+        self.assertEqual(assessment.next_neutron.system, "Neutrón")
+        self.assertEqual(assessment.jumps_to_next_neutron, 2)
+        self.assertEqual(assessment.remaining_neutrons, 2)
+        self.assertEqual(assessment.remaining_white_dwarfs, 1)
+
+    def test_jet_cone_charge_is_consumed_by_boosted_jump(self) -> None:
+        self.manager.handle_event({"event": "JetConeBoost", "BoostValue": 6.0})
+        charged = self.manager.context.high_energy_assessment()
+        self.assertTrue(charged.charged)
+        self.assertEqual(charged.cone_exposures_session, 1)
+
+        self.manager.handle_event({
+            "event": "FSDJump", "StarSystem": "Destino", "SystemAddress": 2,
+            "JumpDist": 366.8, "FuelUsed": 7.36, "FuelLevel": 110.0,
+            "BoostUsed": 4,
+        })
+        used = self.manager.context.high_energy_assessment()
+
+        self.assertFalse(used.charged)
+        self.assertEqual(used.last_boost_used, 4)
+        self.assertEqual(used.boosted_jumps_session, 1)
+        self.assertEqual(self.manager.context.last_jump_distance, 366.8)
+
+    def test_restore_does_not_duplicate_session_boost_counters(self) -> None:
+        journal = self._journal([
+            {"event": "JetConeBoost", "BoostValue": 6.0},
+            {
+                "event": "FSDJump", "StarSystem": "Destino",
+                "SystemAddress": 2, "BoostUsed": 4,
+            },
+        ])
+        self.manager.restore(journal)
+        self.manager.restore(journal)
+
+        assessment = self.manager.context.high_energy_assessment()
+        self.assertEqual(assessment.cone_exposures_session, 1)
+        self.assertEqual(assessment.boosted_jumps_session, 1)
+
 
 if __name__ == "__main__":
     unittest.main()

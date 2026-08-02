@@ -281,6 +281,7 @@ class CommandCenter:
                 "Location",
                 "FuelScoop",
                 "ReservoirReplenished",
+                "JetConeBoost",
             ):
                 self.event_bus.subscribe(
                     event_name,
@@ -547,7 +548,7 @@ class CommandCenter:
         if self.navigation_manager is None:
             return
         self.navigation_manager.handle_event(event)
-        if event.get("event") in {"FSDJump", "FSDTarget"}:
+        if event.get("event") in {"FSDJump", "FSDTarget", "JetConeBoost"}:
             self.heimdall_diagnostics.record_navigation_context(
                 self.navigation_manager.context,
                 reason=event.get("event", "evento"),
