@@ -11,6 +11,7 @@ import requests
 
 from core.database import DatabaseManager
 from heimdall.navigation import NavigationContext
+from heimdall.clipboard import write_text
 
 
 class SpanshRouteError(RuntimeError):
@@ -44,6 +45,40 @@ class SpanshRoutePlan:
     @property
     def next_waypoint(self) -> SpanshWaypoint | None:
         return self.waypoints[1] if len(self.waypoints) > 1 else None
+
+    @classmethod
+    def from_dict(cls, payload: dict) -> "SpanshRoutePlan":
+        return cls(
+            job_id=payload["job_id"],
+            source_system=payload["source_system"],
+            destination_system=payload["destination_system"],
+            jump_range=float(payload["jump_range"]),
+            efficiency=int(payload["efficiency"]),
+            total_jumps=int(payload["total_jumps"]),
+            distance=float(payload["distance"]),
+            waypoints=tuple(
+                SpanshWaypoint(
+                    system=item["system"],
+                    address=item.get("address"),
+                    position=tuple(item["position"]),
+                    distance_jumped=float(item["distance_jumped"]),
+                    distance_left=float(item["distance_left"]),
+                    jumps=int(item["jumps"]),
+                    neutron_star=bool(item["neutron_star"]),
+                )
+                for item in payload["waypoints"]
+            ),
+            provider=payload.get("provider", "Spansh"),
+            strategy=payload.get("strategy", "neutron_fastest"),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class RouteClipboardUpdate:
+    arrived_system: str
+    copied_system: str | None
+    route_complete: bool
+    waypoint_index: int
 
 
 class SpanshClient:
@@ -153,9 +188,16 @@ class SpanshClient:
 class HeimdallRoutePlanner:
     """Planifica desde el contexto real y conserva una única ruta activa."""
 
-    def __init__(self, database: DatabaseManager, client: SpanshClient) -> None:
+    def __init__(
+        self,
+        database: DatabaseManager,
+        client: SpanshClient,
+        *,
+        clipboard_writer: Callable[[str], None] = write_text,
+    ) -> None:
         self.database = database
         self.client = client
+        self.clipboard_writer = clipboard_writer
 
     def plan_fastest(
         self,
@@ -175,6 +217,8 @@ class HeimdallRoutePlanner:
             efficiency=efficiency,
         )
         self.save_active(plan)
+        if plan.next_waypoint is not None:
+            self.clipboard_writer(plan.next_waypoint.system)
         return plan
 
     def save_active(self, plan: SpanshRoutePlan) -> None:
@@ -200,3 +244,70 @@ class HeimdallRoutePlanner:
                 json.dumps(asdict(plan), ensure_ascii=False),
             ),
         )
+
+    def advance_if_arrived(self, system: str) -> RouteClipboardUpdate | None:
+        """Avanza solamente cuando un FSDJump confirma el waypoint esperado."""
+
+        rows = self.database.query(
+            """
+            SELECT id, json, current_waypoint_index
+            FROM heimdall_planned_routes
+            WHERE status='active'
+            ORDER BY id DESC LIMIT 1
+            """
+        )
+        if not rows:
+            return None
+        row = rows[0]
+        plan = SpanshRoutePlan.from_dict(json.loads(row["json"]))
+        index = int(row["current_waypoint_index"])
+        if index >= len(plan.waypoints):
+            return None
+        expected = plan.waypoints[index]
+        if expected.system.casefold() != system.strip().casefold():
+            return None
+
+        next_index = index + 1
+        if next_index >= len(plan.waypoints):
+            self.database.execute(
+                """
+                UPDATE heimdall_planned_routes
+                SET status='completed', current_waypoint_index=?
+                WHERE id=?
+                """,
+                (next_index, row["id"]),
+            )
+            return RouteClipboardUpdate(system, None, True, next_index)
+
+        next_system = plan.waypoints[next_index].system
+        self.database.execute(
+            """
+            UPDATE heimdall_planned_routes
+            SET current_waypoint_index=?
+            WHERE id=?
+            """,
+            (next_index, row["id"]),
+        )
+        self.clipboard_writer(next_system)
+        return RouteClipboardUpdate(system, next_system, False, next_index)
+
+    def copy_pending_waypoint(self) -> str | None:
+        """Recupera una ruta activa sin adelantarla y copia su objetivo pendiente."""
+
+        rows = self.database.query(
+            """
+            SELECT json, current_waypoint_index
+            FROM heimdall_planned_routes
+            WHERE status='active'
+            ORDER BY id DESC LIMIT 1
+            """
+        )
+        if not rows:
+            return None
+        plan = SpanshRoutePlan.from_dict(json.loads(rows[0]["json"]))
+        index = int(rows[0]["current_waypoint_index"])
+        if index >= len(plan.waypoints):
+            return None
+        system = plan.waypoints[index].system
+        self.clipboard_writer(system)
+        return system

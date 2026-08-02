@@ -84,6 +84,10 @@
     - [x] Usar automáticamente sistema actual y alcance real de la nave
     - [ ] Incorporar parámetros físicos completos para Galaxy Plotter exacto
   - [ ] Guiar la secuencia segura de sobrecarga
+    - [x] Copiar el primer waypoint al crear la ruta
+    - [x] Avanzar y copiar el siguiente solamente tras `FSDJump` confirmado
+    - [x] Persistir el índice y evitar avances duplicados
+    - [ ] Guiar entrada al cono, carga y salida segura
 - [ ] Síntesis de salto autorizada
 - [ ] Replanificación por desvío
 - [ ] Luces y visión nocturna opcionales

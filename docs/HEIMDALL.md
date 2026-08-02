@@ -160,6 +160,18 @@ La segunda etapa integrará Galaxy Plotter (`generic/route`) cuando ODIN pueda
 extraer de forma fiable masa, constantes completas del FSD, depósitos y
 bonificaciones. No se enviarán parámetros estimados a ese calculador.
 
+#### Seguimiento mediante portapapeles
+
+Al crear una ruta, HEIMDALL copia el primer punto de control como texto Unicode
+en el portapapeles de Windows. No abre el mapa ni simula teclas: el comandante
+decide cuándo pegar el nombre y trazar el recorrido.
+
+Los saltos intermedios se observan sin adelantar el itinerario. Únicamente un
+evento `FSDJump` cuyo `StarSystem` coincida exactamente con el punto esperado
+incrementa el índice persistente y copia el siguiente sistema. Un evento
+repetido no puede saltar dos waypoints. Al llegar al destino final, la ruta se
+marca como completada y el portapapeles no se modifica nuevamente.
+
 ### Fase 5 — Asistencia de cabina
 
 - Descubrir y respetar los bindings del comandante.

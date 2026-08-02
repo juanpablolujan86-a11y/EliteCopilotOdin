@@ -271,3 +271,12 @@ class HeimdallDiagnostics:
             next_waypoint.system if next_waypoint else "destino alcanzado",
             next_waypoint.neutron_star if next_waypoint else False,
         )
+
+    def record_route_clipboard_update(self, update) -> None:
+        self.logger.info(
+            "ROUTE_CLIPBOARD | llegada=%s | copiado=%s | indice=%s | completa=%s",
+            update.arrived_system,
+            update.copied_system or "ninguno",
+            update.waypoint_index,
+            update.route_complete,
+        )

@@ -88,6 +88,7 @@ class SpanshRoutePlannerTestCase(unittest.TestCase):
         planner = HeimdallRoutePlanner(
             self.database,
             SpanshClient(session, sleeper=lambda _: None),
+            clipboard_writer=lambda _: None,
         )
         context = NavigationContext(
             current_system="Origen",
@@ -105,7 +106,11 @@ class SpanshRoutePlannerTestCase(unittest.TestCase):
         self.assertEqual(saved[0]["total_jumps"], 2)
 
     def test_planner_requires_known_position_and_range(self) -> None:
-        planner = HeimdallRoutePlanner(self.database, SpanshClient(FakeSession([])))
+        planner = HeimdallRoutePlanner(
+            self.database,
+            SpanshClient(FakeSession([])),
+            clipboard_writer=lambda _: None,
+        )
         with self.assertRaisesRegex(ValueError, "sistema actual"):
             planner.plan_fastest(NavigationContext(), "Destino")
         with self.assertRaisesRegex(ValueError, "alcance"):
@@ -113,6 +118,64 @@ class SpanshRoutePlannerTestCase(unittest.TestCase):
                 NavigationContext(current_system="Origen"),
                 "Destino",
             )
+
+    def test_route_copies_first_waypoint_then_advances_only_on_arrival(self) -> None:
+        copied = []
+        planner = HeimdallRoutePlanner(
+            self.database,
+            SpanshClient(FakeSession([{"status": "ok", "result": RESULT}])),
+            clipboard_writer=copied.append,
+        )
+        context = NavigationContext(current_system="Origen", max_jump_range=66.12)
+
+        planner.plan_fastest(context, "Destino")
+        ignored = planner.advance_if_arrived("Salto intermedio")
+        advanced = planner.advance_if_arrived("Neutrón")
+
+        self.assertEqual(copied, ["Neutrón", "Destino"])
+        self.assertIsNone(ignored)
+        self.assertEqual(advanced.copied_system, "Destino")
+        self.assertFalse(advanced.route_complete)
+
+    def test_repeated_jump_does_not_skip_waypoint_and_final_completes(self) -> None:
+        copied = []
+        planner = HeimdallRoutePlanner(
+            self.database,
+            SpanshClient(FakeSession([{"status": "ok", "result": RESULT}])),
+            clipboard_writer=copied.append,
+        )
+        planner.plan_fastest(
+            NavigationContext(current_system="Origen", max_jump_range=66.12),
+            "Destino",
+        )
+        planner.advance_if_arrived("Neutrón")
+
+        self.assertIsNone(planner.advance_if_arrived("Neutrón"))
+        completed = planner.advance_if_arrived("Destino")
+
+        self.assertTrue(completed.route_complete)
+        self.assertIsNone(completed.copied_system)
+        rows = self.database.query(
+            "SELECT status FROM heimdall_planned_routes ORDER BY id DESC LIMIT 1"
+        )
+        self.assertEqual(rows[0]["status"], "completed")
+
+    def test_pending_waypoint_can_be_restored_without_advancing(self) -> None:
+        copied = []
+        planner = HeimdallRoutePlanner(
+            self.database,
+            SpanshClient(FakeSession([{"status": "ok", "result": RESULT}])),
+            clipboard_writer=copied.append,
+        )
+        planner.plan_fastest(
+            NavigationContext(current_system="Origen", max_jump_range=66.12),
+            "Destino",
+        )
+
+        pending = planner.copy_pending_waypoint()
+
+        self.assertEqual(pending, "Neutrón")
+        self.assertEqual(copied, ["Neutrón", "Neutrón"])
 
 
 if __name__ == "__main__":

@@ -242,10 +242,17 @@ class DatabaseManager:
                 total_jumps INTEGER NOT NULL,
                 distance REAL NOT NULL,
                 status TEXT NOT NULL DEFAULT 'active',
+                current_waypoint_index INTEGER NOT NULL DEFAULT 1,
                 json TEXT NOT NULL,
                 created_at TEXT NOT NULL
             )
             """
+        )
+
+        self._ensure_column(
+            "heimdall_planned_routes",
+            "current_waypoint_index",
+            "INTEGER NOT NULL DEFAULT 1",
         )
 
         self._ensure_column(

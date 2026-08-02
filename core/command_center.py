@@ -553,6 +553,14 @@ class CommandCenter:
         if self.navigation_manager is None:
             return
         self.navigation_manager.handle_event(event)
+        if event.get("event") == "FSDJump":
+            route_update = self.heimdall_route_planner.advance_if_arrived(
+                event.get("StarSystem", "")
+            )
+            if route_update is not None:
+                self.heimdall_diagnostics.record_route_clipboard_update(
+                    route_update
+                )
         if event.get("event") in {"FSDJump", "FSDTarget", "JetConeBoost"}:
             self.heimdall_diagnostics.record_navigation_context(
                 self.navigation_manager.context,
