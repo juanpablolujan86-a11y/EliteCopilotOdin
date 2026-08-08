@@ -34,6 +34,22 @@ class WakeWordTests(unittest.TestCase):
             ("estado general", False),
         )
 
+    def test_forced_retry_keeps_full_command_silence(self) -> None:
+        recorder = Mock()
+        listener = WakeWordListener(
+            Path("."), Mock(), recorder=recorder, transcriber=Mock()
+        )
+        recorder.record_utterance.side_effect = lambda *args, **kwargs: (
+            listener.stop() or None
+        )
+        listener.arm()
+
+        listener.run()
+
+        self.assertEqual(
+            recorder.record_utterance.call_args.kwargs["silence_seconds"], 1.0
+        )
+
     def test_wake_word_alone_announces_activation_before_next_phrase(self) -> None:
         recorder = Mock()
         recorder.record_utterance.return_value = Path("wake.wav")

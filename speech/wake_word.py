@@ -84,7 +84,9 @@ class WakeWordListener:
             try:
                 audio = self.recorder.record_utterance(
                     self.audio_path,
-                    silence_seconds=1.0 if waiting_for_question else 0.25,
+                    silence_seconds=(
+                        1.0 if waiting_for_question or self.armed.is_set() else 0.25
+                    ),
                     stop_event=self.stop_event,
                 )
                 if audio is None:

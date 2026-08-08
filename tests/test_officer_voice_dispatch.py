@@ -59,6 +59,12 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
             "Revisando la base de datos.",
         )
 
+    def test_rejects_garbled_short_transcripts_but_accepts_real_orders(self):
+        self.assertFalse(CommandCenter._is_credible_voice_question("Olíden"))
+        self.assertFalse(CommandCenter._is_credible_voice_question("Táatió"))
+        self.assertTrue(CommandCenter._is_credible_voice_question("¿Estás activo?"))
+        self.assertTrue(CommandCenter._is_credible_voice_question("combustible"))
+
     def test_processing_message_signals_completion_without_resuming_listener(self):
         center=CommandCenter.__new__(CommandCenter)
         center.config=SimpleNamespace()

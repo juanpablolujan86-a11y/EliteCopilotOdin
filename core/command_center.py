@@ -802,6 +802,12 @@ class CommandCenter:
 
     def _start_voice_response(self, question: str) -> None:
         """Responde en segundo plano sin detener el seguimiento del Journal."""
+        if not self._is_credible_voice_question(question):
+            self.wake_listener.arm()
+            self._start_fixed_voice_response(
+                "No entendí la orden. Repítala, comandante."
+            )
+            return
         commander = self.commander_state.fid or self.commander_state.commander_name or "default"
         lowered = question.casefold().strip()
         previous_question = self._last_voice_question
@@ -912,6 +918,20 @@ class CommandCenter:
         if route is not None:
             return LearnedCommand("neutron_route", {"destination": route.destination})
         return None
+
+    @staticmethod
+    def _is_credible_voice_question(question: str) -> bool:
+        words = re.findall(r"[a-záéíóúüñ]+", question.casefold())
+        if len(words) >= 2:
+            return True
+        if not words:
+            return False
+        accepted_short_orders = {
+            "activo", "activa", "ayuda", "base", "biología", "biologias",
+            "biologías", "combustible", "créditos", "creditos", "estado",
+            "geología", "geologia", "mímir", "mimir", "nave", "ruta", "saldo",
+        }
+        return words[0] in accepted_short_orders
 
     def _run_voice_response(self, question: str, context: str) -> None:
         acknowledgement_done = threading.Event()
