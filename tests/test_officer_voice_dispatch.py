@@ -20,12 +20,30 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
         center=CommandCenter.__new__(CommandCenter)
         center.config=SimpleNamespace()
         center._voice_busy=threading.Event(); center._voice_busy.set()
+        center._wake_acknowledgement_index=0
+        center._wake_acknowledgement_lock=threading.Lock()
         center.wake_listener=Mock()
         with patch("core.command_center.OfficerVoiceService") as service:
             center._run_wake_acknowledgement()
         service.return_value.speak.assert_called_once_with("ODIN", "Sí, comandante?")
         self.assertFalse(center._voice_busy.is_set())
         center.wake_listener.resume.assert_called_once()
+
+    def test_wake_acknowledgements_rotate_without_immediate_repetition(self):
+        center=CommandCenter.__new__(CommandCenter)
+        center._wake_acknowledgement_index=0
+        center._wake_acknowledgement_lock=threading.Lock()
+
+        phrases=[
+            center._next_wake_acknowledgement()
+            for _ in CommandCenter.WAKE_ACKNOWLEDGEMENTS
+        ]
+
+        self.assertEqual(tuple(phrases), CommandCenter.WAKE_ACKNOWLEDGEMENTS)
+        self.assertEqual(
+            center._next_wake_acknowledgement(),
+            CommandCenter.WAKE_ACKNOWLEDGEMENTS[0],
+        )
 
     def test_processing_messages_match_the_requested_context(self):
         self.assertEqual(

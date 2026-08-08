@@ -75,6 +75,14 @@ class CommandCenter:
     - Cerrar recursos correctamente.
     """
 
+    WAKE_ACKNOWLEDGEMENTS = (
+        "Sí, comandante?",
+        "Lo escucho, comandante.",
+        "Adelante, comandante.",
+        "Dígame, comandante.",
+        "A sus órdenes, comandante.",
+    )
+
     def __init__(self) -> None:
         self.config = Config()
 
@@ -112,6 +120,8 @@ class CommandCenter:
         self._voice_busy = threading.Event()
         self._voice_questions: queue.Queue[str] = queue.Queue()
         self._wake_activations: queue.Queue[bool] = queue.Queue()
+        self._wake_acknowledgement_index = 0
+        self._wake_acknowledgement_lock = threading.Lock()
         self._route_acknowledgement_done = threading.Event()
         self._route_acknowledgement_done.set()
         self._route_results: queue.Queue[tuple[object | None, str | None]] = queue.Queue()
@@ -754,21 +764,23 @@ class CommandCenter:
     def _prepare_wake_acknowledgement(self) -> None:
         try:
             voice = OfficerVoiceService(self.config)
-            for officer, message in (
-                ("ODIN", "Sí, comandante?"),
+            messages = tuple(
+                ("ODIN", message) for message in self.WAKE_ACKNOWLEDGEMENTS
+            ) + (
                 ("ODIN", "Revisando la base de datos."),
                 ("ODIN", "Consultando los registros científicos."),
                 ("ODIN", "Revisando los datos del comandante."),
                 ("ODIN", "Procesando la orden, comandante."),
                 ("HEIMDALL", "Calculando la ruta, comandante."),
-            ):
+            )
+            for officer, message in messages:
                 voice.prepare(officer, message)
         except (VoiceServiceError, OSError):
             pass
 
     def _run_wake_acknowledgement(self) -> None:
         try:
-            acknowledgement = "Sí, comandante?"
+            acknowledgement = self._next_wake_acknowledgement()
             print(f"ODIN: {acknowledgement}\n")
             OfficerVoiceService(self.config).speak("ODIN", acknowledgement)
             print("ODIN escucha. Hablá y terminá con un segundo de silencio...")
@@ -777,6 +789,16 @@ class CommandCenter:
         finally:
             self._voice_busy.clear()
             self.wake_listener.resume()
+
+    def _next_wake_acknowledgement(self) -> str:
+        with self._wake_acknowledgement_lock:
+            acknowledgement = self.WAKE_ACKNOWLEDGEMENTS[
+                self._wake_acknowledgement_index
+            ]
+            self._wake_acknowledgement_index = (
+                self._wake_acknowledgement_index + 1
+            ) % len(self.WAKE_ACKNOWLEDGEMENTS)
+            return acknowledgement
 
     def _start_voice_response(self, question: str) -> None:
         """Responde en segundo plano sin detener el seguimiento del Journal."""
