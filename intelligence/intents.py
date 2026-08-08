@@ -11,6 +11,18 @@ class NeutronRouteIntent:
     destination: str
 
 
+@dataclass(frozen=True, slots=True)
+class HomeRouteIntent:
+    pass
+
+
+def parse_home_route_intent(text: str) -> HomeRouteIntent | None:
+    lowered = text.casefold()
+    home = re.search(r"\b(?:casa|base)\b", lowered)
+    movement = re.search(r"\b(?:vamos|ir|viaj|ruta|llev|regres|volv)", lowered)
+    return HomeRouteIntent() if home and movement else None
+
+
 def parse_neutron_route_intent(text: str) -> NeutronRouteIntent | None:
     lowered = text.casefold()
     navigation_words = ("ruta", "viaj", "ir ", "llev", "calcul", "planific", "traz")

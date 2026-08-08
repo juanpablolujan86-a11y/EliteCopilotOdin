@@ -17,6 +17,12 @@ anterior para no mantener instrucciones obsoletas.
 Durante una autopista muestra saltos realizados, restantes y total real,
 incluidos los saltos convencionales entre puntos principales de Spansh.
 
+HEIMDALL analiza el evento `StoredShips` más reciente y registra como base el
+sistema con más naves guardadas; en un empate prefiere la estación donde se
+consultó el inventario. La base persiste en `%LOCALAPPDATA%\ODIN\heimdall`.
+Las frases “vamos a la base”, “creá una ruta a la base” y “vamos a casa” calculan
+automáticamente una ruta de neutrones hacia ella.
+
 MÍMIR, el oficial científico, recibe eventos `Scan` planetarios,
 normaliza sus datos, predice especies biológicas y publica una
 recomendación de descenso. Su conocimiento incluye 116 especies de 19
@@ -146,6 +152,8 @@ Al decir “ODIN, calculá una ruta de neutrones hasta NOMBRE DEL SISTEMA”, OD
 extrae el destino con reglas locales, entrega el cálculo a HEIMDALL y Spansh,
 reemplaza la ruta activa y copia el primer waypoint al portapapeles. Al arribar,
 HEIMDALL valida el sistema y copia el siguiente hasta completar el recorrido.
+Si Spansh falla, ODIN pronuncia solamente un aviso breve; el detalle técnico se
+conserva en `heimdall.log` para diagnóstico.
 
 El cliente usa solamente `127.0.0.1:11434`, evita mostrar razonamiento interno
 y falla de forma segura si Ollama o el modelo todavía no están disponibles.

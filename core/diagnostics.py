@@ -294,3 +294,13 @@ class HeimdallDiagnostics:
             update.total_jumps,
             update.jumps_remaining,
         )
+
+    def record_route_error(self, destination: str, error: Exception) -> None:
+        """Conserva el detalle técnico sin pronunciarlo al comandante."""
+
+        self.logger.error(
+            "ROUTE_ERROR | destino=%s | tipo=%s | detalle=%s",
+            destination,
+            type(error).__name__,
+            str(error),
+        )

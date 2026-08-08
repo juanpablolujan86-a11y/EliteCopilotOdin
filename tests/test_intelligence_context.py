@@ -34,6 +34,7 @@ class IntelligenceContextTests(unittest.TestCase):
             navigation,
             balance,
             {"Sol A 1": ("Bacterium Aurasus", "Stratum Tectonicas")},
+            "GCRV 1568",
         )
 
         self.assertIn("Sistema actual: Sol", context)
@@ -43,6 +44,7 @@ class IntelligenceContextTests(unittest.TestCase):
         self.assertIn(
             "Sol A 1: Bacterium Aurasus, Stratum Tectonicas", context
         )
+        self.assertIn("Base del comandante: GCRV 1568", context)
         biology_section = context.split(
             "Biologías probables conocidas en el sistema, sin precios:"
         )[1]

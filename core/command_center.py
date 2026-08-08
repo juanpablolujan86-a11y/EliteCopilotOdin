@@ -43,10 +43,11 @@ from ui.console_presenter import ConsolePresenter
 from core.version import CAPABILITY, VERSION
 from core.diagnostics import HeimdallDiagnostics, MimirDiagnostics, OdinDiagnostics
 from heimdall.bindings import BindingAudit, BindingCustodian
+from heimdall.home_base import HomeBaseManager
 from heimdall.navigation import NavigationContext, NavigationContextManager
 from heimdall.spansh import HeimdallRoutePlanner, SpanshClient, SpanshRouteError
 from intelligence.context import build_live_context
-from intelligence.intents import parse_neutron_route_intent
+from intelligence.intents import parse_home_route_intent, parse_neutron_route_intent
 from intelligence.ollama import OllamaError
 from speech.conversation import VoiceConversation
 from speech.hotkey import WindowsHotkey
@@ -91,6 +92,7 @@ class CommandCenter:
         self.binding_audit: BindingAudit | None = None
         self.navigation_manager: NavigationContextManager | None = None
         self.heimdall_diagnostics = HeimdallDiagnostics(self.config.data_root)
+        self.home_base_manager = HomeBaseManager(self.config.data_root)
         self.heimdall_route_planner = HeimdallRoutePlanner(
             self.database,
             SpanshClient(),
@@ -128,6 +130,8 @@ class CommandCenter:
         self._initialize_heimdall()
 
         self._initialize_heimdall_navigation(journal)
+
+        self._initialize_home_base()
 
         self._restore_commander_state(journal)
 
@@ -248,6 +252,20 @@ class CommandCenter:
             f"Sistema actual {self.commander_state.current_system}"
         )
 
+    def _initialize_home_base(self) -> None:
+        base = self.home_base_manager.load()
+        event = JournalReader(self.config.journal_path).latest_stored_ships_event()
+        if event is not None:
+            base = self.home_base_manager.update_from_stored_ships(event)
+        if base is None:
+            print("HEIMDALL base         : sin base registrada")
+            return
+        location = f" ({base.station})" if base.station else ""
+        print(
+            f"HEIMDALL base         : {base.system}{location}, "
+            f"{base.stored_ships} naves guardadas"
+        )
+
     def _configure_processors(self) -> None:
         """
         Crea y registra todos los procesadores.
@@ -308,6 +326,10 @@ class CommandCenter:
             "SetUserShipName", "ShipyardSwap", "ShipyardBuy",
         ):
             self.event_bus.subscribe(event_name, commander_state_updater.handle_profile_event)
+        self.event_bus.subscribe(
+            "StoredShips",
+            self.home_base_manager.update_from_stored_ships,
+        )
 
         expedition_ledger = ExpeditionLedger(
             self.database,
@@ -669,6 +691,15 @@ class CommandCenter:
 
     def _start_voice_response(self, question: str) -> None:
         """Responde en segundo plano sin detener el seguimiento del Journal."""
+        if parse_home_route_intent(question) is not None:
+            base = self.home_base_manager.current
+            if base is None:
+                self._start_fixed_voice_response(
+                    "No tengo una base registrada para el comandante."
+                )
+            else:
+                self._start_voice_route(base.system)
+            return
         route_intent = parse_neutron_route_intent(question)
         if route_intent is not None:
             self._start_voice_route(route_intent.destination)
@@ -686,7 +717,12 @@ class CommandCenter:
             self.commander_state.current_system
         )
         context = build_live_context(
-            self.commander_state, navigation, balance, biology
+            self.commander_state,
+            navigation,
+            balance,
+            biology,
+            self.home_base_manager.current.system
+            if self.home_base_manager.current is not None else "",
         )
         self._voice_busy.set()
         threading.Thread(
@@ -749,11 +785,14 @@ class CommandCenter:
             plan = self.heimdall_route_planner.calculate_fastest(context, destination)
             self._route_results.put((plan, None))
         except (SpanshRouteError, ValueError) as error:
-            self._route_results.put((None, str(error)))
+            self.heimdall_diagnostics.record_route_error(destination, error)
+            self._route_results.put((None, "route_error"))
 
     def _finish_voice_route(self, plan, error: str | None) -> None:
         if error is not None:
-            self._start_fixed_voice_response(f"No pude calcular la ruta. {error}")
+            self._start_fixed_voice_response(
+                "No pude calcular la ruta de neutrones. Se produjo un error."
+            )
             return
         try:
             self.heimdall_route_planner.activate(plan)
@@ -769,7 +808,11 @@ class CommandCenter:
             else:
                 answer += "Ya te encontrás en el destino."
         except (OSError, RuntimeError, ValueError) as route_error:
-            answer = f"La ruta fue calculada, pero no pude activarla. {route_error}"
+            self.heimdall_diagnostics.record_route_error(
+                getattr(plan, "destination_system", "desconocido"),
+                route_error,
+            )
+            answer = "La ruta fue calculada, pero se produjo un error al activarla."
         self._start_fixed_voice_response(answer)
 
     def _start_fixed_voice_response(self, answer: str) -> None:

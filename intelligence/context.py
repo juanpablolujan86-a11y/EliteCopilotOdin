@@ -12,12 +12,14 @@ def build_live_context(
     navigation: NavigationContext | None,
     balance: ExpeditionBalanceUpdated | None,
     biology_by_body: dict[str, tuple[str, ...]] | None = None,
+    home_base: str = "",
 ) -> str:
     lines = [
         f"Comandante: {commander.commander_name or 'desconocido'}",
         f"Créditos disponibles: {commander.credits}",
         f"Préstamo pendiente: {commander.loan}",
         f"Patrimonio registrado: {commander.current_wealth or 'sin datos'}",
+        f"Base del comandante: {home_base or 'sin base registrada'}",
         f"Sistema actual: {commander.current_system or 'desconocido'}",
         f"Cuerpo actual: {commander.current_body or commander.last_scanned_body or 'sin datos'}",
         (

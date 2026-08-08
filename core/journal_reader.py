@@ -139,6 +139,26 @@ class JournalReader:
                     latest[name] = event
         return list(latest.values())
 
+    def latest_stored_ships_event(self) -> dict | None:
+        """Busca el inventario de naves más reciente del historial disponible."""
+
+        journals = sorted(
+            self.journal_folder.glob("Journal.*.log"),
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        )
+        for journal in journals:
+            with journal.open("r", encoding="utf-8", errors="ignore") as stream:
+                lines = stream.readlines()
+            for line in reversed(lines):
+                try:
+                    event = json.loads(line)
+                except (json.JSONDecodeError, TypeError):
+                    continue
+                if event.get("event") == "StoredShips":
+                    return event
+        return None
+
     def current_system_events(
         self,
         journal: Path | None = None,
