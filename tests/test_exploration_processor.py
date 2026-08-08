@@ -5,7 +5,10 @@ from pathlib import Path
 from core.database import DatabaseManager
 from core.event_bus import EventBus
 from core.internal_events import InternalEvent
-from core.processors.exploration_processor import ExplorationProcessor
+from core.processors.exploration_processor import (
+    FIRST_FOOTFALL_MESSAGES,
+    ExplorationProcessor,
+)
 from mimir.surface_navigation import SurfaceNavigationTracker
 from state.commander_state import CommanderState
 from tests.test_mimir import bacteria_scan
@@ -137,10 +140,16 @@ class ExplorationProcessorTestCase(unittest.TestCase):
             processor.handle_disembark(event)
 
             self.assertEqual(len(messages), 1)
-            self.assertIn("mono pulgoso", messages[0].message)
-            self.assertIn("Darwin", messages[0].message)
+            self.assertIn(messages[0].message, FIRST_FOOTFALL_MESSAGES)
             self.assertEqual(messages[0].body_name, "Prueba 7")
             database.disconnect()
+
+    def test_first_footfall_jokes_vary_by_planet(self) -> None:
+        messages = {
+            ExplorationProcessor._first_footfall_message(f"Planeta {index}")
+            for index in range(20)
+        }
+        self.assertGreater(len(messages), 1)
 
     def test_duplicate_all_bodies_found_report_is_ignored(self) -> None:
         database = FakeDatabase()

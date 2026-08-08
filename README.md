@@ -50,7 +50,9 @@ informar cuántas quedan, o que el planeta fue completado.
 Los candidatos científicos visibles incluyen su recompensa base individual y,
 cuando corresponde, el potencial First Logged. Un desembarco sobre un planeta
 que el último escaneo marcó sin pisada prepara además el aviso de voz de primera
-pisada, sin repetirlo ni mostrarlo en la consola.
+pisada, sin repetirlo ni mostrarlo en la consola. MÍMIR elige entre varias frases
+de humor evolutivo de forma estable por planeta, incluyendo el clásico del mono
+pulgoso.
 
 ODIN conserva por sistema los nombres de las especies probables informadas por
 MÍMIR. Ante una consulta hablada puede enumerarlas agrupadas por planeta sin

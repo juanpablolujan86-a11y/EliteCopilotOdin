@@ -21,6 +21,7 @@ Procesa la exploración científica:
 """
 
 import json
+import hashlib
 import unicodedata
 
 from core.database import DatabaseManager
@@ -36,6 +37,15 @@ from models.events.organic_scan_updated import OrganicScanUpdated
 from models.events.voice_message_ready import VoiceMessageReady
 from state.commander_state import CommanderState
 from mimir.surface_navigation import SurfaceNavigationTracker
+
+
+FIRST_FOOTFALL_MESSAGES = (
+    "Felicidades, sos el primer descendiente de un mono pulgoso en pisar este planeta. Darwin estaría orgulloso de vos.",
+    "Primera pisada confirmada. Sos el primer mono con licencia de piloto que deja sus huellas en este planeta.",
+    "Nadie había pisado este planeta antes. Millones de años de evolución para que fueras vos quien ensuciara primero el suelo.",
+    "Felicidades, comandante. Este planeta ya puede presumir de haber sido pisado por un primate espacial certificado.",
+    "Primeras huellas registradas. Darwin no predijo naves espaciales, pero seguramente aprobaría este aterrizaje.",
+)
 
 
 class ExplorationProcessor:
@@ -346,15 +356,16 @@ class ExplorationProcessor:
             InternalEvent.VOICE_MESSAGE_READY,
             VoiceMessageReady(
                 officer="MÍMIR",
-                message=(
-                    "Felicidades, sos el primer descendiente de un mono "
-                    "pulgoso en pisar este planeta. Darwin estaría "
-                    "orgulloso de vos."
-                ),
+                message=self._first_footfall_message(body_name),
                 reason="Primera pisada confirmada",
                 body_name=body_name,
             ),
         )
+
+    @staticmethod
+    def _first_footfall_message(body_name: str) -> str:
+        digest = hashlib.sha256(body_name.encode("utf-8")).digest()
+        return FIRST_FOOTFALL_MESSAGES[digest[0] % len(FIRST_FOOTFALL_MESSAGES)]
 
     def handle_fss_discovery_scan(self, event: dict) -> None:
         """
