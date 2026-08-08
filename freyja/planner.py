@@ -71,6 +71,21 @@ class ThreeStationTradePlan:
             f"{self.total_jumps} saltos."
         )
 
+
+@dataclass(frozen=True, slots=True)
+class TradeExpeditionPlan:
+    legs: tuple[QuickTradePlan, ...]
+    estimated_profit: int
+    estimated_minutes: float
+    profit_per_minute: float
+    total_jumps: int
+
+    def summary(self) -> str:
+        return (
+            f"Expedición de {len(self.legs)} operaciones y {self.total_jumps} "
+            f"saltos: {self.estimated_profit:,} créditos estimados."
+        )
+
 class TradeProfileBuilder:
     LARGE_SHIPS = {
         "anaconda", "belugaliner", "cutter", "federation_corvette",
@@ -238,6 +253,102 @@ class ThreeStationOptimizer:
             key=lambda plan: (plan.profit_per_minute, plan.estimated_profit),
             default=None,
         )
+
+    @staticmethod
+    def _station(system: str, station: str) -> tuple[str, str]:
+        return system.casefold(), station.casefold()
+
+
+class TradeExpeditionOptimizer:
+    """Encadena operaciones rentables sin superar el presupuesto de saltos."""
+
+    def __init__(self, quick_optimizer: QuickRouteOptimizer | None = None) -> None:
+        self.quick = quick_optimizer or QuickRouteOptimizer()
+
+    def choose(
+        self,
+        profile: TradeProfile,
+        opportunities,
+        *,
+        max_jumps: int = 30,
+        max_legs: int = 8,
+        beam_width: int = 100,
+        max_age_hours: float = 8.0,
+        max_bulk_discount: float = 0.08,
+    ) -> TradeExpeditionPlan | None:
+        if max_jumps <= 0 or max_legs <= 0:
+            return None
+        feasible: list[tuple[int, QuickTradePlan]] = []
+        for index, opportunity in enumerate(opportunities):
+            leg = self.quick.choose(
+                profile,
+                [opportunity],
+                max_age_hours=max_age_hours,
+                max_bulk_discount=max_bulk_discount,
+                max_profit_sacrifice=0.0,
+            )
+            if leg is not None and 0 <= opportunity.jumps <= max_jumps:
+                feasible.append((index, leg))
+        if not feasible:
+            return None
+
+        states = [
+            ((index,), (leg,))
+            for index, leg in feasible
+        ]
+        candidates = list(states)
+        for _ in range(1, max_legs):
+            expanded = []
+            for used, legs in states:
+                last = legs[-1].opportunity
+                current_station = self._station(
+                    last.sell_system, last.sell_station
+                )
+                jumps_used = sum(leg.opportunity.jumps for leg in legs)
+                for index, leg in feasible:
+                    if index in used:
+                        continue
+                    next_opportunity = leg.opportunity
+                    if self._station(
+                        next_opportunity.buy_system,
+                        next_opportunity.buy_station,
+                    ) != current_station:
+                        continue
+                    if jumps_used + next_opportunity.jumps > max_jumps:
+                        continue
+                    expanded.append((used + (index,), legs + (leg,)))
+            if not expanded:
+                break
+            expanded.sort(
+                key=lambda state: self._state_score(state[1]), reverse=True
+            )
+            states = expanded[:max(1, beam_width)]
+            candidates.extend(states)
+
+        best = max(
+            candidates,
+            key=lambda state: self._state_score(state[1]),
+            default=None,
+        )
+        if best is None:
+            return None
+        legs = best[1]
+        profit = sum(leg.estimated_profit for leg in legs)
+        minutes = sum(leg.estimated_minutes for leg in legs)
+        jumps = sum(leg.opportunity.jumps for leg in legs)
+        return TradeExpeditionPlan(
+            legs,
+            profit,
+            minutes,
+            profit / max(1.0, minutes),
+            jumps,
+        )
+
+    @staticmethod
+    def _state_score(legs: tuple[QuickTradePlan, ...]) -> tuple[int, float]:
+        profit = sum(leg.estimated_profit for leg in legs)
+        minutes = sum(leg.estimated_minutes for leg in legs)
+        return profit, profit / max(1.0, minutes)
 
     @staticmethod
     def _station(system: str, station: str) -> tuple[str, str]:

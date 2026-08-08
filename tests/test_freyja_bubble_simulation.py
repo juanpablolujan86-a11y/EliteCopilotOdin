@@ -13,6 +13,7 @@ from freyja.planner import (
     MarketOpportunity,
     QuickRouteOptimizer,
     ThreeStationOptimizer,
+    TradeExpeditionOptimizer,
     TradeProfile,
 )
 
@@ -264,6 +265,53 @@ class FreyjaBubbleSimulationTests(unittest.TestCase):
 
         self.assertIsNone(
             ThreeStationOptimizer().choose(profile, [a_to_b, b_to_c])
+        )
+
+    def test_trade_expedition_maximizes_profit_without_exceeding_30_jumps(self) -> None:
+        profile = TradeProfile(
+            "Sistema A", 50_000_000, 2_500_000, 200, 0, 30, (0, 0, 0)
+        )
+        legs = [
+            MarketOpportunity(
+                f"producto {index}",
+                f"Sistema {letter}", f"Estación {letter}",
+                f"Sistema {chr(ord(letter) + 1)}", f"Estación {chr(ord(letter) + 1)}",
+                5_000, 10_000 + index * 1_000,
+                2_000, 2_000, 8, 300, self.now,
+            )
+            for index, letter in enumerate(("A", "B", "C", "D"), start=1)
+        ]
+
+        plan = TradeExpeditionOptimizer().choose(profile, legs, max_jumps=30)
+
+        self.assertIsNotNone(plan)
+        self.assertEqual(plan.total_jumps, 24)
+        self.assertEqual(len(plan.legs), 3)
+        self.assertLessEqual(plan.total_jumps, 30)
+        self.assertGreater(plan.estimated_profit, 0)
+        self.assertIn("24 saltos", plan.summary())
+
+    def test_trade_expedition_rejects_invalid_budget_and_disconnected_edges(self) -> None:
+        profile = TradeProfile(
+            "Sistema A", 5_000_000, 250_000, 64, 0, 25, (0, 0, 0)
+        )
+        disconnected = [
+            self.opportunity(commodity="oro", jumps=16),
+            MarketOpportunity(
+                "plata", "Otro A", "Otro Puerto", "Otro B", "Destino",
+                5_000, 12_000, 500, 500, 16, 500, self.now,
+            ),
+        ]
+
+        plan = TradeExpeditionOptimizer().choose(
+            profile, disconnected, max_jumps=30
+        )
+
+        self.assertIsNotNone(plan)
+        self.assertEqual(len(plan.legs), 1)
+        self.assertEqual(plan.total_jumps, 16)
+        self.assertIsNone(
+            TradeExpeditionOptimizer().choose(profile, disconnected, max_jumps=0)
         )
 
     def test_large_ship_rejects_route_without_large_pads(self) -> None:

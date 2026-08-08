@@ -73,6 +73,11 @@ una ruta más corta ofrece mejor rendimiento o menor riesgo.
 - progreso persistente y siguiente estación copiada sólo tras llegada
   confirmada.
 
+El optimizador ya encadena operaciones mediante una búsqueda acotada, descarta
+tramos desconectados o inviables y nunca supera el presupuesto configurado de
+30 saltos. El seguimiento persistente y el avance por llegada quedan como la
+siguiente etapa de integración.
+
 ## Función objetivo
 
 FREYJA puntúa cada plan usando:
