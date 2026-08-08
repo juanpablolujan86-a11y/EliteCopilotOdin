@@ -125,6 +125,12 @@ La captura termina automáticamente un segundo después de dejar de hablar. Sól
 una frase que contiene la palabra de activación llega a Ollama; durante la
 respuesta hablada el micrófono se pausa para evitar realimentación.
 
+Las órdenes de navegación no dependen de una interpretación creativa del modelo.
+Al decir “ODIN, calculá una ruta de neutrones hasta NOMBRE DEL SISTEMA”, ODIN
+extrae el destino con reglas locales, entrega el cálculo a HEIMDALL y Spansh,
+reemplaza la ruta activa y copia el primer waypoint al portapapeles. Al arribar,
+HEIMDALL valida el sistema y copia el siguiente hasta completar el recorrido.
+
 El cliente usa solamente `127.0.0.1:11434`, evita mostrar razonamiento interno
 y falla de forma segura si Ollama o el modelo todavía no están disponibles.
 

@@ -105,6 +105,30 @@ class SpanshRoutePlannerTestCase(unittest.TestCase):
         self.assertEqual(saved[0]["provider"], "Spansh")
         self.assertEqual(saved[0]["total_jumps"], 2)
 
+    def test_background_calculation_does_not_touch_database_or_clipboard(self) -> None:
+        copied = []
+        planner = HeimdallRoutePlanner(
+            self.database,
+            SpanshClient(
+                FakeSession([{"status": "ok", "result": RESULT}]),
+                sleeper=lambda _: None,
+            ),
+            clipboard_writer=copied.append,
+        )
+        plan = planner.calculate_fastest(
+            NavigationContext(current_system="Origen", max_jump_range=66.12),
+            "Destino",
+        )
+
+        self.assertEqual(plan.destination_system, "Destino")
+        self.assertEqual(copied, [])
+        self.assertEqual(
+            self.database.query(
+                "SELECT COUNT(*) FROM heimdall_planned_routes WHERE status='active'"
+            )[0][0],
+            0,
+        )
+
     def test_planner_requires_known_position_and_range(self) -> None:
         planner = HeimdallRoutePlanner(
             self.database,

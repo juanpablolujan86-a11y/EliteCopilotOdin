@@ -217,20 +217,35 @@ class HeimdallRoutePlanner:
         *,
         efficiency: int = 60,
     ) -> SpanshRoutePlan:
+        plan = self.calculate_fastest(context, destination, efficiency=efficiency)
+        self.activate(plan)
+        return plan
+
+    def calculate_fastest(
+        self,
+        context: NavigationContext,
+        destination: str,
+        *,
+        efficiency: int = 60,
+    ) -> SpanshRoutePlan:
+        """Calcula sin tocar SQLite ni portapapeles; apto para un hilo de red."""
+
         if not context.current_system:
             raise ValueError("HEIMDALL todavía no conoce el sistema actual.")
         if context.max_jump_range <= 0:
             raise ValueError("HEIMDALL todavía no conoce el alcance de la nave.")
-        plan = self.client.plan_neutron_route(
+        return self.client.plan_neutron_route(
             context.current_system,
             destination,
             context.max_jump_range,
             efficiency=efficiency,
         )
+    def activate(self, plan: SpanshRoutePlan) -> None:
+        """Guarda el resultado y deja el primer waypoint en el portapapeles."""
+
         self.save_active(plan)
         if plan.next_waypoint is not None:
             self.clipboard_writer(plan.next_waypoint.system)
-        return plan
 
     def save_active(self, plan: SpanshRoutePlan) -> None:
         self.database.execute(

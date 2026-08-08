@@ -41,16 +41,17 @@ from ui.console_presenter import ConsolePresenter
 from core.version import CAPABILITY, VERSION
 from core.diagnostics import HeimdallDiagnostics, MimirDiagnostics, OdinDiagnostics
 from heimdall.bindings import BindingAudit, BindingCustodian
-from heimdall.navigation import NavigationContextManager
-from heimdall.spansh import HeimdallRoutePlanner, SpanshClient
+from heimdall.navigation import NavigationContext, NavigationContextManager
+from heimdall.spansh import HeimdallRoutePlanner, SpanshClient, SpanshRouteError
 from intelligence.context import build_live_context
+from intelligence.intents import parse_neutron_route_intent
 from intelligence.ollama import OllamaError
 from speech.conversation import VoiceConversation
 from speech.hotkey import WindowsHotkey
 from speech.wake_word import WakeWordListener
 from speech.recorder import MicrophoneError
 from speech.whisper import TranscriptionError
-from voice.service import VoiceServiceError
+from voice.service import OfficerVoiceService, VoiceServiceError
 
 class CommandCenter:
     """
@@ -97,6 +98,7 @@ class CommandCenter:
         self.voice_hotkey = WindowsHotkey()
         self._voice_busy = threading.Event()
         self._voice_questions: queue.Queue[str] = queue.Queue()
+        self._route_results: queue.Queue[tuple[object | None, str | None]] = queue.Queue()
         self.wake_listener = WakeWordListener(
             self.config.data_root, self._voice_questions.put
         )
@@ -604,6 +606,13 @@ class CommandCenter:
                 if question:
                     self._start_voice_response(question)
 
+            try:
+                route_plan, route_error = self._route_results.get_nowait()
+            except queue.Empty:
+                route_plan, route_error = None, None
+            if route_plan is not None or route_error is not None:
+                self._finish_voice_route(route_plan, route_error)
+
             events = self.watcher.poll()
 
             for event in events:
@@ -613,6 +622,11 @@ class CommandCenter:
 
     def _start_voice_response(self, question: str) -> None:
         """Responde en segundo plano sin detener el seguimiento del Journal."""
+        route_intent = parse_neutron_route_intent(question)
+        if route_intent is not None:
+            self._start_voice_route(route_intent.destination)
+            return
+
         balance = (
             self.expedition_ledger.summary("consulta por voz")
             if self.expedition_ledger is not None else None
@@ -637,6 +651,78 @@ class CommandCenter:
             print(f"ODIN: {answer}\n")
         except (MicrophoneError, TranscriptionError, OllamaError, VoiceServiceError) as error:
             print(f"\nConversación por voz no disponible: {error}\n")
+        finally:
+            self._voice_busy.clear()
+            self.wake_listener.resume()
+
+    def _start_voice_route(self, destination: str) -> None:
+        if self.navigation_manager is None:
+            self._start_fixed_voice_response(
+                "HEIMDALL todavía no tiene disponible el contexto de navegación."
+            )
+            return
+        context = self.navigation_manager.context
+        snapshot = NavigationContext(
+            current_system=context.current_system,
+            max_jump_range=context.max_jump_range,
+        )
+        self._voice_busy.set()
+        print(
+            f"\nHEIMDALL calcula una ruta de neutrones desde "
+            f"{snapshot.current_system or 'origen desconocido'} hasta {destination}..."
+        )
+        threading.Thread(
+            target=self._calculate_voice_route,
+            args=(snapshot, destination),
+            name="heimdall-voice-route",
+            daemon=True,
+        ).start()
+
+    def _calculate_voice_route(
+        self, context: NavigationContext, destination: str
+    ) -> None:
+        try:
+            plan = self.heimdall_route_planner.calculate_fastest(context, destination)
+            self._route_results.put((plan, None))
+        except (SpanshRouteError, ValueError) as error:
+            self._route_results.put((None, str(error)))
+
+    def _finish_voice_route(self, plan, error: str | None) -> None:
+        if error is not None:
+            self._start_fixed_voice_response(f"No pude calcular la ruta. {error}")
+            return
+        try:
+            self.heimdall_route_planner.activate(plan)
+            self.heimdall_diagnostics.record_planned_route(plan)
+            next_system = plan.next_waypoint.system if plan.next_waypoint else None
+            answer = (
+                f"Ruta de neutrones calculada desde {plan.source_system} hasta "
+                f"{plan.destination_system}: {plan.actual_total_jumps} saltos y "
+                f"{plan.distance:.0f} años luz. "
+            )
+            if next_system:
+                answer += f"Copié {next_system} al portapapeles como primer destino."
+            else:
+                answer += "Ya te encontrás en el destino."
+        except (OSError, RuntimeError, ValueError) as route_error:
+            answer = f"La ruta fue calculada, pero no pude activarla. {route_error}"
+        self._start_fixed_voice_response(answer)
+
+    def _start_fixed_voice_response(self, answer: str) -> None:
+        self._voice_busy.set()
+        threading.Thread(
+            target=self._run_fixed_voice_response,
+            args=(answer,),
+            name="odin-fixed-voice-response",
+            daemon=True,
+        ).start()
+
+    def _run_fixed_voice_response(self, answer: str) -> None:
+        try:
+            print(f"ODIN: {answer}\n")
+            OfficerVoiceService(self.config).speak("ODIN", answer)
+        except VoiceServiceError as error:
+            print(f"Voz no disponible: {error}\n")
         finally:
             self._voice_busy.clear()
             self.wake_listener.resume()
