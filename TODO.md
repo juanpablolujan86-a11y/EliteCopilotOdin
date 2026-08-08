@@ -59,9 +59,14 @@
 
 ## Sprint 4 - Oficial Comercial
 
-- [ ] Mercados
-- [ ] Inara
-- [ ] Rutas comerciales
+- [ ] FREYJA: libro comercial local y carga actual
+- [ ] Mercado comunitario con oferta, demanda y antigüedad verificables
+- [ ] Perfil automático de nave, capital, permisos y preferencias
+- [ ] Ruta rápida optimizada por beneficio por minuto
+- [ ] Cadena de tres estaciones y hasta tres productos
+- [ ] Expedición comercial de hasta 30 saltos
+- [ ] Replanificación y progreso persistente
+- [ ] Consultas e informes por voz
 
 ---
 
