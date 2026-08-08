@@ -9,6 +9,7 @@ from typing import Callable
 
 from speech.recorder import MicrophoneError, MicrophoneRecorder
 from speech.whisper import TranscriptionError, WhisperTranscriber
+from speech.faster_whisper import FasterWhisperTranscriber
 from speech.wake_recognizer import VoskWakeRecognizer, WakeRecognitionError
 
 
@@ -51,8 +52,8 @@ class WakeWordListener:
         # La escucha permanente debe competir lo mínimo posible con el juego.
         # Base reconoce órdenes breves con mucha menos carga que Small; los
         # alias de interpret_wake_phrase cubren sus variantes de "ODIN".
-        self.transcriber = transcriber or WhisperTranscriber(
-            model_preference="base", threads=4
+        self.transcriber = transcriber or FasterWhisperTranscriber(
+            fallback=WhisperTranscriber(model_preference="small", threads=4)
         )
         if wake_transcriber is not None:
             self.wake_transcriber = wake_transcriber

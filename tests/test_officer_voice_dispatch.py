@@ -84,11 +84,29 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
             "FREYJA",
         )
 
+    def test_new_trade_confusions_are_learned_as_freyja_menu(self):
+        for transcript in ("y gaseer comercio", "vale bien"):
+            center=CommandCenter.__new__(CommandCenter)
+            center._pending_freyja_trade_menu=False
+            center.commander_state=SimpleNamespace(fid="F123",commander_name="")
+            center._last_voice_question=""
+            center.command_memory=Mock()
+            center._start_fixed_voice_response=Mock()
+
+            center._start_voice_response(transcript)
+
+            center.command_memory.remember.assert_called_once_with(
+                "F123",transcript,"freyja_trade_menu",{}
+            )
+            self.assertTrue(center._pending_freyja_trade_menu)
+
     def test_freyja_trade_request_accepts_natural_variants(self):
         self.assertTrue(CommandCenter._is_freyja_trade_request("quiero comerciar"))
         self.assertTrue(CommandCenter._is_freyja_trade_request("vamos a hacer comercio"))
         self.assertTrue(CommandCenter._is_freyja_trade_request("quiero comprar y vender"))
         self.assertFalse(CommandCenter._is_freyja_trade_request("cu\u00e1nto combustible tengo"))
+        self.assertTrue(CommandCenter._is_freyja_trade_request("y gaseer comercio"))
+        self.assertTrue(CommandCenter._is_freyja_trade_request("vale bien"))
         learned=CommandCenter._command_from_text("quiero comerciar")
         self.assertEqual(learned.intent,"freyja_trade_menu")
 

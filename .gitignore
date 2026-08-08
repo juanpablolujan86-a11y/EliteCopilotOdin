@@ -22,6 +22,7 @@ ELEVENLABS_API_KEY.txt
 # Compilación distribuible
 build/
 dist/
+.runtime/
 
 # Descargas externas duplicadas
 knowledge/external/bioscan/*.zip

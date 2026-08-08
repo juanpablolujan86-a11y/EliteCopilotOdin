@@ -792,6 +792,13 @@ class CommandCenter:
 
     def _prepare_wake_acknowledgement(self) -> None:
         try:
+            warm_up = getattr(self.wake_listener.transcriber, "warm_up", None)
+            if callable(warm_up):
+                ready = warm_up()
+                print(
+                    "Reconocimiento de voz: "
+                    + ("large-v3-turbo listo en GPU" if ready else "whisper.cpp de respaldo")
+                )
             voice = OfficerVoiceService(self.config)
             messages = tuple(
                 ("ODIN", message) for message in self.WAKE_ACKNOWLEDGEMENTS
@@ -1211,6 +1218,7 @@ class CommandCenter:
     def _is_freyja_trade_request(text: str) -> bool:
         lowered = text.casefold()
         normalized = re.sub(r"[^a-z0-9\u00e1\u00e9\u00ed\u00f3\u00fa\u00fc\u00f1]+", " ", lowered).strip()
+        normalized = re.sub(r"\bgase+r\b", "hacer", normalized)
         explicit_trade = "comerci" in normalized and any(
             word in normalized
             for word in ("freyja", "freya", "quiero", "hacer", "vamos", "deseo")
@@ -1224,6 +1232,7 @@ class CommandCenter:
         observed_whisper_alias = bool(
             re.search(r"\b(?:el\s+)?fin\s+de\s+la\s+proxima\s+vez\b", normalized)
             or re.search(r"\b(?:el\s+)?fin\s+de\s+la\s+pr\u00f3xima\s+vez\b", normalized)
+            or normalized in {"vale bien", "y vale bien"}
         )
         return bool(explicit_trade or buy_and_sell or observed_whisper_alias)
 

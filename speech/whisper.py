@@ -49,7 +49,7 @@ class WhisperTranscriber:
             "-l", "es", "-nt", "-otxt", "-of", str(output_base),
             "-t", str(self.threads), "-ng", "-sns", "--prompt",
             "ODIN, MÍMIR, HEIMDALL, FREYJA, Elite Dangerous, Colonia, "
-            "quiero comerciar, comercio Powerplay, "
+            "quiero comerciar, vamos a comerciar, hacer comercio, comercio Powerplay, "
             "Stratum Tectonicas, exobiología, ruta de neutrones",
         ]
         try:
@@ -90,7 +90,7 @@ class WhisperTranscriber:
             "-l", "es", "-nt", "-ojf", "-of", str(output_base),
             "-t", str(self.threads), "-ng", "-sns", "--prompt",
             "ODIN, MÍMIR, HEIMDALL, FREYJA, Elite Dangerous, Colonia, "
-            "quiero comerciar, comercio Powerplay, "
+            "quiero comerciar, vamos a comerciar, hacer comercio, comercio Powerplay, "
             "Stratum Tectonicas, exobiología, ruta de neutrones",
         ]
         try:

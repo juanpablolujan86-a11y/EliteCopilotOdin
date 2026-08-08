@@ -80,3 +80,11 @@ class Config:
     @property
     def market_file(self) -> Path:
         return self.journal_path / "Market.json"
+
+    @property
+    def faster_whisper_model_root(self) -> Path:
+        if not getattr(sys, "frozen", False):
+            runtime = self.project_root / ".runtime" / "speech_models"
+            if runtime.exists():
+                return runtime
+        return self.data_root / "speech" / "models"
