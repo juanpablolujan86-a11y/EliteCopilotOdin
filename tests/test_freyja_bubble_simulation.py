@@ -68,6 +68,7 @@ class FreyjaBubbleSimulationTests(unittest.TestCase):
         self.assertEqual(plan.units, 5)
         self.assertEqual(plan.investment, 50_000)
         self.assertEqual(plan.estimated_profit, 50_000)
+        self.assertEqual(plan.recommended_sale_tons, 5)
 
     def test_large_freighter_never_exceeds_observed_demand(self) -> None:
         profile = TradeProfile("Sol", 100_000_000, 5_000_000, 720, 20, 30, (0, 0, 0))
@@ -78,7 +79,24 @@ class FreyjaBubbleSimulationTests(unittest.TestCase):
         )
 
         self.assertEqual(profile.cargo_free, 700)
-        self.assertEqual(plan.units, 180)
+        self.assertEqual(plan.units, 45)
+        self.assertEqual(plan.recommended_sale_tons, 45)
+
+    def test_sale_quantity_stays_at_or_below_quarter_of_demand(self) -> None:
+        profile = TradeProfile(
+            "Sol", 100_000_000, 5_000_000, 700, 0, 30, (0, 0, 0)
+        )
+
+        plan = QuickRouteOptimizer().choose(
+            profile,
+            [self.opportunity(supply=1_000, demand=1_003)],
+        )
+
+        self.assertEqual(plan.units, 250)
+        self.assertEqual(plan.recommended_sale_tons, 250)
+        self.assertLessEqual(plan.recommended_sale_tons, 1_003 * 0.25)
+        self.assertIn("vendé 250 toneladas", plan.sale_instruction())
+        self.assertIn("Puerto Venta", plan.sale_instruction())
 
     def test_stale_prices_are_rejected(self) -> None:
         stale = (datetime.now(timezone.utc) - timedelta(hours=12)).isoformat()

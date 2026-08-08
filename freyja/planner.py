@@ -34,6 +34,15 @@ class QuickTradePlan:
     opportunity: MarketOpportunity; units: int; investment: int
     estimated_profit: int; estimated_minutes: float
     profit_per_minute: float; stale_hours: float
+    recommended_sale_tons: int
+
+    def sale_instruction(self) -> str:
+        unit = "tonelada" if self.recommended_sale_tons == 1 else "toneladas"
+        return (
+            f"Comandante, vendé {self.recommended_sale_tons} {unit} de "
+            f"{self.opportunity.commodity} en {self.opportunity.sell_station} "
+            "para conservar la ganancia estimada."
+        )
 
 class TradeProfileBuilder:
     LARGE_SHIPS = {
@@ -81,13 +90,14 @@ class QuickRouteOptimizer:
                 continue
             age=self._age_hours(item.updated_at)
             if item.buy_price<=0 or item.sell_price<=item.buy_price or age>max_age_hours: continue
+            full_price_limit=max(1,math.floor(max(0,item.demand)*0.25))
             units=min(profile.cargo_free,profile.available_capital//item.buy_price,
-                      max(0,item.supply),max(0,item.demand))
+                      max(0,item.supply),max(0,item.demand),full_price_limit)
             if units<=0 or item.jumps<0: continue
             profit=(item.sell_price-item.buy_price)*units
             minutes=max(1.0, 4.0+item.jumps*1.25+self._supercruise_minutes(item.station_distance_ls))
             plans.append(QuickTradePlan(item,units,item.buy_price*units,profit,minutes,
-                                        profit/minutes,age))
+                                        profit/minutes,age,units))
         return max(plans,key=lambda plan:plan.profit_per_minute,default=None)
 
     @staticmethod

@@ -35,6 +35,8 @@ por minuto, no sólo el mayor margen por tonelada.
 - una compra y una venta;
 - pocos saltos y poca distancia hasta las estaciones;
 - demanda suficiente para la carga propuesta;
+- cantidad de compra y venta limitada de forma conservadora al 25% de la
+  demanda observada para reducir la penalización por venta masiva;
 - inversión limitada por los créditos disponibles;
 - precios recientes;
 - opción de repetir el circuito cuando siga siendo rentable.
@@ -99,6 +101,8 @@ demanda y fecha de actualización.
 
 - FREYJA no compra ni vende automáticamente.
 - No recomienda más unidades que la demanda observada o la capacidad libre.
+- Informa cuántas toneladas conviene comprar y vender en esa estación para
+  conservar el precio comunitario estimado; si la demanda cambia, recalcula.
 - No utiliza créditos reservados por el comandante.
 - No oculta precios antiguos ni accesos inciertos.
 - Las rutas se recalculan ante desvíos o cambios relevantes.

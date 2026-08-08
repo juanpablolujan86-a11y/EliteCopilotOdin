@@ -38,6 +38,8 @@ class FreyjaMarketSourceTests(unittest.TestCase):
         profile=TradeProfile("Origen",10000,1000,100,0,10,(0,0,0))
         opportunities=self.cache.opportunities(profile)
         self.assertEqual((len(opportunities),opportunities[0].jumps),(1,2))
-        self.assertEqual(QuickRouteOptimizer().choose(profile,opportunities).units,50)
+        plan=QuickRouteOptimizer().choose(profile,opportunities)
+        self.assertEqual(plan.units,12)
+        self.assertEqual(plan.recommended_sale_tons,12)
 
 if __name__=="__main__": unittest.main()
