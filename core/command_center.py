@@ -1262,6 +1262,7 @@ class CommandCenter:
     def _run_freyja_trade_calculation(self, selection: str) -> None:
         trade_database = DatabaseManager(self.config.data_root)
         try:
+            self._announce_freyja_trade_start(selection)
             trade_database.connect()
             trade_database.create_tables()
             self._calculate_freyja_trade(selection, MarketCache(trade_database))
@@ -1272,6 +1273,35 @@ class CommandCenter:
             )
         finally:
             trade_database.disconnect()
+
+    def _announce_freyja_trade_start(self, selection: str) -> None:
+        announcements = {
+            "quick": (
+                "Opción uno seleccionada: ruta rápida. "
+                "Comienzo a buscar la operación con mayor ganancia por minuto, comandante."
+            ),
+            "three_station": (
+                "Opción dos seleccionada: circuito de tres estaciones. "
+                "Comienzo a calcular el circuito comercial, comandante."
+            ),
+            "expedition": (
+                "Opción tres seleccionada: expedición comercial. "
+                "Comienzo a buscar una ruta de hasta treinta saltos, comandante."
+            ),
+            "powerplay": (
+                "Opción cuatro seleccionada: comercio Powerplay. "
+                "Comienzo a buscar una operación compatible con su potencia, comandante."
+            ),
+        }
+        announcement = announcements.get(
+            selection,
+            "Modalidad seleccionada. Comienzo el cálculo comercial, comandante.",
+        )
+        print(f"FREYJA: {announcement}\n")
+        try:
+            OfficerVoiceService(self.config).speak("FREYJA", announcement)
+        except VoiceServiceError as error:
+            print(f"Voz de FREYJA no disponible: {error}\n")
 
     def _calculate_freyja_trade(self, selection: str, market_cache: MarketCache) -> None:
         if self.navigation_manager is None:

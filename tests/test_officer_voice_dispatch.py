@@ -145,6 +145,25 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
         center.wake_listener.arm.assert_called_once()
         center.wake_listener.resume.assert_called_once()
 
+    def test_freyja_announces_selected_mode_before_calculating(self):
+        expected = {
+            "quick": ("Opción uno", "ruta rápida"),
+            "three_station": ("Opción dos", "tres estaciones"),
+            "expedition": ("Opción tres", "expedición comercial"),
+            "powerplay": ("Opción cuatro", "comercio Powerplay"),
+        }
+        for selection, phrases in expected.items():
+            with self.subTest(selection=selection):
+                center=CommandCenter.__new__(CommandCenter)
+                center.config=SimpleNamespace()
+                with patch("core.command_center.OfficerVoiceService") as service:
+                    center._announce_freyja_trade_start(selection)
+                officer, announcement = service.return_value.speak.call_args.args
+                self.assertEqual(officer, "FREYJA")
+                self.assertIn(phrases[0], announcement)
+                self.assertIn(phrases[1], announcement)
+                self.assertIn("Comienzo", announcement)
+
     def test_wake_acknowledgement_uses_odin_and_resumes_listener(self):
         center=CommandCenter.__new__(CommandCenter)
         center.config=SimpleNamespace()
