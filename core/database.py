@@ -120,6 +120,12 @@ class DatabaseManager:
         self.execute("""CREATE TABLE IF NOT EXISTS freyja_markets
         (market_id INTEGER PRIMARY KEY, system_name TEXT NOT NULL, station_name TEXT NOT NULL,
         updated_at TEXT NOT NULL, source TEXT NOT NULL)""")
+        for column, definition in (
+            ("x","REAL"),("y","REAL"),("z","REAL"),
+            ("distance_to_arrival","REAL"),("has_large_pad","INTEGER NOT NULL DEFAULT 0"),
+            ("is_planetary","INTEGER NOT NULL DEFAULT 0"),
+        ):
+            self._ensure_column("freyja_markets",column,definition)
         self.execute("""CREATE TABLE IF NOT EXISTS freyja_market_commodities
         (market_id INTEGER NOT NULL, commodity TEXT NOT NULL, buy_price INTEGER NOT NULL DEFAULT 0,
         sell_price INTEGER NOT NULL DEFAULT 0, mean_price INTEGER NOT NULL DEFAULT 0,

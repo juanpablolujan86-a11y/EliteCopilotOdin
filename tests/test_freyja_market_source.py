@@ -3,6 +3,7 @@ from unittest.mock import Mock
 import tempfile,unittest
 from core.database import DatabaseManager
 from freyja.market_source import MarketCache,SpanshMarketClient
+from freyja.planner import QuickRouteOptimizer,TradeProfile
 
 class FreyjaMarketSourceTests(unittest.TestCase):
     def setUp(self):
@@ -23,5 +24,20 @@ class FreyjaMarketSourceTests(unittest.TestCase):
         record=SpanshMarketClient(session).station(7)
         session.get.assert_called_once_with("https://spansh.co.uk/api/station/7",timeout=20)
         self.assertEqual(record["name"],"Galileo")
+    def test_builds_realistic_opportunity_between_cached_markets(self):
+        self.cache.ingest_spansh_station({"market_id":1,"system_name":"A","name":"Uno",
+          "system_x":0,"system_y":0,"system_z":0,"distance_to_arrival":100,
+          "market_updated_at":"2099-01-01T00:00:00+00:00",
+          "market":[{"commodity":"gold","buy_price":100,"sell_price":90,
+                     "supply":100,"demand":0}]})
+        self.cache.ingest_spansh_station({"market_id":2,"system_name":"B","name":"Dos",
+          "system_x":20,"system_y":0,"system_z":0,"distance_to_arrival":200,
+          "market_updated_at":"2099-01-01T00:00:00+00:00",
+          "market":[{"commodity":"gold","buy_price":0,"sell_price":200,
+                     "supply":0,"demand":50}]})
+        profile=TradeProfile("Origen",10000,1000,100,0,10,(0,0,0))
+        opportunities=self.cache.opportunities(profile)
+        self.assertEqual((len(opportunities),opportunities[0].jumps),(1,2))
+        self.assertEqual(QuickRouteOptimizer().choose(profile,opportunities).units,50)
 
 if __name__=="__main__": unittest.main()

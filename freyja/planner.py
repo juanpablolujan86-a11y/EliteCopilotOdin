@@ -9,6 +9,7 @@ from pathlib import Path
 class TradeProfile:
     system: str; credits: int; reserve_credits: int
     cargo_capacity: int; cargo_used: int; jump_range: float
+    position: tuple[float,float,float] | None = None
     @property
     def cargo_free(self): return max(0, self.cargo_capacity-self.cargo_used)
     @property
@@ -41,7 +42,8 @@ class TradeProfileBuilder:
         return TradeProfile(
             getattr(navigation,"current_system","") or getattr(commander,"current_system",""),
             credits,reserve,int(getattr(navigation,"cargo_capacity",0) or 0),used,
-            float(getattr(navigation,"max_jump_range",0) or 0))
+            float(getattr(navigation,"max_jump_range",0) or 0),
+            getattr(navigation,"current_position",None))
 
 class QuickRouteOptimizer:
     def choose(self, profile: TradeProfile, opportunities, *, max_age_hours=8.0):
