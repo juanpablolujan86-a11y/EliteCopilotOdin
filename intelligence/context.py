@@ -14,6 +14,9 @@ def build_live_context(
 ) -> str:
     lines = [
         f"Comandante: {commander.commander_name or 'desconocido'}",
+        f"Créditos disponibles: {commander.credits}",
+        f"Préstamo pendiente: {commander.loan}",
+        f"Patrimonio registrado: {commander.current_wealth or 'sin datos'}",
         f"Sistema actual: {commander.current_system or 'desconocido'}",
         f"Cuerpo actual: {commander.current_body or commander.last_scanned_body or 'sin datos'}",
         (
@@ -28,7 +31,13 @@ def build_live_context(
         progress = navigation.route_progress()
         lines.extend((
             f"Nave: {navigation.ship_name or navigation.ship_type or 'desconocida'}",
+            f"Matrícula: {navigation.ship_ident or 'sin datos'}",
+            f"Alcance máximo: {navigation.max_jump_range:.2f} años luz",
             f"Combustible: {navigation.fuel_main:.1f}/{navigation.fuel_capacity:.1f} toneladas",
+            f"Casco: {navigation.hull_health * 100:.1f}%" if navigation.hull_health is not None else "Casco: sin datos",
+            f"Carga máxima: {navigation.cargo_capacity} toneladas",
+            f"Coste de recompra: {navigation.rebuy_cost} créditos",
+            f"Integridad del FSD: {navigation.fsd_health * 100:.1f}%" if navigation.fsd_health is not None else "Integridad del FSD: sin datos",
             f"Destino: {navigation.target_system or 'sin destino fijado'}",
             (
                 "Ruta: sin datos"
@@ -39,8 +48,8 @@ def build_live_context(
         ))
     if balance is not None:
         lines.extend((
-            f"Cartografía pendiente estimada: {balance.cartography_estimated} créditos",
-            f"Exobiología pendiente base: {balance.exobiology_base} créditos",
-            f"Exobiología potencial: {balance.exobiology_potential} créditos",
+            f"MÍMIR, cartografía disponible para vender: {balance.cartography_estimated} créditos",
+            f"MÍMIR, exobiología disponible para vender, valor base: {balance.exobiology_base} créditos",
+            f"MÍMIR, exobiología disponible para vender, potencial con bonificaciones: {balance.exobiology_potential} créditos",
         ))
     return "\n".join(lines)

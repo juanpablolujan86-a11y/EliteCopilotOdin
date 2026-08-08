@@ -8,6 +8,7 @@ Inicializa, conecta y coordina los componentes principales de ODIN.
 
 import time
 import threading
+import queue
 from contextlib import redirect_stdout
 from io import StringIO
 
@@ -46,6 +47,7 @@ from intelligence.context import build_live_context
 from intelligence.ollama import OllamaError
 from speech.conversation import VoiceConversation
 from speech.hotkey import WindowsHotkey
+from speech.wake_word import WakeWordListener
 from speech.recorder import MicrophoneError
 from speech.whisper import TranscriptionError
 from voice.service import VoiceServiceError
@@ -94,6 +96,10 @@ class CommandCenter:
         self.expedition_ledger: ExpeditionLedger | None = None
         self.voice_hotkey = WindowsHotkey()
         self._voice_busy = threading.Event()
+        self._voice_questions: queue.Queue[str] = queue.Queue()
+        self.wake_listener = WakeWordListener(
+            self.config.data_root, self._voice_questions.put
+        )
 
     def start(self) -> None:
         """
@@ -128,6 +134,12 @@ class CommandCenter:
         print("\nODIN está observando Elite Dangerous...")
         print("Esperando eventos.\n")
         print("Conversación          : presioná F8 para hablar con ODIN\n")
+        print("Activación por voz     : decí ODIN y formulá tu consulta\n")
+        threading.Thread(
+            target=self.wake_listener.run,
+            name="odin-wake-word",
+            daemon=True,
+        ).start()
 
         try:
             self._run_event_loop()
@@ -136,6 +148,7 @@ class CommandCenter:
             print("\nODIN detenido por el comandante.")
 
         finally:
+            self.wake_listener.stop()
             self.database.disconnect()
             print("Base de datos desconectada correctamente.")
 
@@ -218,7 +231,10 @@ class CommandCenter:
         if context is None:
             return
 
-        CommanderStateUpdater(self.commander_state).restore_context(context)
+        updater = CommanderStateUpdater(self.commander_state)
+        for event in reader.commander_context(journal):
+            updater.handle_profile_event(event)
+        updater.restore_context(context)
         print(
             "Estado restaurado     : "
             f"Sistema actual {self.commander_state.current_system}"
@@ -278,6 +294,12 @@ class CommandCenter:
             self.event_bus,
             mimir_handler,
         )
+
+        for event_name in (
+            "Commander", "LoadGame", "Loadout", "Statistics",
+            "SetUserShipName", "ShipyardSwap", "ShipyardBuy",
+        ):
+            self.event_bus.subscribe(event_name, commander_state_updater.handle_profile_event)
 
         expedition_ledger = ExpeditionLedger(
             self.database,
@@ -413,16 +435,19 @@ class CommandCenter:
             "SellExplorationData",
             expedition_ledger.handle_exploration_sale,
         )
+        self.event_bus.subscribe("SellExplorationData", commander_state_updater.handle_sale)
 
         self.event_bus.subscribe(
             "MultiSellExplorationData",
             expedition_ledger.handle_exploration_sale,
         )
+        self.event_bus.subscribe("MultiSellExplorationData", commander_state_updater.handle_sale)
 
         self.event_bus.subscribe(
             "SellOrganicData",
             expedition_ledger.handle_organic_sale,
         )
+        self.event_bus.subscribe("SellOrganicData", commander_state_updater.handle_sale)
 
         # Eventos internos
         self.event_bus.subscribe(
@@ -568,7 +593,16 @@ class CommandCenter:
                 self.navigation_manager.poll_route()
 
             if self.voice_hotkey.pressed() and not self._voice_busy.is_set():
-                self._start_voice_conversation()
+                print("\nODIN escucha. Hablá y terminá con un segundo de silencio...")
+                self.wake_listener.arm()
+
+            if not self._voice_busy.is_set():
+                try:
+                    question = self._voice_questions.get_nowait()
+                except queue.Empty:
+                    question = ""
+                if question:
+                    self._start_voice_response(question)
 
             events = self.watcher.poll()
 
@@ -577,9 +611,8 @@ class CommandCenter:
 
             time.sleep(0.1)
 
-    def _start_voice_conversation(self) -> None:
-        """Escucha en segundo plano sin detener el seguimiento del Journal."""
-
+    def _start_voice_response(self, question: str) -> None:
+        """Responde en segundo plano sin detener el seguimiento del Journal."""
         balance = (
             self.expedition_ledger.summary("consulta por voz")
             if self.expedition_ledger is not None else None
@@ -590,23 +623,23 @@ class CommandCenter:
         )
         context = build_live_context(self.commander_state, navigation, balance)
         self._voice_busy.set()
-        print("\nODIN escucha durante 7 segundos. Hablá ahora...")
         threading.Thread(
-            target=self._run_voice_conversation,
-            args=(context,),
+            target=self._run_voice_response,
+            args=(question, context),
             name="odin-voice-conversation",
             daemon=True,
         ).start()
 
-    def _run_voice_conversation(self, context: str) -> None:
+    def _run_voice_response(self, question: str, context: str) -> None:
         try:
-            question, answer = VoiceConversation(self.config).listen_once(7, context)
+            answer = VoiceConversation(self.config).respond(question, context)
             print(f"\nVos: {question}")
             print(f"ODIN: {answer}\n")
         except (MicrophoneError, TranscriptionError, OllamaError, VoiceServiceError) as error:
             print(f"\nConversación por voz no disponible: {error}\n")
         finally:
             self._voice_busy.clear()
+            self.wake_listener.resume()
 
     def _handle_heimdall_navigation_event(self, event: dict) -> None:
         if self.navigation_manager is None:

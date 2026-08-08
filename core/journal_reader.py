@@ -117,6 +117,28 @@ class JournalReader:
 
         return context
 
+    def commander_context(self, journal: Path | None = None) -> list[dict]:
+        """Recupera los últimos eventos de identidad, economía y nave."""
+
+        journal_path = journal or self.latest_file()
+        if journal_path is None:
+            return []
+        relevant = {
+            "Commander", "LoadGame", "Loadout", "Statistics",
+            "SetUserShipName", "ShipyardSwap", "ShipyardBuy",
+        }
+        latest: dict[str, dict] = {}
+        with journal_path.open("r", encoding="utf-8", errors="ignore") as stream:
+            for line in stream:
+                try:
+                    event = json.loads(line)
+                except (json.JSONDecodeError, TypeError):
+                    continue
+                name = event.get("event")
+                if name in relevant:
+                    latest[name] = event
+        return list(latest.values())
+
     def current_system_events(
         self,
         journal: Path | None = None,

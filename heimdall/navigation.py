@@ -74,6 +74,11 @@ class NavigationContext:
     ship_id: int | None = None
     ship_name: str = ""
     ship_ident: str = ""
+    hull_health: float | None = None
+    cargo_capacity: int = 0
+    unladen_mass: float = 0.0
+    rebuy_cost: int = 0
+    modules_value: int = 0
     max_jump_range: float = 0.0
     fuel_capacity: float = 0.0
     reserve_capacity: float = 0.0
@@ -362,6 +367,11 @@ class NavigationContextManager:
         context.ship_id = event.get("ShipID")
         context.ship_name = event.get("ShipName", "")
         context.ship_ident = event.get("ShipIdent", "")
+        context.hull_health = event.get("HullHealth")
+        context.cargo_capacity = int(event.get("CargoCapacity", 0) or 0)
+        context.unladen_mass = float(event.get("UnladenMass", 0) or 0)
+        context.rebuy_cost = int(event.get("Rebuy", 0) or 0)
+        context.modules_value = int(event.get("ModulesValue", 0) or 0)
         context.max_jump_range = float(event.get("MaxJumpRange", 0) or 0)
         capacity = event.get("FuelCapacity", {})
         context.fuel_capacity = float(capacity.get("Main", 0) or 0)

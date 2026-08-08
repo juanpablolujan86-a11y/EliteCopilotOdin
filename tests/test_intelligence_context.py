@@ -34,7 +34,7 @@ class IntelligenceContextTests(unittest.TestCase):
         self.assertIn("Sistema actual: Sol", context)
         self.assertIn("Cuerpo actual: Sol A 1", context)
         self.assertIn("0 saltos realizados y 1 restantes", context)
-        self.assertIn("Exobiología potencial: 10000 créditos", context)
+        self.assertIn("potencial con bonificaciones: 10000 créditos", context)
 
 
 if __name__ == "__main__":

@@ -86,3 +86,42 @@ class JournalBootstrapTestCase(unittest.TestCase):
         self.assertEqual(context["StarSystem"], "Sistema actual")
         self.assertEqual(context["SystemAddress"], 10)
         self.assertEqual(context["Body"], "Sistema actual 1")
+
+    def test_commander_and_ship_are_restored_from_journal(self) -> None:
+        events = [
+            {"event": "Commander", "FID": "F123", "Name": "Zorro"},
+            {
+                "event": "LoadGame", "Commander": "Zorro", "Credits": 3000,
+                "Loan": 0, "Ship": "Explorer_NX", "Ship_Localised": "Caspian Explorer",
+                "ShipName": "Thor", "ShipIdent": "ZDJ-2", "FuelLevel": 120,
+                "FuelCapacity": 128,
+            },
+            {"event": "Statistics", "Bank_Account": {"Current_Wealth": 5000}},
+            {"event": "FSDJump", "StarSystem": "Sol", "SystemAddress": 1},
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            journal = Path(directory) / "Journal.test.log"
+            journal.write_text("\n".join(json.dumps(event) for event in events), encoding="utf-8")
+            reader = JournalReader(Path(directory))
+            profile = reader.commander_context(journal)
+
+        state = CommanderState()
+        updater = CommanderStateUpdater(state)
+        for event in profile:
+            updater.handle_profile_event(event)
+
+        self.assertEqual(state.commander_name, "Zorro")
+        self.assertEqual(state.credits, 3000)
+        self.assertEqual(state.current_wealth, 5000)
+        self.assertEqual(state.ship_name, "Thor")
+        self.assertEqual(state.ship_type_localised, "Caspian Explorer")
+
+    def test_expedition_sales_increase_known_credit_balance(self) -> None:
+        state = CommanderState(credits=1000)
+        updater = CommanderStateUpdater(state)
+        updater.handle_sale({"event": "SellExplorationData", "TotalEarnings": 250})
+        updater.handle_sale({
+            "event": "SellOrganicData",
+            "BioData": [{"Value": 100, "Bonus": 400}],
+        })
+        self.assertEqual(state.credits, 1750)

@@ -119,6 +119,12 @@ cuerpo, progreso de exploración, señales biológicas, nave, combustible, desti
 ruta y estimación acumulada de la expedición. ODIN indica expresamente cuando un
 dato no está disponible y no debe inventarlo.
 
+ODIN también mantiene una escucha local de activación. Se puede decir “ODIN” y
+luego formular la pregunta, o pronunciar “ODIN” y la pregunta en una sola frase.
+La captura termina automáticamente un segundo después de dejar de hablar. Sólo
+una frase que contiene la palabra de activación llega a Ollama; durante la
+respuesta hablada el micrófono se pausa para evitar realimentación.
+
 El cliente usa solamente `127.0.0.1:11434`, evita mostrar razonamiento interno
 y falla de forma segura si Ollama o el modelo todavía no están disponibles.
 

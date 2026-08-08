@@ -12,9 +12,15 @@ from dataclasses import dataclass
 @dataclass
 class CommanderState:
     commander_name: str = ""
+    fid: str = ""
+    credits: int = 0
+    loan: int = 0
+    current_wealth: int = 0
 
     ship_name: str = ""
     ship_ident: str = ""
+    ship_type_localised: str = ""
+    game_version: str = ""
 
     current_system: str = ""
     system_address: int = 0
