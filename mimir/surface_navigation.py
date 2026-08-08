@@ -21,6 +21,7 @@ class SurfaceNavigationTracker:
         self.sample_locations: list[tuple[float, float]] = []
         self._last_distance_band: int | None = None
         self._last_ready: bool | None = None
+        self._cycle_id = 0
 
     def update_status(self, status: dict) -> SurfaceNavigationUpdated | None:
         latitude = status.get("Latitude")
@@ -46,6 +47,7 @@ class SurfaceNavigationTracker:
 
         if progress == 1 or genus != self.genus or species != self.species:
             self.sample_locations.clear()
+            self._cycle_id += 1
 
         self.genus = genus
         self.species = species
@@ -102,6 +104,7 @@ class SurfaceNavigationTracker:
             distance_m=min(distance, required),
             required_distance_m=required,
             ready_for_sample=ready,
+            cycle_id=self._cycle_id,
         )
 
     @staticmethod

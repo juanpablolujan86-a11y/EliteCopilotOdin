@@ -23,6 +23,7 @@ class SurfaceNavigationTrackerTestCase(unittest.TestCase):
         self.assertEqual(update.progress, 1)
         self.assertEqual(update.required_distance_m, 500)
         self.assertFalse(update.ready_for_sample)
+        self.assertEqual(update.cycle_id, 1)
 
     def test_distance_becomes_ready_after_minimum_is_reached(self) -> None:
         self.tracker.record_sample(
@@ -80,6 +81,7 @@ class SurfaceNavigationTrackerTestCase(unittest.TestCase):
         self.assertEqual(update.progress, 2)
         self.assertAlmostEqual(update.distance_m, 0.0)
         self.assertEqual(len(self.tracker.sample_locations), 2)
+        self.assertEqual(update.cycle_id, 1)
 
 
 if __name__ == "__main__":

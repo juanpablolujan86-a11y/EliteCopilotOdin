@@ -11,4 +11,4 @@ class SurfaceNavigationUpdated:
     distance_m: float
     required_distance_m: float
     ready_for_sample: bool
-
+    cycle_id: int = 0

@@ -101,6 +101,7 @@ class CommandCenter:
         self._voice_questions: queue.Queue[str] = queue.Queue()
         self._route_results: queue.Queue[tuple[object | None, str | None]] = queue.Queue()
         self._officer_voice_messages: queue.Queue[VoiceMessageReady] = queue.Queue()
+        self._surface_ready_announced: set[tuple[int, int]] = set()
         self.wake_listener = WakeWordListener(
             self.config.data_root, self._voice_questions.put
         )
@@ -596,6 +597,29 @@ class CommandCenter:
                         InternalEvent.SURFACE_NAVIGATION_UPDATED,
                         navigation,
                     )
+                    ready_key = (navigation.cycle_id, navigation.progress)
+                    if (
+                        navigation.ready_for_sample
+                        and ready_key not in self._surface_ready_announced
+                    ):
+                        self._surface_ready_announced.add(ready_key)
+                        next_ordinal = (
+                            "segunda" if navigation.progress == 1 else "tercera"
+                        )
+                        self.event_bus.publish_internal(
+                            InternalEvent.VOICE_MESSAGE_READY,
+                            VoiceMessageReady(
+                                officer="MÍMIR",
+                                message=(
+                                    "Comandante, ya te alejaste la distancia "
+                                    f"necesaria. Podés recolectar la {next_ordinal} "
+                                    "muestra."
+                                ),
+                                reason=(
+                                    "Distancia suficiente para la siguiente muestra"
+                                ),
+                            ),
+                        )
 
             if self.navigation_manager is not None:
                 self.navigation_manager.poll_route()

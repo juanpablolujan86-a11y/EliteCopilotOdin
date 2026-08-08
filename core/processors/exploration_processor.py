@@ -829,6 +829,29 @@ class ExplorationProcessor:
             ),
         )
 
+        if progress in (1, 2) and navigation_update is not None:
+            ordinal = "primera" if progress == 1 else "segunda"
+            next_ordinal = "segunda" if progress == 1 else "tercera"
+            self.event_bus.publish_internal(
+                InternalEvent.VOICE_MESSAGE_READY,
+                VoiceMessageReady(
+                    officer="MÍMIR",
+                    message=(
+                        f"{ordinal.capitalize()} muestra registrada. Para la "
+                        f"{next_ordinal} muestra de {species or genus or 'esta especie'}, "
+                        f"alejate al menos {navigation_update.required_distance_m:.0f} metros."
+                    ),
+                    reason=f"Distancia requerida después de muestra {progress}/3",
+                ),
+            )
+
+        if progress == 3:
+            self._announce_organic_completion(
+                system_address,
+                body_id,
+                species or genus or "esta especie",
+            )
+
         if scan_type != "Analyse":
             return
 
@@ -848,6 +871,51 @@ class ExplorationProcessor:
         self._publish_report(
             system_address,
             system_name,
+        )
+
+    def _announce_organic_completion(
+        self,
+        system_address: int,
+        body_id: int | None,
+        species_name: str,
+    ) -> None:
+        expected_rows = self.database.query(
+            """
+            SELECT COALESCE(MAX(signal_count), 0)
+            FROM biological_signals
+            WHERE system_address=? AND body_id=?
+              AND source_event IN ('FSSBodySignals', 'SAASignalsFound')
+              AND LOWER(COALESCE(signal_type, '')) LIKE 'biol%'
+            """,
+            (system_address, body_id),
+        )
+        completed_rows = self.database.query(
+            """
+            SELECT COUNT(DISTINCT COALESCE(NULLIF(species, ''), genus))
+            FROM biological_signals
+            WHERE system_address=? AND body_id=?
+              AND source_event='ScanOrganic' AND scan_type='Analyse'
+            """,
+            (system_address, body_id),
+        )
+        expected = int(expected_rows[0][0] or 0) if expected_rows else 0
+        completed = int(completed_rows[0][0] or 0) if completed_rows else 0
+        remaining = max(0, expected - completed)
+        message = f"Las tres muestras de {species_name} fueron recolectadas. "
+        if expected > 1 and remaining > 0:
+            noun = "especie" if remaining == 1 else "especies"
+            message += f"Quedan {remaining} {noun} por completar en este planeta."
+        elif expected > 0 and remaining == 0:
+            message += "Completaste todas las especies de este planeta."
+        else:
+            message += "Muestreo biológico completado."
+        self.event_bus.publish_internal(
+            InternalEvent.VOICE_MESSAGE_READY,
+            VoiceMessageReady(
+                officer="MÍMIR",
+                message=message,
+                reason="Especie exobiológica completada",
+            ),
         )
 
     def _announce_star_only_system(

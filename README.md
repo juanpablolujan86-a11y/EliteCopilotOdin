@@ -34,6 +34,12 @@ Cuando el DSS confirma los géneros presentes, ODIN actualiza el informe y
 conserva las especies y variantes compatibles. Durante el trabajo de campo,
 MÍMIR cuenta las muestras 1/3, 2/3 y 3/3 y usa `Status.json` para calcular
 la distancia superficial necesaria antes de la siguiente recolección.
+Después de las muestras 1/3 y 2/3 anuncia por voz la separación mínima de la
+especie. Al alcanzar el umbral vuelve a avisar, una sola vez por etapa, que la
+siguiente muestra ya puede recolectarse.
+Al completar la muestra 3/3, MÍMIR confirma la especie terminada y compara el
+número de señales biológicas del planeta con las especies ya analizadas para
+informar cuántas quedan, o que el planeta fue completado.
 Los candidatos científicos visibles incluyen su recompensa base individual y,
 cuando corresponde, el potencial First Logged. Un desembarco sobre un planeta
 que el último escaneo marcó sin pisada prepara además el aviso de voz de primera

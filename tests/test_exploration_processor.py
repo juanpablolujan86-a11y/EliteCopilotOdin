@@ -6,6 +6,7 @@ from core.database import DatabaseManager
 from core.event_bus import EventBus
 from core.internal_events import InternalEvent
 from core.processors.exploration_processor import ExplorationProcessor
+from mimir.surface_navigation import SurfaceNavigationTracker
 from state.commander_state import CommanderState
 from tests.test_mimir import bacteria_scan
 
@@ -359,6 +360,54 @@ class ExplorationProcessorTestCase(unittest.TestCase):
         self.assertEqual(updates[0].progress, 3)
         self.assertTrue(updates[0].completed)
         self.assertFalse(updates[0].was_logged)
+
+    def test_mimir_reports_sample_distance_and_remaining_species(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            database = DatabaseManager(Path(folder))
+            database.connect()
+            database.create_tables()
+            event_bus = EventBus()
+            messages = []
+            event_bus.subscribe(InternalEvent.VOICE_MESSAGE_READY, messages.append)
+            tracker = SurfaceNavigationTracker()
+            tracker.update_status({
+                "Latitude": 0.0, "Longitude": 0.0, "PlanetRadius": 1_000_000,
+            })
+            processor = ExplorationProcessor(
+                database,
+                CommanderState(current_system="Bio", system_address=42),
+                event_bus,
+                tracker,
+            )
+            processor.handle_fsd_jump({
+                "event": "FSDJump", "StarSystem": "Bio", "SystemAddress": 42,
+            })
+            processor.handle_saa_signals_found({
+                "event": "SAASignalsFound", "SystemAddress": 42,
+                "BodyID": 7, "BodyName": "Bio 7",
+                "Signals": [{
+                    "Type": "$SAA_SignalType_Biological;",
+                    "Type_Localised": "Biológica", "Count": 3,
+                }],
+            })
+            base = {
+                "event": "ScanOrganic", "SystemAddress": 42, "Body": 7,
+                "Genus": "$Codex_Ent_Bacterial_Genus_Name;",
+                "Species": "$Codex_Ent_Bacterial_01_Name;",
+                "Species_Localised": "Bacterium Aurasus",
+            }
+            processor.handle_scan_organic({**base, "ScanType": "Log"})
+            tracker.update_status({
+                "Latitude": 0.0, "Longitude": 0.04, "PlanetRadius": 1_000_000,
+            })
+            processor.handle_scan_organic({**base, "ScanType": "Sample"})
+            processor.handle_scan_organic({**base, "ScanType": "Analyse"})
+
+            spoken = " ".join(message.message for message in messages)
+            database.disconnect()
+            self.assertIn("segunda muestra", spoken.casefold())
+            self.assertIn("tercera muestra", spoken.casefold())
+            self.assertIn("Quedan 2 especies", spoken)
 
     def test_duplicate_organic_progress_is_silent(self) -> None:
         database = FakeDatabase()
