@@ -54,6 +54,22 @@ python main.py
 ODIN impide que dos copias se ejecuten simultáneamente para evitar el
 procesamiento duplicado de eventos del Journal.
 
+## Configuración segura de voces
+
+ODIN permite asignar una voz diferente a ODIN, MÍMIR y HEIMDALL. El
+configurador detecta las voces OneCore instaladas en Windows y también deja
+preparados identificadores de voz independientes para ElevenLabs:
+
+```powershell
+python main.py --configure-voice
+```
+
+La clave de ElevenLabs se introduce de forma oculta, se valida antes de
+guardarla y se almacena en el Administrador de credenciales de Windows para el
+usuario actual. Nunca se escribe en `config.json`, en el archivo de preferencias
+ni en los registros de ODIN. Las asignaciones no secretas quedan en
+`%LOCALAPPDATA%\ODIN\voice\settings.json`.
+
 ## Balance de expedición
 
 ODIN conserva un libro persistente con sistemas visitados, cuerpos

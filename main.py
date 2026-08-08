@@ -1,11 +1,19 @@
+import sys
+
 from core.command_center import CommandCenter
 from core.config import Config
 from core.diagnostics import configure_diagnostics, log_fatal_error
 from core.single_instance import SingleInstance
+from voice.configurator import run_voice_configuration
 
 
 def main() -> None:
     config = Config()
+
+    if "--configure-voice" in sys.argv:
+        run_voice_configuration(config)
+        return
+
     instance = SingleInstance()
 
     if not instance.acquire():
