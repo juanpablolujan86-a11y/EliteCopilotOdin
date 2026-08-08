@@ -37,6 +37,21 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
             {"officer":"FREYJA","arm_after":True},
         )
 
+    def test_odin_hands_trade_request_to_freyja_without_saying_her_name(self):
+        center=CommandCenter.__new__(CommandCenter)
+        center._pending_freyja_trade_menu=False
+        center.commander_state=SimpleNamespace(fid="",commander_name="")
+        center._last_voice_question=""
+        center._start_fixed_voice_response=Mock()
+
+        center._start_voice_response("quiero comerciar")
+
+        self.assertTrue(center._pending_freyja_trade_menu)
+        self.assertEqual(
+            center._start_fixed_voice_response.call_args.kwargs["officer"],
+            "FREYJA",
+        )
+
     def test_freyja_pending_menu_starts_selected_calculation_without_wake_word(self):
         center=CommandCenter.__new__(CommandCenter)
         center._pending_freyja_trade_menu=True

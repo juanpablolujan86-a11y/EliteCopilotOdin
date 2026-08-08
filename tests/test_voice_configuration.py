@@ -14,6 +14,8 @@ class VoiceSettingsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             repository = VoiceSettingsRepository(Path(directory))
             settings = repository.load()
+            self.assertEqual(settings.officers["FREYJA"].provider, "edge")
+            self.assertEqual(settings.officers["FREYJA"].voice, "es-AR-ElenaNeural")
             settings.officers["ODIN"].voice = "Microsoft Raul - Spanish (Mexico)"
             settings.officers["MÍMIR"].voice = "voice_id_mimir"
             settings.officers["MÍMIR"].provider = "elevenlabs"

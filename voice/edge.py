@@ -13,6 +13,7 @@ EDGE_LATIN_VOICES = {
     "ODIN": "es-US-AlonsoNeural",
     "MÍMIR": "es-MX-DaliaNeural",
     "HEIMDALL": "es-MX-JorgeNeural",
+    "FREYJA": "es-AR-ElenaNeural",
 }
 
 

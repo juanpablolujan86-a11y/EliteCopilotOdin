@@ -33,6 +33,9 @@ class EdgeTtsClientTests(unittest.TestCase):
     def test_heimdall_uses_masculine_mexican_voice(self):
         self.assertEqual(EDGE_LATIN_VOICES["HEIMDALL"], "es-MX-JorgeNeural")
 
+    def test_freyja_uses_feminine_argentinian_voice(self):
+        self.assertEqual(EDGE_LATIN_VOICES["FREYJA"], "es-AR-ElenaNeural")
+
 
 if __name__ == "__main__":
     unittest.main()

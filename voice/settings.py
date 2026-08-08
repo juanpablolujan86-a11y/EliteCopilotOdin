@@ -23,6 +23,7 @@ class VoiceSettings:
         "ODIN": OfficerVoice(provider="edge", voice="es-US-AlonsoNeural"),
         "MÍMIR": OfficerVoice(provider="edge", voice="es-MX-DaliaNeural"),
         "HEIMDALL": OfficerVoice(provider="edge", voice="es-MX-JorgeNeural"),
+        "FREYJA": OfficerVoice(provider="edge", voice="es-AR-ElenaNeural", rate=1),
     })
 
 

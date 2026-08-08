@@ -21,6 +21,7 @@ WINDOWS_FALLBACKS = {
     "ODIN": ("Microsoft Raul - Spanish (Mexico)", 0),
     "MÍMIR": ("Microsoft Sabina - Spanish (Mexico)", 0),
     "HEIMDALL": ("Microsoft Raul - Spanish (Mexico)", -2),
+    "FREYJA": ("Microsoft Sabina - Spanish (Mexico)", 1),
 }
 
 
