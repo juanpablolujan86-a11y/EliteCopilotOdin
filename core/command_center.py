@@ -847,12 +847,10 @@ class CommandCenter:
         previous_question = self._last_voice_question
 
         if self._is_freyja_trade_request(question):
-            self._pending_freyja_trade_menu = True
-            self._start_fixed_voice_response(
-                "Tengo cuatro modelos disponibles para usted, comandante. Uno: ruta r\u00e1pida, para maximizar ganancias por minuto. Dos: circuito de tres estaciones, comerciando tres productos diferentes. Tres: expedici\u00f3n comercial de hasta treinta saltos, para maximizar el ingreso total. Cuatro: comercio Powerplay, para buscar cr\u00e9ditos y m\u00e9ritos de su potencia. Indique el n\u00famero o el nombre de la modalidad.",
-                officer="FREYJA",
-                arm_after=True,
+            self.command_memory.remember(
+                commander, question, "freyja_trade_menu", {}
             )
+            self._open_freyja_trade_menu()
             return
 
         cockpit_intent = parse_cockpit_intent(question)
@@ -925,6 +923,9 @@ class CommandCenter:
         if learned is not None and learned.intent == "neutron_route":
             self._start_voice_route(learned.payload["destination"])
             return
+        if learned is not None and learned.intent == "freyja_trade_menu":
+            self._open_freyja_trade_menu()
+            return
 
         balance = (
             self.expedition_ledger.summary("consulta por voz")
@@ -955,12 +956,22 @@ class CommandCenter:
 
     @staticmethod
     def _command_from_text(text: str) -> LearnedCommand | None:
+        if CommandCenter._is_freyja_trade_request(text):
+            return LearnedCommand("freyja_trade_menu", {})
         if parse_home_route_intent(text) is not None:
             return LearnedCommand("home_route", {})
         route = parse_neutron_route_intent(text)
         if route is not None:
             return LearnedCommand("neutron_route", {"destination": route.destination})
         return None
+
+    def _open_freyja_trade_menu(self) -> None:
+        self._pending_freyja_trade_menu = True
+        self._start_fixed_voice_response(
+            "Tengo cuatro modelos disponibles para usted, comandante. Uno: ruta r\u00e1pida, para maximizar ganancias por minuto. Dos: circuito de tres estaciones, comerciando tres productos diferentes. Tres: expedici\u00f3n comercial de hasta treinta saltos, para maximizar el ingreso total. Cuatro: comercio Powerplay, para buscar cr\u00e9ditos y m\u00e9ritos de su potencia. Indique el n\u00famero o el nombre de la modalidad.",
+            officer="FREYJA",
+            arm_after=True,
+        )
 
     @staticmethod
     def _is_credible_voice_question(question: str) -> bool:

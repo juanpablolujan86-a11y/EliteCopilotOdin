@@ -21,6 +21,7 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
         center._pending_freyja_trade_menu=False
         center.commander_state=SimpleNamespace(fid="",commander_name="")
         center._last_voice_question=""
+        center.command_memory=Mock()
         center._start_fixed_voice_response=Mock()
 
         center._start_voice_response("Freyja, quiero comerciar")
@@ -42,6 +43,7 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
         center._pending_freyja_trade_menu=False
         center.commander_state=SimpleNamespace(fid="",commander_name="")
         center._last_voice_question=""
+        center.command_memory=Mock()
         center._start_fixed_voice_response=Mock()
 
         center._start_voice_response("quiero comerciar")
@@ -51,12 +53,16 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
             center._start_fixed_voice_response.call_args.kwargs["officer"],
             "FREYJA",
         )
+        center.command_memory.remember.assert_called_once_with(
+            "default", "quiero comerciar", "freyja_trade_menu", {}
+        )
 
     def test_observed_whisper_trade_confusion_is_handed_to_freyja(self):
         center=CommandCenter.__new__(CommandCenter)
         center._pending_freyja_trade_menu=False
         center.commander_state=SimpleNamespace(fid="",commander_name="")
         center._last_voice_question=""
+        center.command_memory=Mock()
         center._start_fixed_voice_response=Mock()
 
         center._start_voice_response("y el fin de la pr\u00f3xima vez")
@@ -72,6 +78,8 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
         self.assertTrue(CommandCenter._is_freyja_trade_request("vamos a hacer comercio"))
         self.assertTrue(CommandCenter._is_freyja_trade_request("quiero comprar y vender"))
         self.assertFalse(CommandCenter._is_freyja_trade_request("cu\u00e1nto combustible tengo"))
+        learned=CommandCenter._command_from_text("quiero comerciar")
+        self.assertEqual(learned.intent,"freyja_trade_menu")
 
     def test_freyja_pending_menu_starts_selected_calculation_without_wake_word(self):
         center=CommandCenter.__new__(CommandCenter)
