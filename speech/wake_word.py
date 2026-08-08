@@ -48,7 +48,7 @@ class WakeWordListener:
         # Base reconoce órdenes breves con mucha menos carga que Small; los
         # alias de interpret_wake_phrase cubren sus variantes de "ODIN".
         self.transcriber = transcriber or WhisperTranscriber(
-            model_preference="base", threads=2
+            model_preference="base", threads=4
         )
         self.stop_event = threading.Event()
         self.armed = threading.Event()
@@ -67,7 +67,9 @@ class WakeWordListener:
                 continue
             try:
                 audio = self.recorder.record_utterance(
-                    self.audio_path, silence_seconds=1.0, stop_event=self.stop_event
+                    self.audio_path,
+                    silence_seconds=1.0 if waiting_for_question else 0.45,
+                    stop_event=self.stop_event,
                 )
                 if audio is None:
                     continue

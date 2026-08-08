@@ -163,6 +163,11 @@ class CommandCenter:
         print("Conversación          : presioná F8 para hablar con ODIN\n")
         print("Activación por voz     : decí ODIN y formulá tu consulta\n")
         threading.Thread(
+            target=self._prepare_wake_acknowledgement,
+            name="odin-prepare-wake-acknowledgement",
+            daemon=True,
+        ).start()
+        threading.Thread(
             target=self.wake_listener.run,
             name="odin-wake-word",
             daemon=True,
@@ -742,6 +747,12 @@ class CommandCenter:
             name="odin-wake-acknowledgement",
             daemon=True,
         ).start()
+
+    def _prepare_wake_acknowledgement(self) -> None:
+        try:
+            OfficerVoiceService(self.config).prepare("ODIN", "Sí, comandante?")
+        except (VoiceServiceError, OSError):
+            pass
 
     def _run_wake_acknowledgement(self) -> None:
         try:

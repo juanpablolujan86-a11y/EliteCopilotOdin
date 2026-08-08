@@ -53,6 +53,9 @@ class WakeWordTests(unittest.TestCase):
 
         activated.assert_called_once_with()
         self.assertTrue(listener.paused.is_set())
+        self.assertEqual(
+            recorder.record_utterance.call_args.kwargs["silence_seconds"], 0.45
+        )
 
 
 if __name__ == "__main__":

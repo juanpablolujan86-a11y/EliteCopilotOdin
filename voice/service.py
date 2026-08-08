@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
+from pathlib import Path
+
 from core.config import Config
 from voice.credentials import WindowsCredentialStore
 from voice.edge import EdgeTtsClient, EdgeTtsError
@@ -39,6 +42,35 @@ class OfficerVoiceService:
         self.edge_client = edge_client or EdgeTtsClient()
         self.repository = VoiceSettingsRepository(self.config.data_root)
 
+    def _edge_cache_path(self, officer: str, text: str, assignment) -> Path:
+        cache_key = "|".join(
+            (
+                officer.upper(), assignment.voice, str(assignment.rate),
+                str(assignment.volume), text,
+            )
+        )
+        digest = hashlib.sha256(cache_key.encode("utf-8")).hexdigest()
+        return self.config.data_root / "voice" / "cache" / f"edge-{digest}.mp3"
+
+    def prepare(self, officer: str, text: str) -> None:
+        """Genera anticipadamente una frase Edge repetitiva sin reproducirla."""
+
+        settings = self.repository.load()
+        assignment = settings.officers.get(officer.upper())
+        if not settings.enabled or assignment is None or assignment.provider != "edge":
+            return
+        cache_path = self._edge_cache_path(officer, text, assignment)
+        if cache_path.exists():
+            return
+        try:
+            audio = self.edge_client.synthesize(
+                text, assignment.voice, rate=assignment.rate, volume=assignment.volume
+            )
+        except (EdgeTtsError, OSError) as error:
+            raise VoiceServiceError(str(error)) from error
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        cache_path.write_bytes(audio)
+
     def speak(self, officer: str, text: str) -> None:
         settings = self.repository.load()
         assignment = settings.officers.get(officer.upper())
@@ -54,9 +86,16 @@ class OfficerVoiceService:
                 raise VoiceServiceError(str(error)) from error
         if assignment.provider == "edge":
             try:
-                audio = self.edge_client.synthesize(
-                    text, assignment.voice, rate=assignment.rate, volume=assignment.volume
-                )
+                cache_path = self._edge_cache_path(officer, text, assignment)
+                if cache_path.exists():
+                    audio = cache_path.read_bytes()
+                else:
+                    audio = self.edge_client.synthesize(
+                        text, assignment.voice,
+                        rate=assignment.rate, volume=assignment.volume,
+                    )
+                    cache_path.parent.mkdir(parents=True, exist_ok=True)
+                    cache_path.write_bytes(audio)
                 self.player.play(audio)
                 return
             except (EdgeTtsError, AudioPlaybackError, OSError) as error:

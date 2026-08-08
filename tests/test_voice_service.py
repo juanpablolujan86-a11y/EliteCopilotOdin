@@ -63,6 +63,22 @@ class OfficerVoiceServiceTests(unittest.TestCase):
             )
             player.play.assert_called_once_with(b"edge-mp3")
 
+    def test_edge_provider_reuses_cached_repeated_phrase(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config = SimpleNamespace(data_root=Path(directory))
+            player = Mock()
+            edge_client = Mock()
+            edge_client.synthesize.return_value = b"cached-edge-mp3"
+            service = OfficerVoiceService(
+                config, Mock(), Mock(), player, Mock(), edge_client
+            )
+
+            service.prepare("ODIN", "Sí, comandante?")
+            service.speak("ODIN", "Sí, comandante?")
+
+            edge_client.synthesize.assert_called_once()
+            player.play.assert_called_once_with(b"cached-edge-mp3")
+
     def test_elevenlabs_failure_falls_back_to_windows(self):
         with tempfile.TemporaryDirectory() as directory:
             config = SimpleNamespace(data_root=Path(directory))
