@@ -42,7 +42,12 @@ class WakeWordListener:
         self.audio_path = data_root / "speech" / "wake_command.wav"
         self.on_question = on_question
         self.recorder = recorder or MicrophoneRecorder()
-        self.transcriber = transcriber or WhisperTranscriber()
+        # La escucha permanente debe competir lo mínimo posible con el juego.
+        # Base reconoce órdenes breves con mucha menos carga que Small; los
+        # alias de interpret_wake_phrase cubren sus variantes de "ODIN".
+        self.transcriber = transcriber or WhisperTranscriber(
+            model_preference="base", threads=2
+        )
         self.stop_event = threading.Event()
         self.armed = threading.Event()
         self.paused = threading.Event()
@@ -65,7 +70,7 @@ class WakeWordListener:
                 if audio is None:
                     continue
                 text = self.transcriber.transcribe(audio).strip()
-            except (MicrophoneError, TranscriptionError):
+            except (MicrophoneError, TranscriptionError, UnicodeError, OSError):
                 continue
 
             forced = self.armed.is_set()

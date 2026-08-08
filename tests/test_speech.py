@@ -35,6 +35,34 @@ class SpeechTests(unittest.TestCase):
 
             with patch("speech.whisper.subprocess.run", side_effect=fake_run):
                 self.assertEqual(WhisperTranscriber(root).transcribe(audio), "Hola ODIN")
+                self.assertEqual(list(root.glob("command-*.txt")), [])
+
+    def test_whisper_can_use_lightweight_base_model_and_two_threads(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            runtime = root / "whisper.cpp" / "Release"
+            runtime.mkdir(parents=True)
+            (runtime / "whisper-cli.exe").touch()
+            models = root / "models"
+            models.mkdir()
+            base = models / "ggml-base.bin"
+            base.touch()
+            audio = root / "wake.wav"
+            audio.touch()
+
+            def fake_run(command, **kwargs):
+                Path(command[command.index("-of") + 1] + ".txt").write_text(
+                    "Olín, estado", encoding="utf-8"
+                )
+                self.assertEqual(command[command.index("-t") + 1], "2")
+                self.assertIn(str(base), command)
+                return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+            with patch("speech.whisper.subprocess.run", side_effect=fake_run):
+                transcriber = WhisperTranscriber(
+                    root, model_preference="base", threads=2
+                )
+                self.assertEqual(transcriber.transcribe(audio), "Olín, estado")
 
     def test_whisper_reports_missing_runtime(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
