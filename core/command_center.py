@@ -9,6 +9,7 @@ Inicializa, conecta y coordina los componentes principales de ODIN.
 import time
 import threading
 import queue
+import re
 from contextlib import redirect_stdout
 from io import StringIO
 
@@ -47,6 +48,7 @@ from heimdall.home_base import HomeBaseManager
 from heimdall.navigation import NavigationContext, NavigationContextManager
 from heimdall.spansh import HeimdallRoutePlanner, SpanshClient, SpanshRouteError
 from intelligence.context import build_live_context
+from intelligence.command_memory import LearnedCommand, VoiceCommandMemory
 from intelligence.intents import parse_home_route_intent, parse_neutron_route_intent
 from intelligence.ollama import OllamaError
 from speech.conversation import VoiceConversation
@@ -106,6 +108,9 @@ class CommandCenter:
         self._officer_voice_messages: queue.Queue[VoiceMessageReady] = queue.Queue()
         self._surface_ready_announced: set[tuple[int, int]] = set()
         self.scientific_context = ScientificContextRegistry()
+        self.command_memory = VoiceCommandMemory(self.database)
+        self._last_voice_question = ""
+        self._last_learned_command: LearnedCommand | None = None
         self._restoring_context = False
         self.wake_listener = WakeWordListener(
             self.config.data_root, self._voice_questions.put
@@ -691,7 +696,57 @@ class CommandCenter:
 
     def _start_voice_response(self, question: str) -> None:
         """Responde en segundo plano sin detener el seguimiento del Journal."""
-        if parse_home_route_intent(question) is not None:
+        commander = self.commander_state.fid or self.commander_state.commander_name or "default"
+        lowered = question.casefold().strip()
+        previous_question = self._last_voice_question
+        if any(text in lowered for text in ("eso esta bien", "eso está bien", "orden correcta")):
+            confirmed = bool(previous_question) and self.command_memory.confirm(
+                commander, previous_question
+            )
+            self._start_fixed_voice_response(
+                "Entendido. Voy a recordar esa forma de hablar."
+                if confirmed else "Todavía no tengo una orden anterior para confirmar."
+            )
+            return
+        if any(text in lowered for text in ("olvida esa orden", "olvidá esa orden", "olvidate de esa orden")):
+            forgotten = bool(previous_question) and self.command_memory.forget(
+                commander, previous_question
+            )
+            self._last_learned_command = None
+            self._start_fixed_voice_response(
+                "Olvidé esa asociación."
+                if forgotten else "No encontré una orden aprendida para olvidar."
+            )
+            return
+
+        correction = re.search(r"\b(?:quise|queria|quería)\s+decir\s+(.+)$", question, re.IGNORECASE)
+        if correction and previous_question:
+            corrected = correction.group(1).strip()
+            learned = self._command_from_text(corrected)
+            if learned is not None:
+                self.command_memory.remember(
+                    commander, previous_question, learned.intent, learned.payload
+                )
+                self._last_learned_command = learned
+                self._start_fixed_voice_response(
+                    "Entendido. Guardé la corrección para la próxima vez."
+                )
+            else:
+                self._start_fixed_voice_response(
+                    "Entendí la corrección, pero todavía no puedo asociarla a una acción segura."
+                )
+            return
+
+        learned = self.command_memory.resolve(commander, question)
+        if learned is None:
+            learned = self._command_from_text(question)
+            if learned is not None:
+                self.command_memory.remember(
+                    commander, question, learned.intent, learned.payload
+                )
+        self._last_voice_question = question
+        self._last_learned_command = learned
+        if learned is not None and learned.intent == "home_route":
             base = self.home_base_manager.current
             if base is None:
                 self._start_fixed_voice_response(
@@ -700,9 +755,8 @@ class CommandCenter:
             else:
                 self._start_voice_route(base.system)
             return
-        route_intent = parse_neutron_route_intent(question)
-        if route_intent is not None:
-            self._start_voice_route(route_intent.destination)
+        if learned is not None and learned.intent == "neutron_route":
+            self._start_voice_route(learned.payload["destination"])
             return
 
         balance = (
@@ -731,6 +785,15 @@ class CommandCenter:
             name="odin-voice-conversation",
             daemon=True,
         ).start()
+
+    @staticmethod
+    def _command_from_text(text: str) -> LearnedCommand | None:
+        if parse_home_route_intent(text) is not None:
+            return LearnedCommand("home_route", {})
+        route = parse_neutron_route_intent(text)
+        if route is not None:
+            return LearnedCommand("neutron_route", {"destination": route.destination})
+        return None
 
     def _run_voice_response(self, question: str, context: str) -> None:
         try:

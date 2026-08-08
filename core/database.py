@@ -108,6 +108,25 @@ class DatabaseManager:
             """
         )
 
+        self.execute(
+            """
+            CREATE TABLE IF NOT EXISTS voice_command_memory
+            (
+                commander_key TEXT NOT NULL,
+                normalized_phrase TEXT NOT NULL,
+                original_phrase TEXT NOT NULL,
+                intent TEXT NOT NULL,
+                payload_json TEXT NOT NULL DEFAULT '{}',
+                use_count INTEGER NOT NULL DEFAULT 1,
+                confirmation_count INTEGER NOT NULL DEFAULT 0,
+                enabled INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL,
+                last_used_at TEXT NOT NULL,
+                PRIMARY KEY (commander_key, normalized_phrase)
+            )
+            """
+        )
+
         self._ensure_column(
             "stellar_bodies",
             "was_footfalled",
