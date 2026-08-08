@@ -87,10 +87,18 @@ class TradeExpeditionPlan:
     total_jumps: int
 
     def summary(self) -> str:
-        return (
-            f"Expedición de {len(self.legs)} operaciones y {self.total_jumps} "
-            f"saltos: {self.estimated_profit:,} créditos estimados."
+        first=self.legs[0].opportunity
+        last=self.legs[-1].opportunity
+        summary = (
+            f"La expedición comienza en {first.buy_station}, sistema "
+            f"{first.buy_system}, y finaliza en {last.sell_station}, sistema "
+            f"{last.sell_system}. Son {len(self.legs)} operaciones y "
+            f"{self.total_jumps} saltos, con {self.estimated_profit:,} "
+            "créditos estimados."
         )
+        if any(leg.stale_hours > 24 for leg in self.legs):
+            summary += " Confirme los precios al llegar; algunos mercados tienen más de un día."
+        return summary
 
 @dataclass(frozen=True, slots=True)
 class PowerplayTradePlan:
@@ -208,6 +216,14 @@ class QuickRouteOptimizer:
             for system in getattr(profile, "excluded_systems", frozenset())
         }
         for item in opportunities:
+            if any(
+                "carrier" in station_type.casefold()
+                for station_type in (
+                    item.buy_station_type,
+                    item.sell_station_type,
+                )
+            ):
+                continue
             if item.buy_system.casefold() in excluded or item.sell_system.casefold() in excluded:
                 continue
             if getattr(profile, "requires_large_pad", False) and not (

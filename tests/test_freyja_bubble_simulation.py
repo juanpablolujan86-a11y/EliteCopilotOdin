@@ -234,6 +234,7 @@ class FreyjaBubbleSimulationTests(unittest.TestCase):
             sell_station_type="Fleet Carrier",
         )
         self.assertIsNone(PowerplayTradeOptimizer().choose(profile, [carrier]))
+        self.assertIsNone(QuickRouteOptimizer().choose(profile, [carrier]))
 
     def test_market_cache_estimates_bubble_jumps_from_ship_range(self) -> None:
         self.cache.ingest_spansh_station({

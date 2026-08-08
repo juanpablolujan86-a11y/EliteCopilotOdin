@@ -4,8 +4,19 @@ import threading
 import unittest
 
 from core.command_center import CommandCenter
+from freyja.planner import TradeProfile
 
 class OfficerVoiceDispatchTests(unittest.TestCase):
+    def test_all_trade_modes_use_bubble_market_anchor_when_commander_is_far(self):
+        center=CommandCenter.__new__(CommandCenter)
+        center.trade_profile=TradeProfile(
+            "Colonia",10_000_000,500_000,100,0,30,(10_000,0,0)
+        )
+        for selection in ("quick","three_station","expedition","powerplay"):
+            planned=center._freyja_planning_profile(selection)
+            self.assertEqual(planned.system,"Lembava")
+            self.assertEqual(planned.position,center.BUBBLE_TRADE_CENTER)
+
     def test_fixed_response_uses_requested_officer(self):
         center=CommandCenter.__new__(CommandCenter)
         center.config=SimpleNamespace()

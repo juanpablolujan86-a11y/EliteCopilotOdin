@@ -10,6 +10,8 @@ import time
 import threading
 import queue
 import re
+import math
+from dataclasses import replace
 from contextlib import redirect_stdout
 from io import StringIO
 
@@ -91,6 +93,8 @@ class CommandCenter:
     POWERPLAY_TRADE_CENTERS = {
         "li yong-rui": (-43.25, -64.34375, -77.6875),
     }
+    BUBBLE_TRADE_CENTER = (-43.25, -64.34375, -77.6875)
+    FREYJA_MARKET_MAX_AGE_HOURS = 168.0
 
     def __init__(self) -> None:
         self.config = Config()
@@ -1242,18 +1246,46 @@ class CommandCenter:
             self.navigation_manager.context,
             self.config.cargo_file,
         )
+        planning_profile = self._freyja_planning_profile(selection)
         opportunities = (
             [] if selection == "powerplay"
-            else self.market_cache.opportunities(self.trade_profile)
+            else self.market_cache.opportunities(planning_profile)
         )
         if selection == "quick":
-            plan = QuickRouteOptimizer().choose(self.trade_profile, opportunities)
+            plan = QuickRouteOptimizer().choose(
+                planning_profile, opportunities,
+                max_age_hours=self.FREYJA_MARKET_MAX_AGE_HOURS,
+            )
+            if plan is None:
+                plan = self._refresh_and_recalculate_freyja(selection, planning_profile)
         elif selection == "three_station":
-            plan = ThreeStationOptimizer().choose(self.trade_profile, opportunities)
+            plan = ThreeStationOptimizer().choose(
+                planning_profile, opportunities,
+                max_age_hours=self.FREYJA_MARKET_MAX_AGE_HOURS,
+            )
+            if plan is None:
+                plan = self._refresh_and_recalculate_freyja(selection, planning_profile)
         elif selection == "expedition":
             plan = TradeExpeditionOptimizer().choose(
-                self.trade_profile, opportunities, max_jumps=30
+                planning_profile, opportunities, max_jumps=30
+                , max_age_hours=self.FREYJA_MARKET_MAX_AGE_HOURS
             )
+            if plan is None:
+                try:
+                    self.market_cache.refresh_region(
+                        SpanshMarketClient(), self.BUBBLE_TRADE_CENTER, size=75
+                    )
+                    opportunities = self.market_cache.opportunities(planning_profile)
+                    plan = TradeExpeditionOptimizer().choose(
+                        planning_profile, opportunities, max_jumps=30
+                        , max_age_hours=self.FREYJA_MARKET_MAX_AGE_HOURS
+                    )
+                except MarketSourceError:
+                    self._start_fixed_voice_response(
+                        "No pude actualizar los mercados comunitarios en este momento. Int\u00e9ntelo nuevamente m\u00e1s tarde.",
+                        officer="FREYJA",
+                    )
+                    return
         else:
             if not self.trade_profile.powerplay_power:
                 self._start_fixed_voice_response(
@@ -1262,11 +1294,12 @@ class CommandCenter:
                 )
                 return
             opportunities = self.market_cache.opportunities(
-                self.trade_profile,
+                planning_profile,
                 sell_power=self.trade_profile.powerplay_power,
             )
             plan = PowerplayTradeOptimizer().choose(
-                self.trade_profile, opportunities
+                planning_profile, opportunities,
+                max_age_hours=self.FREYJA_MARKET_MAX_AGE_HOURS,
             )
             if plan is None:
                 center = self.POWERPLAY_TRADE_CENTERS.get(
@@ -1278,11 +1311,12 @@ class CommandCenter:
                             SpanshMarketClient(), center, size=75
                         )
                         opportunities = self.market_cache.opportunities(
-                            self.trade_profile,
+                            planning_profile,
                             sell_power=self.trade_profile.powerplay_power,
                         )
                         plan = PowerplayTradeOptimizer().choose(
-                            self.trade_profile, opportunities
+                            planning_profile, opportunities,
+                            max_age_hours=self.FREYJA_MARKET_MAX_AGE_HOURS,
                         )
                     except MarketSourceError:
                         self._start_fixed_voice_response(
@@ -1302,6 +1336,43 @@ class CommandCenter:
             answer = plan.summary()
         self._start_fixed_voice_response(answer, officer="FREYJA")
 
+    def _freyja_planning_profile(self, selection: str):
+        """Separa el viaje a la Burbuja del presupuesto de la expedici\u00f3n."""
+        profile = self.trade_profile
+        if profile.position is None:
+            return profile
+        distance_to_bubble = math.dist(profile.position, self.BUBBLE_TRADE_CENTER)
+        if distance_to_bubble <= 500:
+            return profile
+        return replace(
+            profile,
+            system="Lembava",
+            position=self.BUBBLE_TRADE_CENTER,
+        )
+
+    def _refresh_and_recalculate_freyja(self, selection: str, profile):
+        try:
+            self.market_cache.refresh_region(
+                SpanshMarketClient(), self.BUBBLE_TRADE_CENTER, size=75
+            )
+        except MarketSourceError:
+            return None
+        opportunities = self.market_cache.opportunities(profile)
+        if selection == "quick":
+            return QuickRouteOptimizer().choose(
+                profile, opportunities,
+                max_age_hours=self.FREYJA_MARKET_MAX_AGE_HOURS,
+            )
+        if selection == "three_station":
+            return ThreeStationOptimizer().choose(
+                profile, opportunities,
+                max_age_hours=self.FREYJA_MARKET_MAX_AGE_HOURS,
+            )
+        return TradeExpeditionOptimizer().choose(
+            profile, opportunities, max_jumps=30,
+            max_age_hours=self.FREYJA_MARKET_MAX_AGE_HOURS,
+        )
+
     @staticmethod
     def _quick_trade_voice_summary(plan) -> str:
         item = plan.opportunity
@@ -1311,6 +1382,10 @@ class CommandCenter:
             f"{item.sell_station}, sistema {item.sell_system}. La ganancia "
             f"estimada es de {plan.estimated_profit:,} cr\u00e9ditos en "
             f"{item.jumps} saltos."
+            + (
+                " Confirme el precio al llegar; uno de los mercados tiene m\u00e1s de un d\u00eda."
+                if plan.stale_hours > 24 else ""
+            )
         )
 
     def _start_officer_voice_message(self, message: VoiceMessageReady) -> None:
