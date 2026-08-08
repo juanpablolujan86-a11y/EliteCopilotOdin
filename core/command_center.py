@@ -15,6 +15,7 @@ from io import StringIO
 
 from brain.decision_engine import DecisionEngine
 from core.config import Config
+from core.body_names import planet_reference
 from core.database import DatabaseManager
 from core.event_bus import EventBus
 from core.expedition_ledger import ExpeditionLedger
@@ -905,6 +906,7 @@ class CommandCenter:
         try:
             conversation = VoiceConversation(self.config)
             answer = conversation.answer(question, context)
+            answer = self._sanitize_scientific_answer(question, answer)
             acknowledgement_done.wait()
             conversation.voice.speak("ODIN", answer)
             print(f"\nVos: {question}")
@@ -926,6 +928,32 @@ class CommandCenter:
         if any(word in lowered for word in ("sistema", "planeta", "base de datos", "escane")):
             return "Revisando la base de datos."
         return "Procesando la orden, comandante."
+
+    def _sanitize_scientific_answer(self, question: str, answer: str) -> str:
+        lowered = question.casefold()
+        if not any(
+            word in lowered
+            for word in ("biolog", "especie", "muestra", "mímir", "mimir")
+        ):
+            return answer
+        system = self.commander_state.current_system.strip()
+        if not system:
+            return answer
+        sanitized = answer
+        known_bodies = self.scientific_context.system_predictions(system)
+        for body in sorted(known_bodies, key=len, reverse=True):
+            sanitized = re.sub(
+                re.escape(body),
+                planet_reference(system, body),
+                sanitized,
+                flags=re.IGNORECASE,
+            )
+        return re.sub(
+            re.escape(system),
+            "este sistema",
+            sanitized,
+            flags=re.IGNORECASE,
+        )
 
     def _run_processing_message(
         self, officer: str, message: str, completed: threading.Event

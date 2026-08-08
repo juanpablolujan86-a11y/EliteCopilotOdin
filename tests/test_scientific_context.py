@@ -25,11 +25,19 @@ class ScientificContextTests(unittest.TestCase):
 
     def test_tectonicas_alert_is_emitted_once_per_planet(self) -> None:
         registry = ScientificContextRegistry()
-        first = registry.record("Sistema", report("Stratum Tectonicas"))
-        repeated = registry.record("Sistema", report("Stratum Tectonicas"))
+        first = registry.record(
+            "Synuefua QF-L d9-25",
+            report("Stratum Tectonicas", body="Synuefua QF-L d9-25 1"),
+        )
+        repeated = registry.record(
+            "Synuefua QF-L d9-25",
+            report("Stratum Tectonicas", body="Synuefua QF-L d9-25 1"),
+        )
 
         self.assertIsNotNone(first)
         self.assertIn("Stratum Tectonicas", first.message)
+        self.assertIn("planeta 1", first.message)
+        self.assertNotIn("Synuefua", first.message)
         self.assertIsNone(repeated)
 
     def test_no_alert_without_biological_signal_or_during_restore(self) -> None:

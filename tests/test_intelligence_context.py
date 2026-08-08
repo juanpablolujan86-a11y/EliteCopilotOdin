@@ -38,16 +38,17 @@ class IntelligenceContextTests(unittest.TestCase):
         )
 
         self.assertIn("Sistema actual: Sol", context)
-        self.assertIn("Cuerpo actual: Sol A 1", context)
+        self.assertIn("Cuerpo actual: planeta A 1", context)
         self.assertIn("0 saltos realizados y 1 restantes", context)
         self.assertIn("potencial con bonificaciones: 10000 créditos", context)
         self.assertIn(
-            "Sol A 1: Bacterium Aurasus, Stratum Tectonicas", context
+            "planeta A 1: Bacterium Aurasus, Stratum Tectonicas", context
         )
-        self.assertIn("Base del comandante: GCRV 1568", context)
         biology_section = context.split(
             "Biologías probables conocidas en el sistema, sin precios:"
         )[1]
+        self.assertNotIn("Sol A 1", biology_section)
+        self.assertIn("Base del comandante: GCRV 1568", context)
         self.assertNotIn("1000", biology_section)
 
 

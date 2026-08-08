@@ -5,6 +5,7 @@ from __future__ import annotations
 from models.events.expedition_balance_updated import ExpeditionBalanceUpdated
 from state.commander_state import CommanderState
 from heimdall.navigation import NavigationContext
+from core.body_names import planet_reference
 
 
 def build_live_context(
@@ -14,6 +15,7 @@ def build_live_context(
     biology_by_body: dict[str, tuple[str, ...]] | None = None,
     home_base: str = "",
 ) -> str:
+    current_body = commander.current_body or commander.last_scanned_body
     lines = [
         f"Comandante: {commander.commander_name or 'desconocido'}",
         f"Créditos disponibles: {commander.credits}",
@@ -21,7 +23,10 @@ def build_live_context(
         f"Patrimonio registrado: {commander.current_wealth or 'sin datos'}",
         f"Base del comandante: {home_base or 'sin base registrada'}",
         f"Sistema actual: {commander.current_system or 'desconocido'}",
-        f"Cuerpo actual: {commander.current_body or commander.last_scanned_body or 'sin datos'}",
+        (
+            f"Cuerpo actual: {planet_reference(commander.current_system, current_body)}"
+            if current_body else "Cuerpo actual: sin datos"
+        ),
         (
             "Exploración del sistema: "
             f"{commander.discovered_body_count}/{commander.expected_body_count or '?'} cuerpos, "
@@ -58,7 +63,10 @@ def build_live_context(
     lines.append("Biologías probables conocidas en el sistema, sin precios:")
     if biology_by_body:
         for body, species in sorted(biology_by_body.items()):
-            lines.append(f"- {body}: {', '.join(species)}")
+            lines.append(
+                f"- {planet_reference(commander.current_system, body)}: "
+                f"{', '.join(species)}"
+            )
     else:
         lines.append("- No hay predicciones biológicas disponibles.")
     return "\n".join(lines)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from models.events.voice_message_ready import VoiceMessageReady
 from models.officer_report import OfficerReport
+from core.body_names import body_designation
 
 
 class ScientificContextRegistry:
@@ -38,7 +39,7 @@ class ScientificContextRegistry:
         return VoiceMessageReady(
             officer="MÍMIR",
             message=(
-                f"Comandante, el planeta {body} podría contener "
+                f"Comandante, el planeta {body_designation(system, body)} podría contener "
                 "Stratum Tectonicas. Recomiendo revisarlo."
             ),
             reason="Posible Stratum Tectonicas",
