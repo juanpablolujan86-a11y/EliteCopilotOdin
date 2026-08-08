@@ -76,6 +76,13 @@
 - [ ] Comandos
 - [ ] Automatización
 
+### Bloqueante para ODIN 1.0
+
+- [ ] Adaptación acústica local por comandante: aprender pronunciación y ritmo
+  a partir de muestras confirmadas, con consentimiento, opción de borrar el
+  perfil y aislamiento completo entre comandantes.
+- [x] Memoria semántica local de órdenes, alias y correcciones por comandante.
+
 ---
 
 ## HEIMDALL - Navegación y asistencia mínima
