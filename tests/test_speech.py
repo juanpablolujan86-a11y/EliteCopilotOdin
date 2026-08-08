@@ -59,7 +59,7 @@ class SpeechTests(unittest.TestCase):
             recorder.record_for.assert_called_once_with(
                 root / "speech" / "last_command.wav", 3
             )
-            assistant.ask.assert_called_once_with("Estado de la nave")
+            assistant.ask.assert_called_once_with("Estado de la nave", context="")
             voice.speak.assert_called_once_with("ODIN", "Todo operativo, comandante.")
             self.assertEqual(
                 (question, answer), ("Estado de la nave", "Todo operativo, comandante.")

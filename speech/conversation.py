@@ -24,10 +24,10 @@ class VoiceConversation:
         self.assistant = assistant or OdinLocalAssistant()
         self.voice = voice or OfficerVoiceService(self.config)
 
-    def listen_once(self, seconds: float = 7.0) -> tuple[str, str]:
+    def listen_once(self, seconds: float = 7.0, context: str = "") -> tuple[str, str]:
         audio = self.config.data_root / "speech" / "last_command.wav"
         self.recorder.record_for(audio, seconds)
         question = self.transcriber.transcribe(audio)
-        answer = self.assistant.ask(question).text
+        answer = self.assistant.ask(question, context=context).text
         self.voice.speak("ODIN", answer)
         return question, answer

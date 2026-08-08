@@ -113,6 +113,12 @@ envían a servicios externos; Edge TTS sólo recibe el texto final que ODIN debe
 pronunciar. Los fragmentos demasiado breves se descartan para evitar respuestas
 activadas por ruido ambiente.
 
+Mientras ODIN observa el Journal, `F8` inicia la misma escucha sin detener el
+procesamiento del juego. La consulta incluye el contexto vivo conocido: sistema,
+cuerpo, progreso de exploración, señales biológicas, nave, combustible, destino,
+ruta y estimación acumulada de la expedición. ODIN indica expresamente cuando un
+dato no está disponible y no debe inventarlo.
+
 El cliente usa solamente `127.0.0.1:11434`, evita mostrar razonamiento interno
 y falla de forma segura si Ollama o el modelo todavía no están disponibles.
 

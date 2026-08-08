@@ -7,6 +7,7 @@ Inicializa, conecta y coordina los componentes principales de ODIN.
 """
 
 import time
+import threading
 from contextlib import redirect_stdout
 from io import StringIO
 
@@ -41,6 +42,13 @@ from core.diagnostics import HeimdallDiagnostics, MimirDiagnostics, OdinDiagnost
 from heimdall.bindings import BindingAudit, BindingCustodian
 from heimdall.navigation import NavigationContextManager
 from heimdall.spansh import HeimdallRoutePlanner, SpanshClient
+from intelligence.context import build_live_context
+from intelligence.ollama import OllamaError
+from speech.conversation import VoiceConversation
+from speech.hotkey import WindowsHotkey
+from speech.recorder import MicrophoneError
+from speech.whisper import TranscriptionError
+from voice.service import VoiceServiceError
 
 class CommandCenter:
     """
@@ -83,6 +91,9 @@ class CommandCenter:
             SpanshClient(),
         )
         self.exploration_processor: ExplorationProcessor | None = None
+        self.expedition_ledger: ExpeditionLedger | None = None
+        self.voice_hotkey = WindowsHotkey()
+        self._voice_busy = threading.Event()
 
     def start(self) -> None:
         """
@@ -116,6 +127,7 @@ class CommandCenter:
         print(f"\nJournal: {journal.name}")
         print("\nODIN está observando Elite Dangerous...")
         print("Esperando eventos.\n")
+        print("Conversación          : presioná F8 para hablar con ODIN\n")
 
         try:
             self._run_event_loop()
@@ -273,6 +285,7 @@ class CommandCenter:
             self.config.project_root / "knowledge" / "biology" / "species.json",
         )
         expedition_ledger.bootstrap()
+        self.expedition_ledger = expedition_ledger
         self.exploration_processor = exploration_processor
 
         mimir_diagnostics = MimirDiagnostics(self.config.data_root)
@@ -554,12 +567,46 @@ class CommandCenter:
             if self.navigation_manager is not None:
                 self.navigation_manager.poll_route()
 
+            if self.voice_hotkey.pressed() and not self._voice_busy.is_set():
+                self._start_voice_conversation()
+
             events = self.watcher.poll()
 
             for event in events:
                 self.event_bus.publish(event)
 
             time.sleep(0.1)
+
+    def _start_voice_conversation(self) -> None:
+        """Escucha en segundo plano sin detener el seguimiento del Journal."""
+
+        balance = (
+            self.expedition_ledger.summary("consulta por voz")
+            if self.expedition_ledger is not None else None
+        )
+        navigation = (
+            self.navigation_manager.context
+            if self.navigation_manager is not None else None
+        )
+        context = build_live_context(self.commander_state, navigation, balance)
+        self._voice_busy.set()
+        print("\nODIN escucha durante 7 segundos. Hablá ahora...")
+        threading.Thread(
+            target=self._run_voice_conversation,
+            args=(context,),
+            name="odin-voice-conversation",
+            daemon=True,
+        ).start()
+
+    def _run_voice_conversation(self, context: str) -> None:
+        try:
+            question, answer = VoiceConversation(self.config).listen_once(7, context)
+            print(f"\nVos: {question}")
+            print(f"ODIN: {answer}\n")
+        except (MicrophoneError, TranscriptionError, OllamaError, VoiceServiceError) as error:
+            print(f"\nConversación por voz no disponible: {error}\n")
+        finally:
+            self._voice_busy.clear()
 
     def _handle_heimdall_navigation_event(self, event: dict) -> None:
         if self.navigation_manager is None:
