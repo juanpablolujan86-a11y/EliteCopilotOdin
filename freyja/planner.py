@@ -301,50 +301,57 @@ class ThreeStationOptimizer:
         max_age_hours: float = 8.0,
         max_bulk_discount: float = 0.08,
     ) -> ThreeStationTradePlan | None:
-        edges = list(opportunities)
-        candidates: list[ThreeStationTradePlan] = []
-        for first in edges:
+        planned = []
+        for edge in opportunities:
+            leg = self.quick.choose(
+                profile, [edge], max_age_hours=max_age_hours,
+                max_bulk_discount=max_bulk_discount,
+                max_profit_sacrifice=0.0,
+            )
+            if leg is not None:
+                planned.append(leg)
+        by_buy: dict[tuple[str,str],list[QuickTradePlan]] = {}
+        for leg in planned:
+            edge=leg.opportunity
+            by_buy.setdefault(self._station(edge.buy_system,edge.buy_station),[]).append(leg)
+        for station,legs in by_buy.items():
+            legs.sort(key=lambda item:item.profit_per_minute,reverse=True)
+            by_buy[station]=legs[:20]
+
+        best: ThreeStationTradePlan | None = None
+        for first_leg in planned:
+            first = first_leg.opportunity
             first_buy = self._station(first.buy_system, first.buy_station)
             first_sell = self._station(first.sell_system, first.sell_station)
-            for second in edges:
+            for second_leg in by_buy.get(first_sell,()):
+                second=second_leg.opportunity
                 second_buy = self._station(second.buy_system, second.buy_station)
                 second_sell = self._station(second.sell_system, second.sell_station)
                 if second_buy != first_sell or second_sell in {first_buy, first_sell}:
                     continue
-                for third in edges:
+                for third_leg in by_buy.get(second_sell,()):
+                    third=third_leg.opportunity
                     if self._station(third.buy_system, third.buy_station) != second_sell:
                         continue
                     if self._station(third.sell_system, third.sell_station) != first_buy:
                         continue
-                    legs = tuple(
-                        self.quick.choose(
-                            profile,
-                            [edge],
-                            max_age_hours=max_age_hours,
-                            max_bulk_discount=max_bulk_discount,
-                            max_profit_sacrifice=0.0,
-                        )
-                        for edge in (first, second, third)
-                    )
-                    if any(leg is None for leg in legs):
+                    if len({
+                        first.commodity.casefold(),second.commodity.casefold(),
+                        third.commodity.casefold(),
+                    }) != 3:
                         continue
-                    typed_legs = (legs[0], legs[1], legs[2])
+                    typed_legs=(first_leg,second_leg,third_leg)
                     minutes = sum(leg.estimated_minutes for leg in typed_legs)
                     profit = sum(leg.estimated_profit for leg in typed_legs)
-                    candidates.append(
-                        ThreeStationTradePlan(
-                            typed_legs,
-                            profit,
-                            minutes,
-                            profit / max(1.0, minutes),
-                            sum(leg.opportunity.jumps for leg in typed_legs),
-                        )
+                    candidate=ThreeStationTradePlan(
+                        typed_legs,profit,minutes,profit/max(1.0,minutes),
+                        sum(leg.opportunity.jumps for leg in typed_legs),
                     )
-        return max(
-            candidates,
-            key=lambda plan: (plan.profit_per_minute, plan.estimated_profit),
-            default=None,
-        )
+                    if best is None or (
+                        candidate.profit_per_minute,candidate.estimated_profit
+                    ) > (best.profit_per_minute,best.estimated_profit):
+                        best=candidate
+        return best
 
     @staticmethod
     def _station(system: str, station: str) -> tuple[str, str]:

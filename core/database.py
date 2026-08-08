@@ -9,6 +9,7 @@ Administrador central de SQLite.
 from pathlib import Path
 import sqlite3
 from sqlite3 import Connection
+from contextlib import contextmanager
 
 
 class DatabaseManager:
@@ -22,6 +23,7 @@ class DatabaseManager:
 
         self.database_file = self.database_folder / "odin.db"
         self.connection: Connection | None = None
+        self._transaction_depth = 0
 
     def connect(self) -> None:
         if self.connection is None:
@@ -39,7 +41,25 @@ class DatabaseManager:
 
         cursor = self.connection.cursor()
         cursor.execute(sql, parameters)
-        self.connection.commit()
+        if self._transaction_depth == 0:
+            self.connection.commit()
+
+    @contextmanager
+    def transaction(self):
+        if self.connection is None:
+            raise RuntimeError("La base de datos no est\u00e1 conectada.")
+        outermost = self._transaction_depth == 0
+        self._transaction_depth += 1
+        try:
+            yield
+            self._transaction_depth -= 1
+            if outermost:
+                self.connection.commit()
+        except Exception:
+            self._transaction_depth -= 1
+            if outermost:
+                self.connection.rollback()
+            raise
 
     def query(self, sql: str, parameters: tuple = ()) -> list:
         if self.connection is None:

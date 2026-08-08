@@ -843,6 +843,12 @@ class CommandCenter:
                 arm_after=True,
             )
             return
+        standalone_selection = self._freyja_trade_selection(question)
+        if standalone_selection is not None and re.search(
+            r"\b(?:opci\u00f3n|opcion|modelo|modalidad)\b", question.casefold()
+        ):
+            self._start_freyja_trade_calculation(standalone_selection)
+            return
         if not self._is_credible_voice_question(question):
             self.wake_listener.arm()
             self._start_fixed_voice_response(
@@ -1235,7 +1241,31 @@ class CommandCenter:
         return None
 
     def _start_freyja_trade_calculation(self, selection: str) -> None:
-        if self.navigation_manager is None or self.market_cache is None:
+        self._voice_busy.set()
+        print("FREYJA: Consultando mercados de la Burbuja...\n")
+        threading.Thread(
+            target=self._run_freyja_trade_calculation,
+            args=(selection,),
+            name=f"freyja-{selection}-calculation",
+            daemon=True,
+        ).start()
+
+    def _run_freyja_trade_calculation(self, selection: str) -> None:
+        trade_database = DatabaseManager(self.config.data_root)
+        try:
+            trade_database.connect()
+            trade_database.create_tables()
+            self._calculate_freyja_trade(selection, MarketCache(trade_database))
+        except Exception:
+            self._start_fixed_voice_response(
+                "Se produjo un error al calcular la operaci\u00f3n comercial. Int\u00e9ntelo nuevamente, comandante.",
+                officer="FREYJA",
+            )
+        finally:
+            trade_database.disconnect()
+
+    def _calculate_freyja_trade(self, selection: str, market_cache: MarketCache) -> None:
+        if self.navigation_manager is None:
             self._start_fixed_voice_response(
                 "El planificador comercial todav\u00eda no tiene disponible el estado de navegaci\u00f3n.",
                 officer="FREYJA",
@@ -1249,7 +1279,7 @@ class CommandCenter:
         planning_profile = self._freyja_planning_profile(selection)
         opportunities = (
             [] if selection == "powerplay"
-            else self.market_cache.opportunities(planning_profile)
+            else market_cache.opportunities(planning_profile)
         )
         if selection == "quick":
             plan = QuickRouteOptimizer().choose(
@@ -1257,14 +1287,18 @@ class CommandCenter:
                 max_age_hours=self.FREYJA_MARKET_MAX_AGE_HOURS,
             )
             if plan is None:
-                plan = self._refresh_and_recalculate_freyja(selection, planning_profile)
+                plan = self._refresh_and_recalculate_freyja(
+                    selection, planning_profile, market_cache
+                )
         elif selection == "three_station":
             plan = ThreeStationOptimizer().choose(
                 planning_profile, opportunities,
                 max_age_hours=self.FREYJA_MARKET_MAX_AGE_HOURS,
             )
             if plan is None:
-                plan = self._refresh_and_recalculate_freyja(selection, planning_profile)
+                plan = self._refresh_and_recalculate_freyja(
+                    selection, planning_profile, market_cache
+                )
         elif selection == "expedition":
             plan = TradeExpeditionOptimizer().choose(
                 planning_profile, opportunities, max_jumps=30
@@ -1272,10 +1306,10 @@ class CommandCenter:
             )
             if plan is None:
                 try:
-                    self.market_cache.refresh_region(
+                    market_cache.refresh_region(
                         SpanshMarketClient(), self.BUBBLE_TRADE_CENTER, size=75
                     )
-                    opportunities = self.market_cache.opportunities(planning_profile)
+                    opportunities = market_cache.opportunities(planning_profile)
                     plan = TradeExpeditionOptimizer().choose(
                         planning_profile, opportunities, max_jumps=30
                         , max_age_hours=self.FREYJA_MARKET_MAX_AGE_HOURS
@@ -1293,7 +1327,7 @@ class CommandCenter:
                     officer="FREYJA",
                 )
                 return
-            opportunities = self.market_cache.opportunities(
+            opportunities = market_cache.opportunities(
                 planning_profile,
                 sell_power=self.trade_profile.powerplay_power,
             )
@@ -1307,10 +1341,10 @@ class CommandCenter:
                 )
                 if center is not None:
                     try:
-                        self.market_cache.refresh_region(
+                        market_cache.refresh_region(
                             SpanshMarketClient(), center, size=75
                         )
-                        opportunities = self.market_cache.opportunities(
+                        opportunities = market_cache.opportunities(
                             planning_profile,
                             sell_power=self.trade_profile.powerplay_power,
                         )
@@ -1350,14 +1384,18 @@ class CommandCenter:
             position=self.BUBBLE_TRADE_CENTER,
         )
 
-    def _refresh_and_recalculate_freyja(self, selection: str, profile):
+    def _refresh_and_recalculate_freyja(
+        self, selection: str, profile, market_cache: MarketCache
+    ):
         try:
-            self.market_cache.refresh_region(
-                SpanshMarketClient(), self.BUBBLE_TRADE_CENTER, size=75
+            market_cache.refresh_region(
+                SpanshMarketClient(), self.BUBBLE_TRADE_CENTER,
+                size=100 if selection == "three_station" else 75,
+                pages=3 if selection == "three_station" else 1,
             )
         except MarketSourceError:
             return None
-        opportunities = self.market_cache.opportunities(profile)
+        opportunities = market_cache.opportunities(profile)
         if selection == "quick":
             return QuickRouteOptimizer().choose(
                 profile, opportunities,

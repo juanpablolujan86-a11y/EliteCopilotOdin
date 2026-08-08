@@ -102,6 +102,15 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
         self.assertFalse(center._pending_freyja_trade_menu)
         center._start_freyja_trade_calculation.assert_called_once_with("powerplay")
 
+    def test_explicit_option_two_survives_lost_menu_state(self):
+        center=CommandCenter.__new__(CommandCenter)
+        center._pending_freyja_trade_menu=False
+        center._start_freyja_trade_calculation=Mock()
+
+        center._start_voice_response("la opci\u00f3n 2")
+
+        center._start_freyja_trade_calculation.assert_called_once_with("three_station")
+
     def test_freyja_menu_understands_all_four_spoken_choices(self):
         self.assertEqual(CommandCenter._freyja_trade_selection("uno"),"quick")
         self.assertEqual(CommandCenter._freyja_trade_selection("circuito"),"three_station")

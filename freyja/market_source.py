@@ -21,12 +21,12 @@ class SpanshMarketClient:
         record=payload.get("record")
         if not isinstance(record,dict): raise MarketSourceError("Spansh devolvió una estación inválida.")
         return record
-    def stations_near(self, coordinates, *, size: int = 75) -> tuple[dict, ...]:
+    def stations_near(self, coordinates, *, size: int = 75, page: int = 0) -> tuple[dict, ...]:
         x,y,z=coordinates
         payload={
             "filters":{"has_market":{"value":True}},
             "sort":[{"distance":{"direction":"asc"}}],
-            "size":max(1,min(int(size),100)),"page":0,
+            "size":max(1,min(int(size),100)),"page":max(0,int(page)),
             "reference_coords":{"x":x,"y":y,"z":z},
         }
         try:
@@ -69,9 +69,14 @@ class MarketCache:
         for item in commodities or ():
             self._commodity(market_id,item,updated); count+=1
         return count
-    def refresh_region(self,client: SpanshMarketClient,coordinates,*,size=75) -> int:
-        stations=client.stations_near(coordinates,size=size)
-        for station in stations: self.ingest_spansh_station(station)
+    def refresh_region(self,client: SpanshMarketClient,coordinates,*,size=75,pages=1) -> int:
+        stations=tuple(
+            station
+            for page in range(max(1,int(pages)))
+            for station in client.stations_near(coordinates,size=size,page=page)
+        )
+        with self.database.transaction():
+            for station in stations: self.ingest_spansh_station(station)
         return len(stations)
     def opportunities(self,profile,*,sell_power: str = "") -> list[MarketOpportunity]:
         if profile.position is None or profile.jump_range <= 0:
