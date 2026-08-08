@@ -15,6 +15,7 @@ from freyja.planner import (
     ThreeStationOptimizer,
     TradeExpeditionOptimizer,
     TradeProfile,
+    PowerplayTradeOptimizer,
 )
 
 
@@ -174,6 +175,50 @@ class FreyjaBubbleSimulationTests(unittest.TestCase):
             QuickRouteOptimizer().choose(profile, [self.opportunity()])
         )
 
+    def test_powerplay_trade_combines_profit_and_merit_eligibility(self) -> None:
+        profile = TradeProfile(
+            "Sol", 10_000_000, 500_000, 100, 0, 30, (0, 0, 0),
+            powerplay_power="Aisling Duval",
+        )
+        eligible = self.opportunity(buy_price=10_000, sell_price=16_000)
+        eligible = MarketOpportunity(
+            **{
+                field: getattr(eligible, field)
+                for field in eligible.__dataclass_fields__
+                if field not in {"sell_power", "sell_power_state"}
+            },
+            sell_power="Aisling Duval",
+            sell_power_state="Fortified",
+        )
+
+        plan = PowerplayTradeOptimizer().choose(profile, [eligible])
+
+        self.assertIsNotNone(plan)
+        self.assertTrue(plan.merit_eligible)
+        self.assertIsNone(plan.merit_estimate)
+        self.assertGreater(plan.trade.estimated_profit, 0)
+        self.assertIn("confirmar\u00e1 con el Journal", plan.summary())
+
+    def test_powerplay_trade_rejects_wrong_power_or_low_margin(self) -> None:
+        profile = TradeProfile(
+            "Sol", 10_000_000, 500_000, 100, 0, 30, (0, 0, 0),
+            powerplay_power="Jerome Archer",
+        )
+        wrong_power = MarketOpportunity(
+            "oro", "A", "A1", "B", "B1", 10_000, 20_000,
+            1_000, 1_000, 1, 100, self.now,
+            sell_power="Aisling Duval", sell_power_state="Stronghold",
+        )
+        low_margin = MarketOpportunity(
+            "plata", "A", "A1", "C", "C1", 10_000, 13_000,
+            1_000, 1_000, 1, 100, self.now,
+            sell_power="Jerome Archer", sell_power_state="Fortified",
+        )
+
+        self.assertIsNone(
+            PowerplayTradeOptimizer().choose(profile, [wrong_power, low_margin])
+        )
+
     def test_market_cache_estimates_bubble_jumps_from_ship_range(self) -> None:
         self.cache.ingest_spansh_station({
             "market_id": 101,
@@ -197,6 +242,8 @@ class FreyjaBubbleSimulationTests(unittest.TestCase):
             "system_y": 0,
             "system_z": 0,
             "distance_to_arrival": 400,
+            "power": {"name": "Aisling Duval"},
+            "power_state": "Fortified",
             "market_updated_at": self.now,
             "market": [{
                 "commodity": "silver", "buy_price": 0,
@@ -212,6 +259,8 @@ class FreyjaBubbleSimulationTests(unittest.TestCase):
         self.assertEqual(len(opportunities), 1)
         self.assertEqual(opportunities[0].jumps, 3)
         self.assertEqual(opportunities[0].station_distance_ls, 650)
+        self.assertEqual(opportunities[0].sell_power, "Aisling Duval")
+        self.assertEqual(opportunities[0].sell_power_state, "Fortified")
 
     def test_missing_position_or_jump_range_fails_conservatively(self) -> None:
         no_position = TradeProfile("Sol", 1_000_000, 50_000, 32, 0, 20, None)

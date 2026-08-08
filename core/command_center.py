@@ -371,7 +371,7 @@ class CommandCenter:
 
         for event_name in (
             "Commander", "LoadGame", "Loadout", "Statistics",
-            "SetUserShipName", "ShipyardSwap", "ShipyardBuy",
+            "SetUserShipName", "ShipyardSwap", "ShipyardBuy", "Powerplay",
         ):
             self.event_bus.subscribe(event_name, commander_state_updater.handle_profile_event)
         self.event_bus.subscribe(

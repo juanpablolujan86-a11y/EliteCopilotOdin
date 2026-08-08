@@ -161,6 +161,16 @@ class CommanderStateUpdater:
             state.game_mode = str(event["GameMode"])
         if event.get("gameversion"):
             state.game_version = str(event["gameversion"])
+        if event.get("Power"):
+            state.powerplay_power = str(event["Power"])
+        if event.get("Rank") is not None and event.get("event") == "Powerplay":
+            state.powerplay_rank = int(event["Rank"])
+        elif event.get("PowerplayRank") is not None:
+            state.powerplay_rank = int(event["PowerplayRank"])
+        if event.get("Merits") is not None and event.get("event") == "Powerplay":
+            state.powerplay_merits = int(event["Merits"])
+        elif event.get("PowerplayMerits") is not None:
+            state.powerplay_merits = int(event["PowerplayMerits"])
 
     def handle_sale(self, event: dict) -> None:
         """Mantiene el saldo aproximado tras ventas confirmadas de expedición."""

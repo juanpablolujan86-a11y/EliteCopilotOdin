@@ -124,6 +124,8 @@ class DatabaseManager:
             ("x","REAL"),("y","REAL"),("z","REAL"),
             ("distance_to_arrival","REAL"),("has_large_pad","INTEGER NOT NULL DEFAULT 0"),
             ("is_planetary","INTEGER NOT NULL DEFAULT 0"),
+            ("power_name","TEXT NOT NULL DEFAULT ''"),
+            ("power_state","TEXT NOT NULL DEFAULT ''"),
         ):
             self._ensure_column("freyja_markets",column,definition)
         self.execute("""CREATE TABLE IF NOT EXISTS freyja_market_commodities

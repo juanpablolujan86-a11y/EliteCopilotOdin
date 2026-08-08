@@ -59,7 +59,8 @@ class MarketCache:
           bm.has_large_pad buy_large,bm.is_planetary buy_planetary,
           sm.system_name sell_system,sm.station_name sell_station,
           sm.x sx,sm.y sy,sm.z sz,sm.distance_to_arrival sell_ls,
-          sm.has_large_pad sell_large,sm.is_planetary sell_planetary
+          sm.has_large_pad sell_large,sm.is_planetary sell_planetary,
+          sm.power_name sell_power,sm.power_state sell_power_state
           FROM freyja_market_commodities buy
           JOIN freyja_markets bm ON bm.market_id=buy.market_id
           JOIN freyja_market_commodities sell ON sell.commodity=buy.commodity
@@ -80,20 +81,35 @@ class MarketCache:
               row["stock"],row["demand"],jumps,
               float(row["buy_ls"] or 0)+float(row["sell_ls"] or 0),updated,
               bool(row["buy_large"]),bool(row["sell_large"]),
-              bool(row["buy_planetary"]),bool(row["sell_planetary"])))
+              bool(row["buy_planetary"]),bool(row["sell_planetary"]),
+              str(row["sell_power"] or ""),str(row["sell_power_state"] or "")))
         return result
     def _station(self,market_id,system,station,updated,source,record=None):
         record=record or {}
         self.database.execute("""INSERT INTO freyja_markets
         (market_id,system_name,station_name,updated_at,source,x,y,z,distance_to_arrival,
-         has_large_pad,is_planetary) VALUES(?,?,?,?,?,?,?,?,?,?,?)
+         has_large_pad,is_planetary,power_name,power_state) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(market_id) DO UPDATE SET system_name=excluded.system_name,
         station_name=excluded.station_name,updated_at=excluded.updated_at,source=excluded.source,
         x=excluded.x,y=excluded.y,z=excluded.z,distance_to_arrival=excluded.distance_to_arrival,
-        has_large_pad=excluded.has_large_pad,is_planetary=excluded.is_planetary""",
+        has_large_pad=excluded.has_large_pad,is_planetary=excluded.is_planetary,
+        power_name=excluded.power_name,power_state=excluded.power_state""",
         (int(market_id),system,station,updated,source,record.get("system_x"),
          record.get("system_y"),record.get("system_z"),record.get("distance_to_arrival"),
-         int(bool(record.get("has_large_pad"))),int(bool(record.get("is_planetary")))))
+         int(bool(record.get("has_large_pad"))),int(bool(record.get("is_planetary"))),
+         self._power_name(record),self._power_state(record)))
+
+    @staticmethod
+    def _power_name(record):
+        power=record.get("power",record.get("controlling_power",record.get("system_power","")))
+        if isinstance(power,dict): return str(power.get("name",power.get("Name","")) or "")
+        return str(power or "")
+
+    @staticmethod
+    def _power_state(record):
+        state=record.get("power_state",record.get("powerplay_state",record.get("system_power_state","")))
+        if isinstance(state,dict): return str(state.get("name",state.get("Name","")) or "")
+        return str(state or "")
     def _commodity(self,market_id,item,updated):
         name=str(item.get("Name",item.get("name",item.get("commodity","")))).strip("$").removesuffix("_name;").casefold()
         if not name: return

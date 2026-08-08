@@ -22,6 +22,10 @@ class CommanderState:
     ship_type_localised: str = ""
     game_version: str = ""
 
+    powerplay_power: str = ""
+    powerplay_rank: int = 0
+    powerplay_merits: int = 0
+
     current_system: str = ""
     system_address: int = 0
     current_body: str = ""

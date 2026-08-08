@@ -115,3 +115,9 @@
 - [ ] Solicitud contextual de aterrizaje
 - [ ] Modo informativo sin pulsaciones
 - [x] Registro persistente `heimdall.log`
+# FREYJA / Powerplay
+
+- [x] Leer afiliaci\u00f3n, rango y m\u00e9ritos del comandante desde el Journal.
+- [x] Filtrar comercio por potencia, estado territorial y margen m\u00ednimo elegible.
+- [x] Mantener separados el beneficio exacto en cr\u00e9ditos y los m\u00e9ritos por confirmar.
+- [ ] Validar en el juego los m\u00e9ritos reales otorgados por cada venta y calibrar la estimaci\u00f3n.

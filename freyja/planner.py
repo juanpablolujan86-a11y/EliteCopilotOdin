@@ -13,6 +13,8 @@ class TradeProfile:
     requires_large_pad: bool = False
     allow_planetary: bool = True
     excluded_systems: frozenset[str] = frozenset()
+    powerplay_power: str = ""
+    powerplay_merits: int = 0
     @property
     def cargo_free(self): return max(0, self.cargo_capacity-self.cargo_used)
     @property
@@ -28,6 +30,8 @@ class MarketOpportunity:
     sell_has_large_pad: bool = True
     buy_planetary: bool = False
     sell_planetary: bool = False
+    sell_power: str = ""
+    sell_power_state: str = ""
 
 @dataclass(frozen=True, slots=True)
 class QuickTradePlan:
@@ -86,6 +90,22 @@ class TradeExpeditionPlan:
             f"saltos: {self.estimated_profit:,} créditos estimados."
         )
 
+@dataclass(frozen=True, slots=True)
+class PowerplayTradePlan:
+    trade: QuickTradePlan
+    power: str
+    merit_eligible: bool
+    merit_estimate: int | None = None
+
+    def summary(self) -> str:
+        eligibility = (
+            "La venta es elegible para generar m\u00e9ritos de Powerplay; "
+            "la cantidad se confirmar\u00e1 con el Journal."
+            if self.merit_eligible else
+            "La venta genera cr\u00e9ditos, pero no cumple las condiciones de m\u00e9ritos."
+        )
+        return f"{self.trade.sale_instruction()} {eligibility}"
+
 class TradeProfileBuilder:
     LARGE_SHIPS = {
         "anaconda", "belugaliner", "cutter", "federation_corvette",
@@ -110,7 +130,42 @@ class TradeProfileBuilder:
             float(getattr(navigation,"max_jump_range",0) or 0),
             getattr(navigation,"current_position",None),
             normalized_ship in TradeProfileBuilder.LARGE_SHIPS,
+            True,
+            frozenset(),
+            str(getattr(commander, "powerplay_power", "") or ""),
+            int(getattr(commander, "powerplay_merits", 0) or 0),
         )
+
+class PowerplayTradeOptimizer:
+    """Prioriza comercio rentable dentro del territorio de la potencia afiliada."""
+
+    MIN_PROFIT_MARGIN = 0.40
+    ELIGIBLE_STATES = frozenset({
+        "acquisition", "exploited", "fortified", "stronghold", "controlled",
+    })
+
+    def __init__(self, quick_optimizer: QuickRouteOptimizer | None = None) -> None:
+        self.quick = quick_optimizer or QuickRouteOptimizer()
+
+    def choose(self, profile: TradeProfile, opportunities, **kwargs):
+        power = profile.powerplay_power.strip()
+        if not power:
+            return None
+        candidates = []
+        for opportunity in opportunities:
+            same_power = opportunity.sell_power.casefold() == power.casefold()
+            state = opportunity.sell_power_state.strip().casefold()
+            margin = (
+                (opportunity.sell_price - opportunity.buy_price)
+                / opportunity.buy_price
+                if opportunity.buy_price > 0 else 0.0
+            )
+            if same_power and state in self.ELIGIBLE_STATES and margin >= self.MIN_PROFIT_MARGIN:
+                candidates.append(opportunity)
+        trade = self.quick.choose(profile, candidates, **kwargs)
+        if trade is None:
+            return None
+        return PowerplayTradePlan(trade, power, True, None)
 
 class QuickRouteOptimizer:
     BULK_FULL_PRICE_RATIO = 0.25
