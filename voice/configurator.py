@@ -6,6 +6,7 @@ import getpass
 
 from core.config import Config
 from voice.credentials import WindowsCredentialStore
+from voice.edge import EDGE_LATIN_VOICES
 from voice.elevenlabs import ElevenLabsClient, ElevenLabsError
 from voice.settings import VoiceSettingsRepository
 from voice.windows_voices import list_windows_voices
@@ -84,15 +85,18 @@ def run_voice_configuration(config: Config | None = None) -> None:
                 secret = ""
         for officer, assignment in settings.officers.items():
             provider = input(
-                f"Proveedor de {officer} [windows/elevenlabs] "
+                f"Proveedor de {officer} [edge/windows/elevenlabs] "
                 f"({assignment.provider}): "
             ).strip().lower()
             if provider:
-                if provider not in {"windows", "elevenlabs"}:
+                if provider not in {"edge", "windows", "elevenlabs"}:
                     print(f"Proveedor inválido para {officer}; se conserva el anterior.")
                     continue
                 assignment.provider = provider
-            if assignment.provider == "elevenlabs" and eleven_voices:
+            if assignment.provider == "edge":
+                assignment.voice = EDGE_LATIN_VOICES[officer]
+                print(f"Voz Edge latinoamericana asignada: {assignment.voice}")
+            elif assignment.provider == "elevenlabs" and eleven_voices:
                 print(f"\nVoces ElevenLabs verificadas en español latino para {officer}:")
                 for number, voice in enumerate(eleven_voices, 1):
                     print(f"  {number}. {voice.name}")

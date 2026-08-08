@@ -64,6 +64,12 @@ preparados identificadores de voz independientes para ElevenLabs:
 python main.py --configure-voice
 ```
 
+El proveedor predeterminado es Edge TTS, sin API key ni consumo de créditos:
+ODIN utiliza Tomás de Argentina, MÍMIR utiliza Dalia de México y HEIMDALL
+utiliza Gonzalo de Colombia. No se seleccionan voces de España. Edge TTS
+necesita conexión a Internet; si no está disponible, ODIN utiliza las voces
+locales de Windows como respaldo.
+
 La clave de ElevenLabs se introduce de forma oculta, se valida antes de
 guardarla y se almacena en el Administrador de credenciales de Windows para el
 usuario actual. Nunca se escribe en `config.json`, en el archivo de preferencias
