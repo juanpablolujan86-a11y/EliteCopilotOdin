@@ -126,6 +126,7 @@ class DatabaseManager:
             ("is_planetary","INTEGER NOT NULL DEFAULT 0"),
             ("power_name","TEXT NOT NULL DEFAULT ''"),
             ("power_state","TEXT NOT NULL DEFAULT ''"),
+            ("station_type","TEXT NOT NULL DEFAULT ''"),
         ):
             self._ensure_column("freyja_markets",column,definition)
         self.execute("""CREATE TABLE IF NOT EXISTS freyja_market_commodities
@@ -133,6 +134,10 @@ class DatabaseManager:
         sell_price INTEGER NOT NULL DEFAULT 0, mean_price INTEGER NOT NULL DEFAULT 0,
         stock INTEGER NOT NULL DEFAULT 0, demand INTEGER NOT NULL DEFAULT 0,
         updated_at TEXT NOT NULL, PRIMARY KEY(market_id,commodity))""")
+        self.execute("""CREATE INDEX IF NOT EXISTS idx_freyja_commodity_name
+        ON freyja_market_commodities(commodity)""")
+        self.execute("""CREATE INDEX IF NOT EXISTS idx_freyja_market_power
+        ON freyja_markets(power_name)""")
 
         self.execute(
             """

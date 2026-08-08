@@ -197,6 +197,9 @@ class FreyjaBubbleSimulationTests(unittest.TestCase):
         self.assertTrue(plan.merit_eligible)
         self.assertIsNone(plan.merit_estimate)
         self.assertGreater(plan.trade.estimated_profit, 0)
+        self.assertIn("Compre", plan.summary())
+        self.assertIn("sistema Sistema Compra", plan.summary())
+        self.assertIn("sistema Sistema Venta", plan.summary())
         self.assertIn("confirmar\u00e1 con el Journal", plan.summary())
 
     def test_powerplay_trade_rejects_wrong_power_or_low_margin(self) -> None:
@@ -218,6 +221,19 @@ class FreyjaBubbleSimulationTests(unittest.TestCase):
         self.assertIsNone(
             PowerplayTradeOptimizer().choose(profile, [wrong_power, low_margin])
         )
+
+    def test_powerplay_trade_rejects_fleet_carriers(self) -> None:
+        profile = TradeProfile(
+            "Sol", 10_000_000, 500_000, 100, 0, 30, (0, 0, 0),
+            powerplay_power="Li Yong-Rui",
+        )
+        carrier = MarketOpportunity(
+            "tritium", "A", "Compra", "B", "T3L-L4K", 10_000, 20_000,
+            1_000, 10_000, 1, 100, self.now,
+            sell_power="Li Yong-Rui", sell_power_state="Stronghold",
+            sell_station_type="Fleet Carrier",
+        )
+        self.assertIsNone(PowerplayTradeOptimizer().choose(profile, [carrier]))
 
     def test_market_cache_estimates_bubble_jumps_from_ship_range(self) -> None:
         self.cache.ingest_spansh_station({

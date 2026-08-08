@@ -24,6 +24,15 @@ class FreyjaMarketSourceTests(unittest.TestCase):
         record=SpanshMarketClient(session).station(7)
         session.get.assert_called_once_with("https://spansh.co.uk/api/station/7",timeout=20)
         self.assertEqual(record["name"],"Galileo")
+    def test_spansh_client_searches_market_stations_near_power_center(self):
+        response=Mock(); response.json.return_value={"results":[{"market_id":8}]}
+        session=Mock(); session.post.return_value=response
+        records=SpanshMarketClient(session).stations_near((-43.25,-64.34375,-77.6875))
+        self.assertEqual(records,({"market_id":8},))
+        request=session.post.call_args
+        self.assertEqual(request.args[0],"https://spansh.co.uk/api/stations/search")
+        self.assertEqual(request.kwargs["json"]["reference_coords"]["x"],-43.25)
+        self.assertTrue(request.kwargs["json"]["filters"]["has_market"]["value"])
     def test_builds_realistic_opportunity_between_cached_markets(self):
         self.cache.ingest_spansh_station({"market_id":1,"system_name":"A","name":"Uno",
           "system_x":0,"system_y":0,"system_z":0,"distance_to_arrival":100,
@@ -33,11 +42,14 @@ class FreyjaMarketSourceTests(unittest.TestCase):
         self.cache.ingest_spansh_station({"market_id":2,"system_name":"B","name":"Dos",
           "system_x":20,"system_y":0,"system_z":0,"distance_to_arrival":200,
           "market_updated_at":"2099-01-01T00:00:00+00:00",
+          "system_controlling_power":"Li Yong-Rui","system_power_state":"Stronghold",
           "market":[{"commodity":"gold","buy_price":0,"sell_price":200,
                      "supply":0,"demand":50}]})
         profile=TradeProfile("Origen",10000,1000,100,0,10,(0,0,0))
         opportunities=self.cache.opportunities(profile)
         self.assertEqual((len(opportunities),opportunities[0].jumps),(1,2))
+        self.assertEqual(opportunities[0].sell_power,"Li Yong-Rui")
+        self.assertEqual(opportunities[0].sell_power_state,"Stronghold")
         plan=QuickRouteOptimizer().choose(profile,opportunities)
         self.assertEqual(plan.units,15)
         self.assertEqual(plan.recommended_sale_tons,15)

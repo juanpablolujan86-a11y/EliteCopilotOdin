@@ -52,7 +52,7 @@ from freyja.planner import (
     TradeExpeditionOptimizer,
     TradeProfileBuilder,
 )
-from freyja.market_source import MarketCache
+from freyja.market_source import MarketCache, MarketSourceError, SpanshMarketClient
 from heimdall.bindings import BindingAudit, BindingCustodian
 from heimdall.cockpit import CockpitAdvisor, parse_cockpit_intent
 from heimdall.home_base import HomeBaseManager
@@ -88,6 +88,9 @@ class CommandCenter:
         "Dígame, comandante.",
         "A sus órdenes, comandante.",
     )
+    POWERPLAY_TRADE_CENTERS = {
+        "li yong-rui": (-43.25, -64.34375, -77.6875),
+    }
 
     def __init__(self) -> None:
         self.config = Config()
@@ -1239,7 +1242,10 @@ class CommandCenter:
             self.navigation_manager.context,
             self.config.cargo_file,
         )
-        opportunities = self.market_cache.opportunities(self.trade_profile)
+        opportunities = (
+            [] if selection == "powerplay"
+            else self.market_cache.opportunities(self.trade_profile)
+        )
         if selection == "quick":
             plan = QuickRouteOptimizer().choose(self.trade_profile, opportunities)
         elif selection == "three_station":
@@ -1255,9 +1261,35 @@ class CommandCenter:
                     officer="FREYJA",
                 )
                 return
+            opportunities = self.market_cache.opportunities(
+                self.trade_profile,
+                sell_power=self.trade_profile.powerplay_power,
+            )
             plan = PowerplayTradeOptimizer().choose(
                 self.trade_profile, opportunities
             )
+            if plan is None:
+                center = self.POWERPLAY_TRADE_CENTERS.get(
+                    self.trade_profile.powerplay_power.casefold()
+                )
+                if center is not None:
+                    try:
+                        self.market_cache.refresh_region(
+                            SpanshMarketClient(), center, size=75
+                        )
+                        opportunities = self.market_cache.opportunities(
+                            self.trade_profile,
+                            sell_power=self.trade_profile.powerplay_power,
+                        )
+                        plan = PowerplayTradeOptimizer().choose(
+                            self.trade_profile, opportunities
+                        )
+                    except MarketSourceError:
+                        self._start_fixed_voice_response(
+                            "No pude actualizar los mercados comunitarios en este momento. Int\u00e9ntelo nuevamente m\u00e1s tarde.",
+                            officer="FREYJA",
+                        )
+                        return
         if plan is None:
             self._start_fixed_voice_response(
                 "No encontr\u00e9 una operaci\u00f3n factible con los mercados actualizados disponibles. Necesito recibir m\u00e1s datos de mercado dentro de la Burbuja.",

@@ -32,6 +32,8 @@ class MarketOpportunity:
     sell_planetary: bool = False
     sell_power: str = ""
     sell_power_state: str = ""
+    buy_station_type: str = ""
+    sell_station_type: str = ""
 
 @dataclass(frozen=True, slots=True)
 class QuickTradePlan:
@@ -104,7 +106,14 @@ class PowerplayTradePlan:
             if self.merit_eligible else
             "La venta genera cr\u00e9ditos, pero no cumple las condiciones de m\u00e9ritos."
         )
-        return f"{self.trade.sale_instruction()} {eligibility}"
+        item = self.trade.opportunity
+        return (
+            f"Compre {self.trade.units} toneladas de {item.commodity} en "
+            f"{item.buy_station}, sistema {item.buy_system}, y v\u00e9ndalas en "
+            f"{item.sell_station}, sistema {item.sell_system}. La ganancia "
+            f"estimada es de {self.trade.estimated_profit:,} cr\u00e9ditos en "
+            f"{item.jumps} saltos. {eligibility}"
+        )
 
 class TradeProfileBuilder:
     LARGE_SHIPS = {
@@ -153,7 +162,19 @@ class PowerplayTradeOptimizer:
             return None
         candidates = []
         for opportunity in opportunities:
-            same_power = opportunity.sell_power.casefold() == power.casefold()
+            if any(
+                "carrier" in station_type.casefold()
+                for station_type in (
+                    opportunity.buy_station_type,
+                    opportunity.sell_station_type,
+                )
+            ):
+                continue
+            sell_powers = {
+                item.strip().casefold()
+                for item in opportunity.sell_power.split("|") if item.strip()
+            }
+            same_power = power.casefold() in sell_powers
             state = opportunity.sell_power_state.strip().casefold()
             margin = (
                 (opportunity.sell_price - opportunity.buy_price)
