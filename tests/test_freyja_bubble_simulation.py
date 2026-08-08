@@ -9,7 +9,12 @@ from pathlib import Path
 
 from core.database import DatabaseManager
 from freyja.market_source import MarketCache
-from freyja.planner import MarketOpportunity, QuickRouteOptimizer, TradeProfile
+from freyja.planner import (
+    MarketOpportunity,
+    QuickRouteOptimizer,
+    ThreeStationOptimizer,
+    TradeProfile,
+)
 
 
 class FreyjaBubbleSimulationTests(unittest.TestCase):
@@ -213,6 +218,53 @@ class FreyjaBubbleSimulationTests(unittest.TestCase):
 
         self.assertEqual(self.cache.opportunities(no_position), [])
         self.assertEqual(self.cache.opportunities(no_range), [])
+
+    def test_three_station_chain_closes_cycle_with_three_products(self) -> None:
+        profile = TradeProfile(
+            "Sistema A", 20_000_000, 1_000_000, 100, 0, 30, (0, 0, 0)
+        )
+        a_to_b = MarketOpportunity(
+            "oro", "Sistema A", "Estación A", "Sistema B", "Estación B",
+            10_000, 18_000, 1_000, 1_000, 2, 400, self.now,
+        )
+        b_to_c = MarketOpportunity(
+            "plata", "Sistema B", "Estación B", "Sistema C", "Estación C",
+            8_000, 14_000, 1_000, 1_000, 3, 500, self.now,
+        )
+        c_to_a = MarketOpportunity(
+            "medicinas", "Sistema C", "Estación C", "Sistema A", "Estación A",
+            4_000, 9_000, 1_000, 1_000, 2, 300, self.now,
+        )
+
+        plan = ThreeStationOptimizer().choose(
+            profile, [a_to_b, b_to_c, c_to_a]
+        )
+
+        self.assertIsNotNone(plan)
+        self.assertEqual(len(plan.legs), 3)
+        self.assertEqual(
+            tuple(leg.opportunity.commodity for leg in plan.legs),
+            ("oro", "plata", "medicinas"),
+        )
+        self.assertEqual(plan.total_jumps, 7)
+        self.assertGreater(plan.estimated_profit, 0)
+        self.assertIn("Estación A → Estación B → Estación C → Estación A", plan.summary())
+
+    def test_three_station_chain_rejects_open_or_incompatible_cycle(self) -> None:
+        profile = TradeProfile(
+            "Sistema A", 20_000_000, 1_000_000, 100, 0, 30, (0, 0, 0),
+            requires_large_pad=True,
+        )
+        a_to_b = self.opportunity()
+        b_to_c = MarketOpportunity(
+            "plata", "Sistema Venta", "Puerto Venta", "Sistema C", "Estación C",
+            8_000, 14_000, 1_000, 1_000, 2, 500, self.now,
+            sell_has_large_pad=False,
+        )
+
+        self.assertIsNone(
+            ThreeStationOptimizer().choose(profile, [a_to_b, b_to_c])
+        )
 
     def test_large_ship_rejects_route_without_large_pads(self) -> None:
         profile = TradeProfile(

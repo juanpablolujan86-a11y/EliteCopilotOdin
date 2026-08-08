@@ -53,6 +53,24 @@ class QuickTradePlan:
             )
         return instruction + "No se estima penalización por volumen."
 
+
+@dataclass(frozen=True, slots=True)
+class ThreeStationTradePlan:
+    legs: tuple[QuickTradePlan, QuickTradePlan, QuickTradePlan]
+    estimated_profit: int
+    estimated_minutes: float
+    profit_per_minute: float
+    total_jumps: int
+
+    def summary(self) -> str:
+        stations = [self.legs[0].opportunity.buy_station]
+        stations.extend(leg.opportunity.sell_station for leg in self.legs)
+        return (
+            " → ".join(stations)
+            + f": {self.estimated_profit:,} créditos estimados en "
+            f"{self.total_jumps} saltos."
+        )
+
 class TradeProfileBuilder:
     LARGE_SHIPS = {
         "anaconda", "belugaliner", "cutter", "federation_corvette",
@@ -160,3 +178,67 @@ class QuickRouteOptimizer:
             stamp=datetime.fromisoformat(value.replace("Z","+00:00"))
             return max(0.0,(datetime.now(timezone.utc)-stamp).total_seconds()/3600)
         except (ValueError,TypeError): return math.inf
+
+
+class ThreeStationOptimizer:
+    """Construye un circuito comercial factible A → B → C → A."""
+
+    def __init__(self, quick_optimizer: QuickRouteOptimizer | None = None) -> None:
+        self.quick = quick_optimizer or QuickRouteOptimizer()
+
+    def choose(
+        self,
+        profile: TradeProfile,
+        opportunities,
+        *,
+        max_age_hours: float = 8.0,
+        max_bulk_discount: float = 0.08,
+    ) -> ThreeStationTradePlan | None:
+        edges = list(opportunities)
+        candidates: list[ThreeStationTradePlan] = []
+        for first in edges:
+            first_buy = self._station(first.buy_system, first.buy_station)
+            first_sell = self._station(first.sell_system, first.sell_station)
+            for second in edges:
+                second_buy = self._station(second.buy_system, second.buy_station)
+                second_sell = self._station(second.sell_system, second.sell_station)
+                if second_buy != first_sell or second_sell in {first_buy, first_sell}:
+                    continue
+                for third in edges:
+                    if self._station(third.buy_system, third.buy_station) != second_sell:
+                        continue
+                    if self._station(third.sell_system, third.sell_station) != first_buy:
+                        continue
+                    legs = tuple(
+                        self.quick.choose(
+                            profile,
+                            [edge],
+                            max_age_hours=max_age_hours,
+                            max_bulk_discount=max_bulk_discount,
+                            max_profit_sacrifice=0.0,
+                        )
+                        for edge in (first, second, third)
+                    )
+                    if any(leg is None for leg in legs):
+                        continue
+                    typed_legs = (legs[0], legs[1], legs[2])
+                    minutes = sum(leg.estimated_minutes for leg in typed_legs)
+                    profit = sum(leg.estimated_profit for leg in typed_legs)
+                    candidates.append(
+                        ThreeStationTradePlan(
+                            typed_legs,
+                            profit,
+                            minutes,
+                            profit / max(1.0, minutes),
+                            sum(leg.opportunity.jumps for leg in typed_legs),
+                        )
+                    )
+        return max(
+            candidates,
+            key=lambda plan: (plan.profit_per_minute, plan.estimated_profit),
+            default=None,
+        )
+
+    @staticmethod
+    def _station(system: str, station: str) -> tuple[str, str]:
+        return system.casefold(), station.casefold()

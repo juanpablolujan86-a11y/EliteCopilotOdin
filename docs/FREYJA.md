@@ -54,6 +54,10 @@ una alternativa rentable.
 - tiempo, saltos y riesgo de datos obsoletos visibles;
 - posibilidad de abandonar un producto sin invalidar toda la cadena.
 
+El optimizador ya valida circuitos cerrados `A → B → C → A`, calcula cada
+tramo con el perfil real y descarta el circuito completo si una estación o una
+operación no es factible.
+
 ### 3. Expedición comercial de hasta 30 saltos
 
 Optimiza el beneficio total bajo un presupuesto máximo de 30 saltos. Puede
