@@ -117,6 +117,14 @@ class DatabaseManager:
         quantity INTEGER NOT NULL DEFAULT 0, unit_price INTEGER NOT NULL DEFAULT 0,
         total_value INTEGER NOT NULL DEFAULT 0, realized_profit INTEGER NOT NULL DEFAULT 0,
         cost_known INTEGER NOT NULL DEFAULT 0, raw_json TEXT NOT NULL)""")
+        self.execute("""CREATE TABLE IF NOT EXISTS freyja_markets
+        (market_id INTEGER PRIMARY KEY, system_name TEXT NOT NULL, station_name TEXT NOT NULL,
+        updated_at TEXT NOT NULL, source TEXT NOT NULL)""")
+        self.execute("""CREATE TABLE IF NOT EXISTS freyja_market_commodities
+        (market_id INTEGER NOT NULL, commodity TEXT NOT NULL, buy_price INTEGER NOT NULL DEFAULT 0,
+        sell_price INTEGER NOT NULL DEFAULT 0, mean_price INTEGER NOT NULL DEFAULT 0,
+        stock INTEGER NOT NULL DEFAULT 0, demand INTEGER NOT NULL DEFAULT 0,
+        updated_at TEXT NOT NULL, PRIMARY KEY(market_id,commodity))""")
 
         self.execute(
             """

@@ -76,3 +76,7 @@ class Config:
     @property
     def cargo_file(self) -> Path:
         return self.journal_path / "Cargo.json"
+
+    @property
+    def market_file(self) -> Path:
+        return self.journal_path / "Market.json"

@@ -45,6 +45,7 @@ from core.version import CAPABILITY, VERSION
 from core.diagnostics import FreyjaDiagnostics, HeimdallDiagnostics, MimirDiagnostics, OdinDiagnostics
 from freyja.ledger import TradeLedger
 from freyja.planner import TradeProfileBuilder
+from freyja.market_source import MarketCache
 from heimdall.bindings import BindingAudit, BindingCustodian
 from heimdall.cockpit import CockpitAdvisor, parse_cockpit_intent
 from heimdall.home_base import HomeBaseManager
@@ -370,6 +371,10 @@ class CommandCenter:
         )
         for event_name in TradeLedger.EVENTS:
             self.event_bus.subscribe(event_name, freyja_ledger.handle)
+        market_cache = MarketCache(self.database)
+        self.event_bus.subscribe(
+            "Market", lambda _event: market_cache.ingest_market_file(self.config.market_file)
+        )
         odin_diagnostics = OdinDiagnostics()
 
         if self.navigation_manager is not None:
