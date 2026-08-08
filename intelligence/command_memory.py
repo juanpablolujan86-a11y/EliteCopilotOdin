@@ -51,9 +51,12 @@ class VoiceCommandMemory:
             ranked = sorted(
                 [
                     (
-                    SequenceMatcher(
-                        None, normalized, normalize_phrase(row["original_phrase"])
-                    ).ratio(),
+                    max(
+                        SequenceMatcher(
+                            None, normalized, normalize_phrase(row["original_phrase"])
+                        ).ratio(),
+                        self._semantic_score(normalized, row),
+                    ),
                     row,
                     )
                 for row in candidates
@@ -77,6 +80,24 @@ class VoiceCommandMemory:
             (self._now(), commander, row["normalized_phrase"]),
         )
         return LearnedCommand(row["intent"], json.loads(row["payload_json"]))
+
+    @staticmethod
+    def _semantic_score(normalized: str, row) -> float:
+        if row["intent"] != "home_route":
+            return 0.0
+        words = set(normalized.split())
+        learned = set(normalize_phrase(row["original_phrase"]).split())
+        movement = any(
+            word.startswith(("llev", "viaj", "regres", "volv"))
+            or word in {"vamos", "ir", "ruta"}
+            for word in words
+        )
+        ignored = {
+            "el", "la", "a", "al", "de", "me", "dejame", "debame",
+            "llevame", "vamos", "ir", "ruta",
+        }
+        aliases = (words & learned) - ignored
+        return 0.90 if movement and aliases else 0.0
 
     def remember(
         self, commander: str, phrase: str, intent: str, payload: dict[str, str]

@@ -38,6 +38,11 @@ class VoiceCommandMemoryTests(unittest.TestCase):
         learned = self.memory.resolve("cmdr-a", "debame el rancho")
         self.assertIsNotNone(learned)
         self.assertEqual(learned.intent, "home_route")
+        self.assertEqual(
+            self.memory.resolve("cmdr-a", "llevame el rancho").intent,
+            "home_route",
+        )
+        self.assertIsNone(self.memory.resolve("cmdr-a", "vendeme el rancho"))
         self.assertIsNone(self.memory.resolve("cmdr-a", "vendeme el hierro"))
 
 
