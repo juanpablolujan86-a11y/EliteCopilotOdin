@@ -52,7 +52,7 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
         self.assertTrue(completed.is_set())
         center.wake_listener.resume.assert_not_called()
 
-    def test_scientific_answer_never_repeats_full_current_system_name(self):
+    def test_answer_never_repeats_full_current_system_name(self):
         center=CommandCenter.__new__(CommandCenter)
         center.commander_state=SimpleNamespace(current_system="Synuefua QF-L d9-25")
         center.scientific_context=Mock()
@@ -60,11 +60,26 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
             "Synuefua QF-L d9-25 1": ("Bacterium",)
         }
 
-        answer=center._sanitize_scientific_answer(
+        answer=center._sanitize_current_system_references(
             "hay exobiología en este sistema",
             "Sí, en Synuefua QF-L d9-25 1.",
         )
 
         self.assertEqual(answer, "Sí, en planeta 1.")
+
+        geology=center._sanitize_current_system_references(
+            "hay geología en este sistema",
+            "No tengo información geológica de Synuefua QF-L d9-25."
+        )
+        self.assertEqual(
+            geology,
+            "No tengo información geológica de este sistema.",
+        )
+
+        named=center._sanitize_current_system_references(
+            "en qué sistema estoy",
+            "Estás en Synuefua QF-L d9-25.",
+        )
+        self.assertEqual(named, "Estás en Synuefua QF-L d9-25.")
 
 if __name__=="__main__": unittest.main()

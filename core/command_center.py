@@ -906,7 +906,7 @@ class CommandCenter:
         try:
             conversation = VoiceConversation(self.config)
             answer = conversation.answer(question, context)
-            answer = self._sanitize_scientific_answer(question, answer)
+            answer = self._sanitize_current_system_references(question, answer)
             acknowledgement_done.wait()
             conversation.voice.speak("ODIN", answer)
             print(f"\nVos: {question}")
@@ -929,12 +929,18 @@ class CommandCenter:
             return "Revisando la base de datos."
         return "Procesando la orden, comandante."
 
-    def _sanitize_scientific_answer(self, question: str, answer: str) -> str:
+    def _sanitize_current_system_references(self, question: str, answer: str) -> str:
+        """Evita repetir por voz el nombre completo de la ubicación actual."""
+
         lowered = question.casefold()
-        if not any(
-            word in lowered
-            for word in ("biolog", "especie", "muestra", "mímir", "mimir")
-        ):
+        asks_for_name = (
+            ("sistema" in lowered and any(term in lowered for term in (
+                "cómo se llama", "como se llama", "cuál es", "cual es",
+                "en qué", "en que", "dónde estoy", "donde estoy",
+            )))
+            or "sistema actual" in lowered
+        )
+        if asks_for_name:
             return answer
         system = self.commander_state.current_system.strip()
         if not system:
