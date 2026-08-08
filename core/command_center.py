@@ -44,6 +44,7 @@ from ui.console_presenter import ConsolePresenter
 from core.version import CAPABILITY, VERSION
 from core.diagnostics import FreyjaDiagnostics, HeimdallDiagnostics, MimirDiagnostics, OdinDiagnostics
 from freyja.ledger import TradeLedger
+from freyja.planner import TradeProfileBuilder
 from heimdall.bindings import BindingAudit, BindingCustodian
 from heimdall.cockpit import CockpitAdvisor, parse_cockpit_intent
 from heimdall.home_base import HomeBaseManager
@@ -104,6 +105,7 @@ class CommandCenter:
         )
         self.exploration_processor: ExplorationProcessor | None = None
         self.expedition_ledger: ExpeditionLedger | None = None
+        self.trade_profile = None
         self.voice_hotkey = WindowsHotkey()
         self._voice_busy = threading.Event()
         self._voice_questions: queue.Queue[str] = queue.Queue()
@@ -142,6 +144,7 @@ class CommandCenter:
         self._initialize_home_base()
 
         self._restore_commander_state(journal)
+        self._initialize_freyja_profile()
 
         self._configure_processors()
 
@@ -273,6 +276,18 @@ class CommandCenter:
         print(
             f"HEIMDALL base         : {base.system}{location}, "
             f"{base.stored_ships} naves guardadas"
+        )
+
+    def _initialize_freyja_profile(self) -> None:
+        if self.navigation_manager is None:
+            return
+        self.trade_profile = TradeProfileBuilder.build(
+            self.commander_state, self.navigation_manager.context, self.config.cargo_file
+        )
+        print(
+            "FREYJA comercio      : "
+            f"{self.trade_profile.cargo_free} t libres, "
+            f"{self.trade_profile.available_capital:,} créditos disponibles"
         )
 
     def _configure_processors(self) -> None:

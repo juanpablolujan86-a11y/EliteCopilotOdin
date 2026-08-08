@@ -72,3 +72,7 @@ class Config:
     @property
     def navroute_file(self) -> Path:
         return self.journal_path / "NavRoute.json"
+
+    @property
+    def cargo_file(self) -> Path:
+        return self.journal_path / "Cargo.json"
