@@ -52,6 +52,27 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
             "FREYJA",
         )
 
+    def test_observed_whisper_trade_confusion_is_handed_to_freyja(self):
+        center=CommandCenter.__new__(CommandCenter)
+        center._pending_freyja_trade_menu=False
+        center.commander_state=SimpleNamespace(fid="",commander_name="")
+        center._last_voice_question=""
+        center._start_fixed_voice_response=Mock()
+
+        center._start_voice_response("y el fin de la pr\u00f3xima vez")
+
+        self.assertTrue(center._pending_freyja_trade_menu)
+        self.assertEqual(
+            center._start_fixed_voice_response.call_args.kwargs["officer"],
+            "FREYJA",
+        )
+
+    def test_freyja_trade_request_accepts_natural_variants(self):
+        self.assertTrue(CommandCenter._is_freyja_trade_request("quiero comerciar"))
+        self.assertTrue(CommandCenter._is_freyja_trade_request("vamos a hacer comercio"))
+        self.assertTrue(CommandCenter._is_freyja_trade_request("quiero comprar y vender"))
+        self.assertFalse(CommandCenter._is_freyja_trade_request("cu\u00e1nto combustible tengo"))
+
     def test_freyja_pending_menu_starts_selected_calculation_without_wake_word(self):
         center=CommandCenter.__new__(CommandCenter)
         center._pending_freyja_trade_menu=True

@@ -1186,9 +1186,22 @@ class CommandCenter:
     @staticmethod
     def _is_freyja_trade_request(text: str) -> bool:
         lowered = text.casefold()
-        return "comerci" in lowered and (
-            "freyja" in lowered or "freya" in lowered or "quiero" in lowered
+        normalized = re.sub(r"[^a-z0-9\u00e1\u00e9\u00ed\u00f3\u00fa\u00fc\u00f1]+", " ", lowered).strip()
+        explicit_trade = "comerci" in normalized and any(
+            word in normalized
+            for word in ("freyja", "freya", "quiero", "hacer", "vamos", "deseo")
         )
+        buy_and_sell = (
+            re.search(r"\bcompr(?:ar|o|amos)?\b", normalized)
+            and re.search(r"\bvend(?:er|o|emos)?\b", normalized)
+        )
+        # Confusi\u00f3n ac\u00fastica real observada con Whisper Base al decir
+        # "quiero comerciar". S\u00f3lo se interpreta dentro de una orden activada.
+        observed_whisper_alias = bool(
+            re.search(r"\b(?:el\s+)?fin\s+de\s+la\s+proxima\s+vez\b", normalized)
+            or re.search(r"\b(?:el\s+)?fin\s+de\s+la\s+pr\u00f3xima\s+vez\b", normalized)
+        )
+        return bool(explicit_trade or buy_and_sell or observed_whisper_alias)
 
     @staticmethod
     def _freyja_trade_selection(text: str) -> str | None:
