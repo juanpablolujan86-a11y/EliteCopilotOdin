@@ -8,9 +8,11 @@ from core.body_names import body_designation
 
 
 class ScientificContextRegistry:
+    PRIORITY_SPECIES = ("Stratum Tectonicas", "Recepta Umbrux")
+
     def __init__(self) -> None:
         self._systems: dict[str, dict[str, tuple[str, ...]]] = {}
-        self._tectonicas_announced: set[tuple[str, str]] = set()
+        self._priority_announced: set[tuple[str, str, str]] = set()
 
     def record(
         self,
@@ -25,24 +27,31 @@ class ScientificContextRegistry:
         body = report.body_name or "Cuerpo desconocido"
         self._systems.setdefault(system, {})[body] = tuple(report.probable_species)
 
-        tectonicas = next(
-            (
-                species for species in report.probable_species
-                if species.casefold() == "stratum tectonicas"
-            ),
-            None,
-        )
-        key = (system.casefold(), body.casefold())
-        if not announce or tectonicas is None or key in self._tectonicas_announced:
+        probable_by_name = {
+            species.casefold(): species for species in report.probable_species
+        }
+        priority_candidates = [
+            probable_by_name[name.casefold()]
+            for name in self.PRIORITY_SPECIES
+            if name.casefold() in probable_by_name
+            and (
+                system.casefold(), body.casefold(), name.casefold()
+            ) not in self._priority_announced
+        ]
+        if not announce or not priority_candidates:
             return None
-        self._tectonicas_announced.add(key)
+        for species in priority_candidates:
+            self._priority_announced.add(
+                (system.casefold(), body.casefold(), species.casefold())
+            )
+        species_text = " y ".join(priority_candidates)
         return VoiceMessageReady(
             officer="MÍMIR",
             message=(
                 f"Comandante, el planeta {body_designation(system, body)} podría contener "
-                "Stratum Tectonicas. Recomiendo revisarlo."
+                f"{species_text}. Recomiendo revisarlo."
             ),
-            reason="Posible Stratum Tectonicas",
+            reason=f"Posible {species_text}",
             body_name=body,
         )
 

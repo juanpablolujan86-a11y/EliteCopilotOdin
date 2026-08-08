@@ -40,6 +40,58 @@ class ScientificContextTests(unittest.TestCase):
         self.assertNotIn("Synuefua", first.message)
         self.assertIsNone(repeated)
 
+    def test_recepta_umbrux_uses_the_same_priority_alert(self) -> None:
+        registry = ScientificContextRegistry()
+        alert = registry.record(
+            "Sistema",
+            report("Recepta Umbrux", body="Sistema A 2"),
+        )
+
+        self.assertIsNotNone(alert)
+        self.assertIn("Recepta Umbrux", alert.message)
+        self.assertIn("planeta A 2", alert.message)
+
+    def test_priority_species_share_one_alert_when_both_are_probable(self) -> None:
+        registry = ScientificContextRegistry()
+        alert = registry.record(
+            "Sistema",
+            report(
+                "Recepta Umbrux",
+                "Stratum Tectonicas",
+                body="Sistema 3",
+            ),
+        )
+
+        self.assertIsNotNone(alert)
+        self.assertIn("Stratum Tectonicas y Recepta Umbrux", alert.message)
+        self.assertIsNone(
+            registry.record(
+                "Sistema",
+                report(
+                    "Stratum Tectonicas",
+                    "Recepta Umbrux",
+                    body="Sistema 3",
+                ),
+            )
+        )
+
+    def test_priority_species_are_announced_on_independent_planets(self) -> None:
+        registry = ScientificContextRegistry()
+
+        tectonicas = registry.record(
+            "Sistema",
+            report("Stratum Tectonicas", body="Sistema 1"),
+        )
+        umbrux = registry.record(
+            "Sistema",
+            report("Recepta Umbrux", body="Sistema 4"),
+        )
+
+        self.assertIn("planeta 1", tectonicas.message)
+        self.assertNotIn("Recepta Umbrux", tectonicas.message)
+        self.assertIn("planeta 4", umbrux.message)
+        self.assertNotIn("Stratum Tectonicas", umbrux.message)
+
     def test_no_alert_without_biological_signal_or_during_restore(self) -> None:
         registry = ScientificContextRegistry()
         self.assertIsNone(
