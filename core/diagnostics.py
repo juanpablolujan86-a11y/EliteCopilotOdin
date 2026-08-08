@@ -200,6 +200,19 @@ class HeimdallDiagnostics:
             " | ".join(audit.loading_errors) or "ninguno",
         )
 
+    def record_cockpit_advice(self, intent, state, message: str) -> None:
+        self.logger.info(
+            "COCKPIT | modo=informativo | funcion=%s | solicitado=%s | "
+            "estado_conocido=%s | nave_principal=%s | luces=%s | nocturna=%s | mensaje=%s",
+            intent.feature,
+            intent.requested_state,
+            state.known,
+            state.in_main_ship,
+            state.lights_on,
+            state.night_vision_on,
+            message,
+        )
+
     def record_navigation_context(self, context, *, reason: str) -> None:
         progress = context.route_progress()
         fuel = context.fuel_assessment()

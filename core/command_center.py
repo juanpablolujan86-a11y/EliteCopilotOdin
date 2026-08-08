@@ -44,6 +44,7 @@ from ui.console_presenter import ConsolePresenter
 from core.version import CAPABILITY, VERSION
 from core.diagnostics import HeimdallDiagnostics, MimirDiagnostics, OdinDiagnostics
 from heimdall.bindings import BindingAudit, BindingCustodian
+from heimdall.cockpit import CockpitAdvisor, parse_cockpit_intent
 from heimdall.home_base import HomeBaseManager
 from heimdall.navigation import NavigationContext, NavigationContextManager
 from heimdall.spansh import HeimdallRoutePlanner, SpanshClient, SpanshRouteError
@@ -92,6 +93,7 @@ class CommandCenter:
             self.config.data_root,
         )
         self.binding_audit: BindingAudit | None = None
+        self.cockpit_advisor = CockpitAdvisor()
         self.navigation_manager: NavigationContextManager | None = None
         self.heimdall_diagnostics = HeimdallDiagnostics(self.config.data_root)
         self.home_base_manager = HomeBaseManager(self.config.data_root)
@@ -173,6 +175,7 @@ class CommandCenter:
         """Audita y respalda bindings sin modificar los originales."""
 
         self.binding_audit = self.binding_custodian.audit(create_snapshot=True)
+        self.cockpit_advisor.audit = self.binding_audit
         self.heimdall_diagnostics.record_binding_audit(
             self.binding_audit
         )
@@ -625,6 +628,7 @@ class CommandCenter:
         while True:
             status = self.status_watcher.poll()
             if status is not None:
+                self.cockpit_advisor.update_status(status)
                 if self.navigation_manager is not None:
                     self.navigation_manager.update_status(status)
                 navigation = self.surface_navigation.update_status(status)
@@ -699,6 +703,17 @@ class CommandCenter:
         commander = self.commander_state.fid or self.commander_state.commander_name or "default"
         lowered = question.casefold().strip()
         previous_question = self._last_voice_question
+
+        cockpit_intent = parse_cockpit_intent(question)
+        if cockpit_intent is not None:
+            answer = self.cockpit_advisor.describe(cockpit_intent)
+            self.heimdall_diagnostics.record_cockpit_advice(
+                cockpit_intent, self.cockpit_advisor.state, answer
+            )
+            self._last_voice_question = question
+            self._last_learned_command = None
+            self._start_fixed_voice_response(answer)
+            return
         if any(text in lowered for text in ("eso esta bien", "eso está bien", "orden correcta")):
             confirmed = bool(previous_question) and self.command_memory.confirm(
                 commander, previous_question
