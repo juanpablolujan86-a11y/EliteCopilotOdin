@@ -12,7 +12,7 @@ class EdgeTtsError(RuntimeError):
 EDGE_LATIN_VOICES = {
     "ODIN": "es-AR-TomasNeural",
     "MÍMIR": "es-MX-DaliaNeural",
-    "HEIMDALL": "es-CO-GonzaloNeural",
+    "HEIMDALL": "es-MX-JorgeNeural",
 }
 
 

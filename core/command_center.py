@@ -738,7 +738,7 @@ class CommandCenter:
             )
             self._last_voice_question = question
             self._last_learned_command = None
-            self._start_fixed_voice_response(answer)
+            self._start_fixed_voice_response(answer, officer="HEIMDALL")
             return
         if any(text in lowered for text in ("eso esta bien", "eso está bien", "orden correcta")):
             confirmed = bool(previous_question) and self.command_memory.confirm(
@@ -791,7 +791,8 @@ class CommandCenter:
             base = self.home_base_manager.current
             if base is None:
                 self._start_fixed_voice_response(
-                    "No tengo una base registrada para el comandante."
+                    "No tengo una base registrada para el comandante.",
+                    officer="HEIMDALL",
                 )
             else:
                 self._start_voice_route(base.system)
@@ -862,7 +863,8 @@ class CommandCenter:
     def _start_voice_route(self, destination: str) -> None:
         if self.navigation_manager is None:
             self._start_fixed_voice_response(
-                "HEIMDALL todavía no tiene disponible el contexto de navegación."
+                "Todavía no tengo disponible el contexto de navegación.",
+                officer="HEIMDALL",
             )
             return
         context = self.navigation_manager.context
@@ -895,7 +897,8 @@ class CommandCenter:
     def _finish_voice_route(self, plan, error: str | None) -> None:
         if error is not None:
             self._start_fixed_voice_response(
-                "No pude calcular la ruta de neutrones. Se produjo un error."
+                "No pude calcular la ruta de neutrones. Se produjo un error.",
+                officer="HEIMDALL",
             )
             return
         try:
@@ -917,23 +920,23 @@ class CommandCenter:
                 route_error,
             )
             answer = "La ruta fue calculada, pero se produjo un error al activarla."
-        self._start_fixed_voice_response(answer)
+        self._start_fixed_voice_response(answer, officer="HEIMDALL")
 
-    def _start_fixed_voice_response(self, answer: str) -> None:
+    def _start_fixed_voice_response(self, answer: str, *, officer: str = "ODIN") -> None:
         self._voice_busy.set()
         threading.Thread(
             target=self._run_fixed_voice_response,
-            args=(answer,),
-            name="odin-fixed-voice-response",
+            args=(officer, answer),
+            name=f"{officer.lower()}-fixed-voice-response",
             daemon=True,
         ).start()
 
-    def _run_fixed_voice_response(self, answer: str) -> None:
+    def _run_fixed_voice_response(self, officer: str, answer: str) -> None:
         try:
-            print(f"ODIN: {answer}\n")
-            OfficerVoiceService(self.config).speak("ODIN", answer)
+            print(f"{officer}: {answer}\n")
+            OfficerVoiceService(self.config).speak(officer, answer)
         except VoiceServiceError as error:
-            print(f"Voz no disponible: {error}\n")
+            print(f"Voz de {officer} no disponible: {error}\n")
         finally:
             self._voice_busy.clear()
             self.wake_listener.resume()

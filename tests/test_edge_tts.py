@@ -30,6 +30,9 @@ class EdgeTtsClientTests(unittest.TestCase):
     def test_presets_exclude_spain(self):
         self.assertTrue(all(not voice.startswith("es-ES") for voice in EDGE_LATIN_VOICES.values()))
 
+    def test_heimdall_uses_masculine_mexican_voice(self):
+        self.assertEqual(EDGE_LATIN_VOICES["HEIMDALL"], "es-MX-JorgeNeural")
+
 
 if __name__ == "__main__":
     unittest.main()

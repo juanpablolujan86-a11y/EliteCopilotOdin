@@ -22,7 +22,7 @@ class VoiceSettings:
     officers: dict[str, OfficerVoice] = field(default_factory=lambda: {
         "ODIN": OfficerVoice(provider="edge", voice="es-AR-TomasNeural"),
         "MÍMIR": OfficerVoice(provider="edge", voice="es-MX-DaliaNeural"),
-        "HEIMDALL": OfficerVoice(provider="edge", voice="es-CO-GonzaloNeural"),
+        "HEIMDALL": OfficerVoice(provider="edge", voice="es-MX-JorgeNeural"),
     })
 
 

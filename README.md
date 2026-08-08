@@ -91,7 +91,7 @@ python main.py --configure-voice
 
 El proveedor predeterminado es Edge TTS, sin API key ni consumo de créditos:
 ODIN utiliza Tomás de Argentina, MÍMIR utiliza Dalia de México y HEIMDALL
-utiliza Gonzalo de Colombia. No se seleccionan voces de España. Edge TTS
+utiliza Jorge de México. No se seleccionan voces de España. Edge TTS
 necesita conexión a Internet; si no está disponible, ODIN utiliza las voces
 locales de Windows como respaldo.
 
