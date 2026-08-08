@@ -110,6 +110,7 @@ class CommandCenter:
         self.voice_hotkey = WindowsHotkey()
         self._voice_busy = threading.Event()
         self._voice_questions: queue.Queue[str] = queue.Queue()
+        self._wake_activations: queue.Queue[bool] = queue.Queue()
         self._route_results: queue.Queue[tuple[object | None, str | None]] = queue.Queue()
         self._officer_voice_messages: queue.Queue[VoiceMessageReady] = queue.Queue()
         self._surface_ready_announced: set[tuple[int, int]] = set()
@@ -119,7 +120,9 @@ class CommandCenter:
         self._last_learned_command: LearnedCommand | None = None
         self._restoring_context = False
         self.wake_listener = WakeWordListener(
-            self.config.data_root, self._voice_questions.put
+            self.config.data_root,
+            self._voice_questions.put,
+            lambda: self._wake_activations.put(True),
         )
 
     def start(self) -> None:
@@ -696,6 +699,14 @@ class CommandCenter:
 
             if not self._voice_busy.is_set():
                 try:
+                    wake_activated = self._wake_activations.get_nowait()
+                except queue.Empty:
+                    wake_activated = False
+                if wake_activated:
+                    self._start_wake_acknowledgement()
+
+            if not self._voice_busy.is_set():
+                try:
                     question = self._voice_questions.get_nowait()
                 except queue.Empty:
                     question = ""
@@ -723,6 +734,26 @@ class CommandCenter:
                 self.event_bus.publish(event)
 
             time.sleep(0.1)
+
+    def _start_wake_acknowledgement(self) -> None:
+        self._voice_busy.set()
+        threading.Thread(
+            target=self._run_wake_acknowledgement,
+            name="odin-wake-acknowledgement",
+            daemon=True,
+        ).start()
+
+    def _run_wake_acknowledgement(self) -> None:
+        try:
+            acknowledgement = "Sí, comandante?"
+            print(f"ODIN: {acknowledgement}\n")
+            OfficerVoiceService(self.config).speak("ODIN", acknowledgement)
+            print("ODIN escucha. Hablá y terminá con un segundo de silencio...")
+        except VoiceServiceError as error:
+            print(f"Voz de ODIN no disponible: {error}\n")
+        finally:
+            self._voice_busy.clear()
+            self.wake_listener.resume()
 
     def _start_voice_response(self, question: str) -> None:
         """Responde en segundo plano sin detener el seguimiento del Journal."""

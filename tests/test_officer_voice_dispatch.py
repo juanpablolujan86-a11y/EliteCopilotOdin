@@ -16,4 +16,15 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
         service.return_value.speak.assert_called_once_with("HEIMDALL","Ruta calculada.")
         center.wake_listener.resume.assert_called_once()
 
+    def test_wake_acknowledgement_uses_odin_and_resumes_listener(self):
+        center=CommandCenter.__new__(CommandCenter)
+        center.config=SimpleNamespace()
+        center._voice_busy=threading.Event(); center._voice_busy.set()
+        center.wake_listener=Mock()
+        with patch("core.command_center.OfficerVoiceService") as service:
+            center._run_wake_acknowledgement()
+        service.return_value.speak.assert_called_once_with("ODIN", "Sí, comandante?")
+        self.assertFalse(center._voice_busy.is_set())
+        center.wake_listener.resume.assert_called_once()
+
 if __name__=="__main__": unittest.main()

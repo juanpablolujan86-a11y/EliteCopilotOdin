@@ -36,11 +36,13 @@ class WakeWordListener:
         self,
         data_root: Path,
         on_question: Callable[[str], None],
+        on_activation: Callable[[], None] | None = None,
         recorder: MicrophoneRecorder | None = None,
         transcriber: WhisperTranscriber | None = None,
     ) -> None:
         self.audio_path = data_root / "speech" / "wake_command.wav"
         self.on_question = on_question
+        self.on_activation = on_activation or (lambda: None)
         self.recorder = recorder or MicrophoneRecorder()
         # La escucha permanente debe competir lo mínimo posible con el juego.
         # Base reconoce órdenes breves con mucha menos carga que Small; los
@@ -75,10 +77,14 @@ class WakeWordListener:
 
             forced = self.armed.is_set()
             self.armed.clear()
+            was_waiting = waiting_for_question
             question, waiting_for_question = interpret_wake_phrase(
                 text, forced=forced, waiting_for_question=waiting_for_question
             )
             if question is None:
+                if waiting_for_question and not was_waiting:
+                    self.paused.set()
+                    self.on_activation()
                 continue
             self.paused.set()
             self.on_question(question)

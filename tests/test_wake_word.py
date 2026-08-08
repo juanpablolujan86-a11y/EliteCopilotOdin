@@ -1,6 +1,8 @@
 import unittest
+from pathlib import Path
+from unittest.mock import Mock
 
-from speech.wake_word import interpret_wake_phrase
+from speech.wake_word import WakeWordListener, interpret_wake_phrase
 
 
 class WakeWordTests(unittest.TestCase):
@@ -31,6 +33,26 @@ class WakeWordTests(unittest.TestCase):
             interpret_wake_phrase("estado general", forced=True),
             ("estado general", False),
         )
+
+    def test_wake_word_alone_announces_activation_before_next_phrase(self) -> None:
+        recorder = Mock()
+        recorder.record_utterance.return_value = Path("wake.wav")
+        transcriber = Mock()
+        transcriber.transcribe.return_value = "ODIN"
+        activated = Mock()
+        listener = WakeWordListener(
+            Path("."), Mock(), activated, recorder=recorder, transcriber=transcriber
+        )
+
+        def stop_after_activation() -> None:
+            activated()
+            listener.stop()
+
+        listener.on_activation = stop_after_activation
+        listener.run()
+
+        activated.assert_called_once_with()
+        self.assertTrue(listener.paused.is_set())
 
 
 if __name__ == "__main__":
