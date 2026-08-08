@@ -16,6 +16,17 @@ class FreyjaPlannerTests(unittest.TestCase):
             self.assertEqual((profile.cargo_free,profile.reserve_credits,
                               profile.available_capital),(76,200_000,800_000))
 
+    def test_profile_detects_large_ship_pad_requirement(self):
+        with tempfile.TemporaryDirectory() as directory:
+            profile=TradeProfileBuilder.build(
+                SimpleNamespace(credits=1_000_000,current_system="Sol"),
+                SimpleNamespace(current_system="Sol",rebuy_cost=100_000,
+                                cargo_capacity=700,max_jump_range=25,
+                                ship_type="Type9_Heavy"),
+                Path(directory)/"Cargo.json",
+            )
+            self.assertTrue(profile.requires_large_pad)
+
     def test_quick_route_prefers_profit_per_minute_and_respects_demand(self):
         now=datetime.now(timezone.utc).isoformat()
         profile=SimpleNamespace(cargo_free=100,available_capital=1_000_000)

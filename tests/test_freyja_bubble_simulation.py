@@ -36,6 +36,10 @@ class FreyjaBubbleSimulationTests(unittest.TestCase):
         jumps: int = 2,
         distance_ls: float = 500,
         updated_at: str | None = None,
+        buy_has_large_pad: bool = True,
+        sell_has_large_pad: bool = True,
+        buy_planetary: bool = False,
+        sell_planetary: bool = False,
     ) -> MarketOpportunity:
         return MarketOpportunity(
             commodity,
@@ -50,6 +54,10 @@ class FreyjaBubbleSimulationTests(unittest.TestCase):
             jumps,
             distance_ls,
             updated_at or self.now,
+            buy_has_large_pad,
+            sell_has_large_pad,
+            buy_planetary,
+            sell_planetary,
         )
 
     def test_small_ship_is_limited_by_available_capital(self) -> None:
@@ -149,6 +157,37 @@ class FreyjaBubbleSimulationTests(unittest.TestCase):
 
         self.assertEqual(self.cache.opportunities(no_position), [])
         self.assertEqual(self.cache.opportunities(no_range), [])
+
+    def test_large_ship_rejects_route_without_large_pads(self) -> None:
+        profile = TradeProfile(
+            "Sol", 100_000_000, 5_000_000, 700, 0, 30, (0, 0, 0),
+            requires_large_pad=True,
+        )
+        incompatible = self.opportunity(sell_has_large_pad=False)
+
+        self.assertIsNone(QuickRouteOptimizer().choose(profile, [incompatible]))
+
+    def test_orbital_profile_rejects_planetary_station(self) -> None:
+        profile = TradeProfile(
+            "Sol", 10_000_000, 500_000, 100, 0, 30, (0, 0, 0),
+            allow_planetary=False,
+        )
+
+        self.assertIsNone(
+            QuickRouteOptimizer().choose(
+                profile, [self.opportunity(sell_planetary=True)]
+            )
+        )
+
+    def test_excluded_or_permit_locked_system_is_never_used(self) -> None:
+        profile = TradeProfile(
+            "Sol", 10_000_000, 500_000, 100, 0, 30, (0, 0, 0),
+            excluded_systems=frozenset({"Sistema Venta"}),
+        )
+
+        self.assertIsNone(
+            QuickRouteOptimizer().choose(profile, [self.opportunity()])
+        )
 
 
 if __name__ == "__main__":

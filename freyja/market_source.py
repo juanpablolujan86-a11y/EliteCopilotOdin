@@ -56,8 +56,10 @@ class MarketCache:
           sell.sell_price, sell.demand, sell.updated_at sell_updated,
           bm.system_name buy_system,bm.station_name buy_station,
           bm.x bx,bm.y by,bm.z bz,bm.distance_to_arrival buy_ls,
+          bm.has_large_pad buy_large,bm.is_planetary buy_planetary,
           sm.system_name sell_system,sm.station_name sell_station,
-          sm.x sx,sm.y sy,sm.z sz,sm.distance_to_arrival sell_ls
+          sm.x sx,sm.y sy,sm.z sz,sm.distance_to_arrival sell_ls,
+          sm.has_large_pad sell_large,sm.is_planetary sell_planetary
           FROM freyja_market_commodities buy
           JOIN freyja_markets bm ON bm.market_id=buy.market_id
           JOIN freyja_market_commodities sell ON sell.commodity=buy.commodity
@@ -76,7 +78,9 @@ class MarketCache:
               row["commodity"],row["buy_system"],row["buy_station"],
               row["sell_system"],row["sell_station"],row["buy_price"],row["sell_price"],
               row["stock"],row["demand"],jumps,
-              float(row["buy_ls"] or 0)+float(row["sell_ls"] or 0),updated))
+              float(row["buy_ls"] or 0)+float(row["sell_ls"] or 0),updated,
+              bool(row["buy_large"]),bool(row["sell_large"]),
+              bool(row["buy_planetary"]),bool(row["sell_planetary"])))
         return result
     def _station(self,market_id,system,station,updated,source,record=None):
         record=record or {}
