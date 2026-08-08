@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 import unicodedata
+from difflib import SequenceMatcher
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
@@ -20,7 +21,10 @@ class LearnedCommand:
 def normalize_phrase(text: str) -> str:
     folded = unicodedata.normalize("NFKD", text.casefold())
     plain = "".join(char for char in folded if not unicodedata.combining(char))
-    return " ".join(re.findall(r"[a-z0-9]+", plain))
+    words = re.findall(r"[a-z0-9]+", plain)
+    if words and words[0] in {"odin", "olin", "odim", "odyn", "bodin", "vodin"}:
+        words.pop(0)
+    return " ".join(words)
 
 
 class VoiceCommandMemory:
@@ -28,16 +32,41 @@ class VoiceCommandMemory:
         self.database = database
 
     def resolve(self, commander: str, phrase: str) -> LearnedCommand | None:
+        normalized = normalize_phrase(phrase)
         rows = self.database.query(
             """
-            SELECT intent, payload_json
+            SELECT normalized_phrase, intent, payload_json
             FROM voice_command_memory
             WHERE commander_key=? AND normalized_phrase=? AND enabled=1
             """,
-            (commander, normalize_phrase(phrase)),
+            (commander, normalized),
         )
         if not rows:
-            return None
+            candidates = self.database.query(
+                """SELECT normalized_phrase, original_phrase, intent, payload_json
+                   FROM voice_command_memory
+                   WHERE commander_key=? AND enabled=1""",
+                (commander,),
+            )
+            ranked = sorted(
+                [
+                    (
+                    SequenceMatcher(
+                        None, normalized, normalize_phrase(row["original_phrase"])
+                    ).ratio(),
+                    row,
+                    )
+                for row in candidates
+                if normalized
+                ],
+                key=lambda item: item[0],
+                reverse=True,
+            )
+            if not ranked or ranked[0][0] < 0.88:
+                return None
+            if len(ranked) > 1 and ranked[0][0] - ranked[1][0] < 0.08:
+                return None
+            rows = [ranked[0][1]]
         row = rows[0]
         self.database.execute(
             """
@@ -45,7 +74,7 @@ class VoiceCommandMemory:
             SET use_count=use_count+1, last_used_at=?
             WHERE commander_key=? AND normalized_phrase=?
             """,
-            (self._now(), commander, normalize_phrase(phrase)),
+            (self._now(), commander, row["normalized_phrase"]),
         )
         return LearnedCommand(row["intent"], json.loads(row["payload_json"]))
 
