@@ -34,7 +34,8 @@ pisada informado por el Journal.
 Al completarse el FSS, si el total confirmado de cuerpos coincide exactamente
 con el número de estrellas y no existen planetas ni lunas, MÍMIR anuncia por voz
 que el sistema no contiene planetas para escanear. El aviso se emite una sola
-vez por sistema y no se muestra como informe científico en pantalla.
+vez por sistema, no pronuncia el nombre del sistema y no se muestra como informe
+científico en pantalla.
 
 Cuando el DSS confirma los géneros presentes, ODIN actualiza el informe y
 conserva las especies y variantes compatibles. Durante el trabajo de campo,
@@ -146,6 +147,12 @@ luego formular la pregunta, o pronunciar “ODIN” y la pregunta en una sola fr
 La captura termina automáticamente un segundo después de dejar de hablar. Sólo
 una frase que contiene la palabra de activación llega a Ollama; durante la
 respuesta hablada el micrófono se pausa para evitar realimentación.
+
+El reconocimiento utiliza Whisper Small cuando está instalado y conserva Base
+como respaldo. La captura mantiene audio previo al umbral para no perder la
+primera sílaba, adapta el umbral al ruido ambiente y reconoce variantes acústicas
+observadas como “Olín”. Un vocabulario inicial favorece nombres propios de ODIN,
+MÍMIR, HEIMDALL y Elite Dangerous.
 
 Las órdenes de navegación no dependen de una interpretación creativa del modelo.
 Al decir “ODIN, calculá una ruta de neutrones hasta NOMBRE DEL SISTEMA”, ODIN

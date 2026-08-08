@@ -950,8 +950,7 @@ class ExplorationProcessor:
             VoiceMessageReady(
                 officer="MÍMIR",
                 message=(
-                    f"Comandante, el sistema {system_name} contiene solamente "
-                    "estrellas. No hay planetas para escanear."
+                    "Comandante, en este sistema no hay planetas para escanear."
                 ),
                 reason="Sistema compuesto solamente por estrellas",
             ),

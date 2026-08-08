@@ -20,6 +20,12 @@ class WakeWordTests(unittest.TestCase):
             ("datos de mi nave", False),
         )
 
+    def test_accepts_real_whisper_olin_confusion(self) -> None:
+        self.assertEqual(
+            interpret_wake_phrase("Olín, vamos a casa"),
+            ("vamos a casa", False),
+        )
+
     def test_f8_accepts_phrase_without_wake_word(self) -> None:
         self.assertEqual(
             interpret_wake_phrase("estado general", forced=True),

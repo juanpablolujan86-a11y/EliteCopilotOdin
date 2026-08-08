@@ -16,7 +16,10 @@ class WhisperTranscriber:
         local = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
         root = data_root or local / "ODIN" / "speech"
         self.executable = root / "whisper.cpp" / "Release" / "whisper-cli.exe"
-        self.model = root / "models" / "ggml-base.bin"
+        small = root / "models" / "ggml-small.bin"
+        self.model = small if small.exists() and small.stat().st_size > 450_000_000 else (
+            root / "models" / "ggml-base.bin"
+        )
 
     def transcribe(self, audio: Path) -> str:
         if not self.executable.exists() or not self.model.exists():
@@ -25,7 +28,9 @@ class WhisperTranscriber:
         command = [
             str(self.executable), "-m", str(self.model), "-f", str(audio),
             "-l", "es", "-nt", "-otxt", "-of", str(output_base),
-            "-t", "4", "-ng", "-sns",
+            "-t", "8", "-ng", "-sns", "--prompt",
+            "ODIN, MÍMIR, HEIMDALL, Elite Dangerous, Colonia, "
+            "Stratum Tectonicas, exobiología, ruta de neutrones",
         ]
         try:
             result = subprocess.run(

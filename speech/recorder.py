@@ -6,7 +6,9 @@ import wave
 import queue
 import time
 from array import array
+from collections import deque
 from pathlib import Path
+from statistics import median
 
 import sounddevice as sd
 
@@ -62,10 +64,13 @@ class MicrophoneRecorder:
         """Espera voz y termina tras un segundo de silencio."""
 
         chunks: list[bytes] = []
+        pre_roll: deque[bytes] = deque(maxlen=6)
+        noise_levels: deque[float] = deque(maxlen=30)
         incoming: queue.Queue[bytes] = queue.Queue()
         speech_started = False
         speech_at = 0.0
-        started_at = time.monotonic()
+        utterance_started_at = 0.0
+        consecutive_voice_frames = 0
 
         def capture(indata, frames, time_info, status) -> None:
             del frames, time_info
@@ -81,7 +86,7 @@ class MicrophoneRecorder:
                 device=self.device,
                 callback=capture,
             ):
-                while time.monotonic() - started_at < max_seconds:
+                while True:
                     if stop_event is not None and stop_event.is_set():
                         return None
                     try:
@@ -95,12 +100,30 @@ class MicrophoneRecorder:
                         if samples else 0
                     )
                     now = time.monotonic()
-                    if rms >= 350:
-                        speech_started = True
-                        speech_at = now
+                    noise_floor = median(noise_levels) if noise_levels else 100.0
+                    start_threshold = max(180.0, min(1600.0, noise_floor * 3.5))
+                    if not speech_started:
+                        pre_roll.append(chunk)
+                        if rms >= start_threshold:
+                            consecutive_voice_frames += 1
+                            if consecutive_voice_frames >= 2:
+                                speech_started = True
+                                utterance_started_at = now
+                                speech_at = now
+                                chunks.extend(pre_roll)
+                                pre_roll.clear()
+                        else:
+                            consecutive_voice_frames = 0
+                            noise_levels.append(rms)
+                        continue
+
                     if speech_started:
                         chunks.append(chunk)
+                        if rms >= max(150.0, start_threshold * 0.55):
+                            speech_at = now
                         if now - speech_at >= silence_seconds:
+                            break
+                        if now - utterance_started_at >= max_seconds:
                             break
         except Exception as error:
             raise MicrophoneError(f"No se pudo escuchar el micrófono: {error}") from error

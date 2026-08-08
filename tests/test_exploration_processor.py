@@ -62,9 +62,10 @@ class ExplorationProcessorTestCase(unittest.TestCase):
                 message for message in messages
                 if message.reason == "Sistema compuesto solamente por estrellas"
             ]
-            self.assertEqual(len(star_only), 1)
-            self.assertIn("No hay planetas para escanear", star_only[0].message)
             database.disconnect()
+            self.assertEqual(len(star_only), 1)
+            self.assertIn("no hay planetas para escanear", star_only[0].message.casefold())
+            self.assertNotIn("Estelar", star_only[0].message)
 
     def test_mimir_does_not_announce_star_only_when_planet_exists(self) -> None:
         with tempfile.TemporaryDirectory() as folder:
