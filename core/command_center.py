@@ -42,7 +42,8 @@ from services.edsm_service import EDSMService
 from state.commander_state import CommanderState
 from ui.console_presenter import ConsolePresenter
 from core.version import CAPABILITY, VERSION
-from core.diagnostics import HeimdallDiagnostics, MimirDiagnostics, OdinDiagnostics
+from core.diagnostics import FreyjaDiagnostics, HeimdallDiagnostics, MimirDiagnostics, OdinDiagnostics
+from freyja.ledger import TradeLedger
 from heimdall.bindings import BindingAudit, BindingCustodian
 from heimdall.cockpit import CockpitAdvisor, parse_cockpit_intent
 from heimdall.home_base import HomeBaseManager
@@ -349,6 +350,11 @@ class CommandCenter:
         self.exploration_processor = exploration_processor
 
         mimir_diagnostics = MimirDiagnostics(self.config.data_root)
+        freyja_ledger = TradeLedger(
+            self.database, FreyjaDiagnostics(self.config.data_root)
+        )
+        for event_name in TradeLedger.EVENTS:
+            self.event_bus.subscribe(event_name, freyja_ledger.handle)
         odin_diagnostics = OdinDiagnostics()
 
         if self.navigation_manager is not None:

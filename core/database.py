@@ -107,6 +107,16 @@ class DatabaseManager:
             )
             """
         )
+        self.execute("""CREATE TABLE IF NOT EXISTS freyja_inventory
+        (commodity TEXT PRIMARY KEY, localised_name TEXT NOT NULL,
+        quantity INTEGER NOT NULL DEFAULT 0, total_cost INTEGER NOT NULL DEFAULT 0,
+        source TEXT NOT NULL, updated_at TEXT NOT NULL)""")
+        self.execute("""CREATE TABLE IF NOT EXISTS freyja_trade_events
+        (event_key TEXT PRIMARY KEY, timestamp TEXT NOT NULL, event_type TEXT NOT NULL,
+        market_id INTEGER, commodity TEXT NOT NULL, localised_name TEXT,
+        quantity INTEGER NOT NULL DEFAULT 0, unit_price INTEGER NOT NULL DEFAULT 0,
+        total_value INTEGER NOT NULL DEFAULT 0, realized_profit INTEGER NOT NULL DEFAULT 0,
+        cost_known INTEGER NOT NULL DEFAULT 0, raw_json TEXT NOT NULL)""")
 
         self.execute(
             """

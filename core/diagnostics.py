@@ -317,3 +317,22 @@ class HeimdallDiagnostics:
             type(error).__name__,
             str(error),
         )
+
+class FreyjaDiagnostics:
+    def __init__(self, data_root: Path) -> None:
+        logs = data_root / "logs"
+        logs.mkdir(parents=True, exist_ok=True)
+        self.logger = logging.getLogger("freyja.activity")
+        self.logger.setLevel(logging.INFO)
+        self.logger.propagate = False
+        if not self.logger.handlers:
+            self.logger.addHandler(_handler(logs / "freyja.log"))
+
+    def record_trade_event(self, event: dict, summary) -> None:
+        self.logger.info(
+            "TRADE | evento=%s | producto=%s | cantidad=%s | mercado=%s | "
+            "invertido=%s | ingresos=%s | beneficio_realizado=%s | carga=%s",
+            event.get("event","?"), event.get("Type_Localised",event.get("Type","?")),
+            event.get("Count",1), event.get("MarketID","?"), summary.invested,
+            summary.revenue, summary.realized_profit, summary.cargo_units,
+        )
