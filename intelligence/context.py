@@ -11,6 +11,7 @@ def build_live_context(
     commander: CommanderState,
     navigation: NavigationContext | None,
     balance: ExpeditionBalanceUpdated | None,
+    biology_by_body: dict[str, tuple[str, ...]] | None = None,
 ) -> str:
     lines = [
         f"Comandante: {commander.commander_name or 'desconocido'}",
@@ -52,4 +53,10 @@ def build_live_context(
             f"MÍMIR, exobiología disponible para vender, valor base: {balance.exobiology_base} créditos",
             f"MÍMIR, exobiología disponible para vender, potencial con bonificaciones: {balance.exobiology_potential} créditos",
         ))
+    lines.append("Biologías probables conocidas en el sistema, sin precios:")
+    if biology_by_body:
+        for body, species in sorted(biology_by_body.items()):
+            lines.append(f"- {body}: {', '.join(species)}")
+    else:
+        lines.append("- No hay predicciones biológicas disponibles.")
     return "\n".join(lines)

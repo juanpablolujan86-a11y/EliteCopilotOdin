@@ -31,6 +31,7 @@ from mimir.event_subscriber import MimirEventSubscriber
 from mimir.officer_handler import MimirOfficerHandler
 from mimir.scientific_officer import ScientificOfficer
 from mimir.surface_navigation import SurfaceNavigationTracker
+from mimir.context_registry import ScientificContextRegistry
 from models.events.voice_message_ready import VoiceMessageReady
 from core.processors.jump_advisor import JumpAdvisor
 from core.processors.jump_processor import JumpProcessor
@@ -102,6 +103,8 @@ class CommandCenter:
         self._route_results: queue.Queue[tuple[object | None, str | None]] = queue.Queue()
         self._officer_voice_messages: queue.Queue[VoiceMessageReady] = queue.Queue()
         self._surface_ready_announced: set[tuple[int, int]] = set()
+        self.scientific_context = ScientificContextRegistry()
+        self._restoring_context = False
         self.wake_listener = WakeWordListener(
             self.config.data_root, self._voice_questions.put
         )
@@ -484,6 +487,10 @@ class CommandCenter:
             InternalEvent.SCIENTIFIC_ANALYSIS_READY,
             self.console_presenter.show_scientific_report
         )
+        self.event_bus.subscribe(
+            InternalEvent.SCIENTIFIC_ANALYSIS_READY,
+            self._remember_scientific_report,
+        )
 
         # Se registra para el futuro sintetizador; deliberadamente no se
         # presenta en pantalla.
@@ -563,6 +570,7 @@ class CommandCenter:
         silent_output = StringIO()
         self.event_bus.output_stream = silent_output
         restored = 0
+        self._restoring_context = True
         try:
             with redirect_stdout(silent_output):
                 for event in events:
@@ -572,6 +580,7 @@ class CommandCenter:
                     handler(event)
                     restored += 1
         finally:
+            self._restoring_context = False
             self.event_bus.output_stream = original_output
 
         print(f"Contexto reconstruido : {restored} eventos del sistema actual")
@@ -673,7 +682,12 @@ class CommandCenter:
             self.navigation_manager.context
             if self.navigation_manager is not None else None
         )
-        context = build_live_context(self.commander_state, navigation, balance)
+        biology = self.scientific_context.system_predictions(
+            self.commander_state.current_system
+        )
+        context = build_live_context(
+            self.commander_state, navigation, balance, biology
+        )
         self._voice_busy.set()
         threading.Thread(
             target=self._run_voice_response,
@@ -692,6 +706,18 @@ class CommandCenter:
         finally:
             self._voice_busy.clear()
             self.wake_listener.resume()
+
+    def _remember_scientific_report(self, report) -> None:
+        message = self.scientific_context.record(
+            self.commander_state.current_system,
+            report,
+            announce=not self._restoring_context,
+        )
+        if message is not None:
+            self.event_bus.publish_internal(
+                InternalEvent.VOICE_MESSAGE_READY,
+                message,
+            )
 
     def _start_voice_route(self, destination: str) -> None:
         if self.navigation_manager is None:

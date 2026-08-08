@@ -29,12 +29,24 @@ class IntelligenceContextTests(unittest.TestCase):
         )
         balance = ExpeditionBalanceUpdated(1, 2, 0, 0, 1000, 2000, 10000, 0, 0)
 
-        context = build_live_context(commander, navigation, balance)
+        context = build_live_context(
+            commander,
+            navigation,
+            balance,
+            {"Sol A 1": ("Bacterium Aurasus", "Stratum Tectonicas")},
+        )
 
         self.assertIn("Sistema actual: Sol", context)
         self.assertIn("Cuerpo actual: Sol A 1", context)
         self.assertIn("0 saltos realizados y 1 restantes", context)
         self.assertIn("potencial con bonificaciones: 10000 créditos", context)
+        self.assertIn(
+            "Sol A 1: Bacterium Aurasus, Stratum Tectonicas", context
+        )
+        biology_section = context.split(
+            "Biologías probables conocidas en el sistema, sin precios:"
+        )[1]
+        self.assertNotIn("1000", biology_section)
 
 
 if __name__ == "__main__":

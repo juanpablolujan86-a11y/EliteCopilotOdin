@@ -45,6 +45,11 @@ cuando corresponde, el potencial First Logged. Un desembarco sobre un planeta
 que el último escaneo marcó sin pisada prepara además el aviso de voz de primera
 pisada, sin repetirlo ni mostrarlo en la consola.
 
+ODIN conserva por sistema los nombres de las especies probables informadas por
+MÍMIR. Ante una consulta hablada puede enumerarlas agrupadas por planeta sin
+decir precios ni recompensas. Si un planeta con señal biológica resulta compatible
+con Stratum Tectonicas, MÍMIR lo anuncia automáticamente una sola vez.
+
 ## Flujo científico
 
 ```text
