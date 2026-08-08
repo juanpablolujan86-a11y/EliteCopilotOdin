@@ -125,7 +125,7 @@ class JournalReader:
             return []
         relevant = {
             "Commander", "LoadGame", "Loadout", "Statistics",
-            "SetUserShipName", "ShipyardSwap", "ShipyardBuy",
+            "SetUserShipName", "ShipyardSwap", "ShipyardBuy", "Powerplay",
         }
         latest: dict[str, dict] = {}
         with journal_path.open("r", encoding="utf-8", errors="ignore") as stream:

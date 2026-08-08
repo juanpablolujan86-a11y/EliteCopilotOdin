@@ -97,6 +97,10 @@ class JournalBootstrapTestCase(unittest.TestCase):
                 "FuelCapacity": 128,
             },
             {"event": "Statistics", "Bank_Account": {"Current_Wealth": 5000}},
+            {
+                "event": "Powerplay", "Power": "Li Yong-Rui", "Rank": 25,
+                "Merits": 175715, "TimePledged": 50438411,
+            },
             {"event": "FSDJump", "StarSystem": "Sol", "SystemAddress": 1},
         ]
         with tempfile.TemporaryDirectory() as directory:
@@ -115,6 +119,9 @@ class JournalBootstrapTestCase(unittest.TestCase):
         self.assertEqual(state.current_wealth, 5000)
         self.assertEqual(state.ship_name, "Thor")
         self.assertEqual(state.ship_type_localised, "Caspian Explorer")
+        self.assertEqual(state.powerplay_power, "Li Yong-Rui")
+        self.assertEqual(state.powerplay_rank, 25)
+        self.assertEqual(state.powerplay_merits, 175715)
 
     def test_expedition_sales_increase_known_credit_balance(self) -> None:
         state = CommanderState(credits=1000)
