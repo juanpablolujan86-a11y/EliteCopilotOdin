@@ -808,6 +808,22 @@ class CommandCenter:
                 ("ODIN", "Revisando los datos del comandante."),
                 ("ODIN", "Procesando la orden, comandante."),
                 ("HEIMDALL", "Calculando la ruta, comandante."),
+                (
+                    "FREYJA",
+                    "Opción uno seleccionada: ruta rápida. Comienzo a buscar la operación con mayor ganancia por minuto, comandante.",
+                ),
+                (
+                    "FREYJA",
+                    "Opción dos seleccionada: circuito de tres estaciones. Comienzo a calcular el circuito comercial, comandante.",
+                ),
+                (
+                    "FREYJA",
+                    "Opción tres seleccionada: expedición comercial. Comienzo a buscar una ruta de hasta treinta saltos, comandante.",
+                ),
+                (
+                    "FREYJA",
+                    "Opción cuatro seleccionada: comercio Powerplay. Comienzo a buscar una operación compatible con su potencia, comandante.",
+                ),
             )
             for officer, message in messages:
                 voice.prepare(officer, message)
@@ -1302,6 +1318,12 @@ class CommandCenter:
             OfficerVoiceService(self.config).speak("FREYJA", announcement)
         except VoiceServiceError as error:
             print(f"Voz de FREYJA no disponible: {error}\n")
+        finally:
+            # La búsqueda de mercados puede tardar varios segundos. Una vez que
+            # FREYJA confirmó la modalidad, ODIN debe volver a escuchar sin
+            # esperar a que termine la consulta de red.
+            self._voice_busy.clear()
+            self.wake_listener.resume()
 
     def _calculate_freyja_trade(self, selection: str, market_cache: MarketCache) -> None:
         if self.navigation_manager is None:

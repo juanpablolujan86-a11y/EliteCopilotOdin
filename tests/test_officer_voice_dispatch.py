@@ -156,6 +156,8 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
             with self.subTest(selection=selection):
                 center=CommandCenter.__new__(CommandCenter)
                 center.config=SimpleNamespace()
+                center._voice_busy=threading.Event(); center._voice_busy.set()
+                center.wake_listener=Mock()
                 with patch("core.command_center.OfficerVoiceService") as service:
                     center._announce_freyja_trade_start(selection)
                 officer, announcement = service.return_value.speak.call_args.args
@@ -163,6 +165,8 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
                 self.assertIn(phrases[0], announcement)
                 self.assertIn(phrases[1], announcement)
                 self.assertIn("Comienzo", announcement)
+                self.assertFalse(center._voice_busy.is_set())
+                center.wake_listener.resume.assert_called_once()
 
     def test_wake_acknowledgement_uses_odin_and_resumes_listener(self):
         center=CommandCenter.__new__(CommandCenter)
