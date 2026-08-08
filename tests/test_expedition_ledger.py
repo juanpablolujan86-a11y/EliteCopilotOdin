@@ -97,6 +97,60 @@ class ExpeditionLedgerTestCase(unittest.TestCase):
         self.assertEqual(summary.cartography_estimated, 0)
         self.assertEqual(summary.exploration_sold, 12345)
 
+    def test_exploration_sale_clears_bodies_not_listed_as_discovered(self) -> None:
+        for body_id, system in ((1, "Conocido"), (2, "Nuevo")):
+            self.ledger.handle_scan({
+                "timestamp": f"2026-01-01T00:00:0{body_id}Z",
+                "SystemAddress": body_id,
+                "StarSystem": system,
+                "BodyID": body_id,
+                "BodyName": f"{system} 1",
+                "PlanetClass": "Icy body",
+                "MassEM": 1.0,
+                "WasDiscovered": system == "Conocido",
+            })
+
+        self.ledger.handle_exploration_sale({
+            "timestamp": "2026-01-02T00:00:00Z",
+            "MarketID": 10,
+            "TotalEarnings": 2000,
+            "Discovered": [{"SystemName": "Nuevo", "NumBodies": 1}],
+        })
+
+        self.assertEqual(self.ledger.summary().cartography_estimated, 0)
+
+    def test_organic_sale_clears_pending_even_if_localised_name_differs(self) -> None:
+        self.database.execute(
+            """
+            INSERT INTO stellar_bodies
+            (system_address, system_name, body_id, body_name, body_type,
+             is_moon, terraformable, was_discovered, was_mapped,
+             was_footfalled, landable, raw_json, scanned_at)
+            VALUES (42, 'Prueba', 7, 'Prueba 7', 'Planeta', 0, 0, 0, 0, 0, 1, '{}', '')
+            """
+        )
+        self.ledger.handle_organic({
+            "timestamp": "2026-01-01T00:00:00Z",
+            "ScanType": "Analyse",
+            "SystemAddress": 42,
+            "Body": 7,
+            "Species": "$Codex_Ent_Bacterial_05_Name;",
+            "Species_Localised": "Bacteria vesicular",
+            "Variant": "$Codex_Ent_Bacterial_05_Antimony_Name;",
+            "Variant_Localised": "Bacteria vesicular - Cian",
+        })
+
+        self.ledger.handle_organic_sale({
+            "timestamp": "2026-01-02T00:00:00Z",
+            "MarketID": 10,
+            "BioData": [{"Species_Localised": "Nombre diferente", "Value": 1}],
+        })
+
+        summary = self.ledger.summary()
+        self.assertEqual(summary.exobiology_base, 0)
+        self.assertEqual(summary.exobiology_potential, 0)
+        self.assertEqual(summary.exobiology_sold, 1)
+
 
 if __name__ == "__main__":
     unittest.main()

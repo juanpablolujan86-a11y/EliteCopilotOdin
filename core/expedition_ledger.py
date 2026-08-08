@@ -111,22 +111,13 @@ class ExpeditionLedger:
         value = int(event.get("TotalEarnings", event.get("BaseValue", 0)) or 0)
         if not self._store_sale("exploration", event, value):
             return
-        systems = {
-            item.get("SystemName")
-            for item in event.get("Discovered", [])
-            if item.get("SystemName")
-        }
-        if systems:
-            placeholders = ",".join("?" for _ in systems)
-            self.database.execute(
-                f"UPDATE expedition_items SET status='sold' "
-                f"WHERE category='scan' AND system_name IN ({placeholders})",
-                tuple(systems),
-            )
-        else:
-            self.database.execute(
-                "UPDATE expedition_items SET status='sold' WHERE category='scan' AND status='pending'"
-            )
+        # ``Discovered`` sólo enumera descubrimientos que reciben bonificación;
+        # no representa todos los cuerpos incluidos en la venta. El propio
+        # evento confirma que el lote cartográfico pendiente fue entregado.
+        self.database.execute(
+            "UPDATE expedition_items SET status='sold' "
+            "WHERE category='scan' AND status='pending'"
+        )
         self.publish("Venta cartográfica")
 
     def handle_organic_sale(self, event: dict) -> None:
@@ -136,19 +127,12 @@ class ExpeditionLedger:
         )
         if not self._store_sale("exobiology", event, value):
             return
-        for item in event.get("BioData", []):
-            description = item.get("Variant_Localised", item.get("Species_Localised", ""))
-            self.database.execute(
-                """
-                UPDATE expedition_items SET status='sold'
-                WHERE event_key = (
-                    SELECT event_key FROM expedition_items
-                    WHERE category='organic' AND status='pending' AND description=?
-                    ORDER BY recorded_at LIMIT 1
-                )
-                """,
-                (description,),
-            )
+        # Los nombres localizados de BioData no siempre coinciden con los del
+        # ScanOrganic almacenado. La venta confirmada cierra el lote pendiente.
+        self.database.execute(
+            "UPDATE expedition_items SET status='sold' "
+            "WHERE category='organic' AND status='pending'"
+        )
         self.publish("Venta exobiológica")
 
     def publish(self, reason: str) -> None:

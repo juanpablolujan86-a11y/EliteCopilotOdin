@@ -46,6 +46,13 @@ class SpanshRoutePlan:
     def next_waypoint(self) -> SpanshWaypoint | None:
         return self.waypoints[1] if len(self.waypoints) > 1 else None
 
+    @property
+    def actual_total_jumps(self) -> int:
+        """Saltos FSD previstos, incluidos los tramos convencionales."""
+
+        calculated = sum(max(0, waypoint.jumps) for waypoint in self.waypoints[1:])
+        return calculated or self.total_jumps
+
     @classmethod
     def from_dict(cls, payload: dict) -> "SpanshRoutePlan":
         return cls(
@@ -80,6 +87,9 @@ class RouteClipboardUpdate:
     route_complete: bool
     waypoint_index: int
     route_abandoned: bool = False
+    jumps_completed: int = 0
+    jumps_remaining: int = 0
+    total_jumps: int = 0
 
 
 class SpanshClient:
@@ -178,7 +188,7 @@ class SpanshClient:
                 destination_system=result["destination_system"],
                 jump_range=float(result["range"]),
                 efficiency=int(result["efficiency"]),
-                total_jumps=int(result["total_jumps"]),
+                total_jumps=sum(waypoint.jumps for waypoint in waypoints[1:]),
                 distance=float(result["distance"]),
                 waypoints=waypoints,
             )
@@ -240,7 +250,7 @@ class HeimdallRoutePlanner:
                 plan.strategy,
                 plan.jump_range,
                 plan.efficiency,
-                plan.total_jumps,
+                plan.actual_total_jumps,
                 plan.distance,
                 json.dumps(asdict(plan), ensure_ascii=False),
             ),
@@ -255,7 +265,7 @@ class HeimdallRoutePlanner:
 
         rows = self.database.query(
             """
-            SELECT id, json, current_waypoint_index
+            SELECT id, json, current_waypoint_index, jumps_completed
             FROM heimdall_planned_routes
             WHERE status='active'
             ORDER BY id DESC LIMIT 1
@@ -266,6 +276,8 @@ class HeimdallRoutePlanner:
         row = rows[0]
         plan = SpanshRoutePlan.from_dict(json.loads(row["json"]))
         index = int(row["current_waypoint_index"])
+        completed = int(row["jumps_completed"])
+        total = plan.actual_total_jumps
         if index >= len(plan.waypoints):
             return None
         expected = plan.waypoints[index]
@@ -290,32 +302,60 @@ class HeimdallRoutePlanner:
                     route_complete=False,
                     waypoint_index=index,
                     route_abandoned=True,
+                    jumps_completed=completed,
+                    jumps_remaining=max(0, total - completed),
+                    total_jumps=total,
                 )
-            return None
+            completed = min(total, completed + 1)
+            self.database.execute(
+                "UPDATE heimdall_planned_routes SET jumps_completed=? WHERE id=?",
+                (completed, row["id"]),
+            )
+            return RouteClipboardUpdate(
+                arrived_system=system,
+                copied_system=None,
+                route_complete=False,
+                waypoint_index=index,
+                jumps_completed=completed,
+                jumps_remaining=max(0, total - completed),
+                total_jumps=total,
+            )
+
+        completed = min(total, completed + 1)
 
         next_index = index + 1
         if next_index >= len(plan.waypoints):
             self.database.execute(
                 """
                 UPDATE heimdall_planned_routes
-                SET status='completed', current_waypoint_index=?
+                SET status='completed', current_waypoint_index=?, jumps_completed=?
                 WHERE id=?
                 """,
-                (next_index, row["id"]),
+                (next_index, completed, row["id"]),
             )
-            return RouteClipboardUpdate(system, None, True, next_index)
+            return RouteClipboardUpdate(
+                system, None, True, next_index,
+                jumps_completed=completed,
+                jumps_remaining=0,
+                total_jumps=total,
+            )
 
         next_system = plan.waypoints[next_index].system
         self.database.execute(
             """
             UPDATE heimdall_planned_routes
-            SET current_waypoint_index=?
+            SET current_waypoint_index=?, jumps_completed=?
             WHERE id=?
             """,
-            (next_index, row["id"]),
+            (next_index, completed, row["id"]),
         )
         self.clipboard_writer(next_system)
-        return RouteClipboardUpdate(system, next_system, False, next_index)
+        return RouteClipboardUpdate(
+            system, next_system, False, next_index,
+            jumps_completed=completed,
+            jumps_remaining=max(0, total - completed),
+            total_jumps=total,
+        )
 
     def copy_pending_waypoint(self) -> str | None:
         """Recupera una ruta activa sin adelantarla y copia su objetivo pendiente."""

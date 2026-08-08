@@ -347,6 +347,11 @@ class CommandCenter:
         )
 
         self.event_bus.subscribe(
+            "Disembark",
+            exploration_processor.handle_disembark,
+        )
+
+        self.event_bus.subscribe(
             "FSSDiscoveryScan",
             exploration_processor.handle_fss_discovery_scan
         )
@@ -435,6 +440,13 @@ class CommandCenter:
         self.event_bus.subscribe(
             InternalEvent.SCIENTIFIC_ANALYSIS_READY,
             self.console_presenter.show_scientific_report
+        )
+
+        # Se registra para el futuro sintetizador; deliberadamente no se
+        # presenta en pantalla.
+        self.event_bus.subscribe(
+            InternalEvent.VOICE_MESSAGE_READY,
+            mimir_diagnostics.record_voice_message,
         )
 
         self.event_bus.subscribe(
@@ -566,6 +578,7 @@ class CommandCenter:
                 self.heimdall_diagnostics.record_route_clipboard_update(
                     route_update
                 )
+                self.console_presenter.show_route_progress(route_update)
         if event.get("event") in {"FSDJump", "FSDTarget", "JetConeBoost"}:
             self.heimdall_diagnostics.record_navigation_context(
                 self.navigation_manager.context,

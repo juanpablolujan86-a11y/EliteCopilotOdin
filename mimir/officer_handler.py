@@ -134,6 +134,18 @@ class MimirOfficerHandler:
                 + ", ".join(confirmed_genus_names),
             )
 
+        first_logged_multiplier = (
+            5 if discovery_context.first_footfall_available else 1
+        )
+        values_by_species: dict[str, tuple[str, int, int]] = {}
+        for prediction in predictions:
+            name = prediction.species.name
+            base_value = int(prediction.species.value)
+            values_by_species.setdefault(
+                name,
+                (name, base_value, base_value * first_logged_multiplier),
+            )
+
         return OfficerReport(
             officer="MÍMIR",
             title=recommendation.title,
@@ -143,10 +155,8 @@ class MimirOfficerHandler:
             body_name=str(body_name),
             confirmed_genus_names=confirmed_genus_names,
             probable_species=tuple(
-                dict.fromkeys(
-                    prediction.species.name
-                    for prediction in predictions
-                )
+                values_by_species
             ),
+            probable_species_values=tuple(values_by_species.values()),
             has_biological_signal=has_biological_signal,
         )

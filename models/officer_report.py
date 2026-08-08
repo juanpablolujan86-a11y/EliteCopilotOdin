@@ -38,4 +38,7 @@ class OfficerReport:
 
     probable_species: tuple[str, ...] = ()
 
+    # (nombre, valor base, valor potencial First Logged)
+    probable_species_values: tuple[tuple[str, int, int], ...] = ()
+
     has_biological_signal: bool = False

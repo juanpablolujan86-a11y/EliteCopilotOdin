@@ -39,6 +39,17 @@ class ConsolePresenter:
             f"{update.distance_m:.0f}/{update.required_distance_m:.0f} m — {state}"
         )
 
+    def show_route_progress(self, update) -> None:
+        """Muestra un contador compacto después de cada salto de HEIMDALL."""
+
+        if update.route_abandoned or update.total_jumps <= 0:
+            return
+        print(
+            "Ruta HEIMDALL         : "
+            f"{update.jumps_completed}/{update.total_jumps} saltos — "
+            f"faltan {update.jumps_remaining}"
+        )
+
     def show_expedition_balance(
         self,
         balance: ExpeditionBalanceUpdated,
@@ -130,6 +141,7 @@ class ConsolePresenter:
             report.body_name,
             report.confirmed_genus_names,
             report.probable_species,
+            report.probable_species_values,
         )
         if state in self._shown_biology_states:
             return
@@ -148,7 +160,20 @@ class ConsolePresenter:
 
         if report.probable_species:
             print("Especies probables:")
+            values = {
+                name: (base, potential)
+                for name, base, potential in report.probable_species_values
+            }
             for species in report.probable_species:
-                print(f"  - {species}")
+                base, potential = values.get(species, (0, 0))
+                if not base:
+                    print(f"  - {species}")
+                elif potential != base:
+                    print(
+                        f"  - {species}: {base:,} CR base | "
+                        f"{potential:,} CR potencial First Logged"
+                    )
+                else:
+                    print(f"  - {species}: {base:,} CR")
 
         print("=" * 50)

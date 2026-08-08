@@ -12,6 +12,7 @@ from models.events.expedition_balance_updated import ExpeditionBalanceUpdated
 from models.events.organic_scan_updated import OrganicScanUpdated
 from models.events.recommendation_ready import RecommendationReady
 from models.events.surface_navigation_updated import SurfaceNavigationUpdated
+from models.events.voice_message_ready import VoiceMessageReady
 from models.officer_report import OfficerReport
 from heimdall.bindings import BindingAudit
 
@@ -142,6 +143,14 @@ class MimirDiagnostics:
             scan.progress,
             scan.completed,
             scan.was_logged,
+        )
+
+    def record_voice_message(self, message: VoiceMessageReady) -> None:
+        self.logger.info(
+            "VOZ_PENDIENTE | motivo=%s | cuerpo=%s | mensaje=%s",
+            message.reason,
+            message.body_name or "desconocido",
+            message.message,
         )
 
     def record_surface_navigation(
@@ -275,10 +284,13 @@ class HeimdallDiagnostics:
     def record_route_clipboard_update(self, update) -> None:
         self.logger.info(
             "ROUTE_CLIPBOARD | llegada=%s | copiado=%s | indice=%s | "
-            "completa=%s | abandonada=%s",
+            "completa=%s | abandonada=%s | progreso=%s/%s | restantes=%s",
             update.arrived_system,
             update.copied_system or "ninguno",
             update.waypoint_index,
             update.route_complete,
             update.route_abandoned,
+            update.jumps_completed,
+            update.total_jumps,
+            update.jumps_remaining,
         )

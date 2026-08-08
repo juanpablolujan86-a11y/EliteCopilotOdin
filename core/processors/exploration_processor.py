@@ -33,6 +33,7 @@ from models.events.planet_scan_ready import (
     PlanetScanReady,
 )
 from models.events.organic_scan_updated import OrganicScanUpdated
+from models.events.voice_message_ready import VoiceMessageReady
 from state.commander_state import CommanderState
 from mimir.surface_navigation import SurfaceNavigationTracker
 
@@ -164,6 +165,7 @@ class ExplorationProcessor:
                 ),
                 None,
             )
+
             if existing_index is None:
                 self.commander_state.system_stars.append(star)
         elif subtype and subtype not in self.commander_state.system_body_types:
@@ -303,6 +305,54 @@ class ExplorationProcessor:
                 "Interés científico    : "
                 "Cuerpo terraformable detectado"
             )
+
+    def handle_disembark(self, event: dict) -> None:
+        """Confirma y anuncia una primera pisada conocida por ODIN."""
+
+        if not event.get("OnPlanet", False):
+            return
+        system_address = event.get(
+            "SystemAddress",
+            self.commander_state.system_address,
+        )
+        body_id = event.get("BodyID")
+        if system_address is None or body_id is None:
+            return
+        rows = self.database.query(
+            """
+            SELECT body_name FROM stellar_bodies
+            WHERE system_address=? AND body_id=?
+              AND landable=1 AND was_footfalled=0
+            """,
+            (system_address, body_id),
+        )
+        if not rows or self.database.query(
+            "SELECT 1 FROM mimir_first_footfalls WHERE system_address=? AND body_id=?",
+            (system_address, body_id),
+        ):
+            return
+        body_name = str(event.get("Body") or rows[0]["body_name"])
+        self.database.execute(
+            """
+            INSERT INTO mimir_first_footfalls
+            (system_address, body_id, body_name, confirmed_at)
+            VALUES (?, ?, ?, ?)
+            """,
+            (system_address, body_id, body_name, event.get("timestamp", "")),
+        )
+        self.event_bus.publish_internal(
+            InternalEvent.VOICE_MESSAGE_READY,
+            VoiceMessageReady(
+                officer="MÍMIR",
+                message=(
+                    "Felicidades, sos el primer descendiente de un mono "
+                    "pulgoso en pisar este planeta. Darwin estaría "
+                    "orgulloso de vos."
+                ),
+                reason="Primera pisada confirmada",
+                body_name=body_name,
+            ),
+        )
 
     def handle_fss_discovery_scan(self, event: dict) -> None:
         """

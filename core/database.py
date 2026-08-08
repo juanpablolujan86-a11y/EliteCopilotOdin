@@ -219,6 +219,19 @@ class DatabaseManager:
 
         self.execute(
             """
+            CREATE TABLE IF NOT EXISTS mimir_first_footfalls
+            (
+                system_address INTEGER NOT NULL,
+                body_id INTEGER NOT NULL,
+                body_name TEXT NOT NULL,
+                confirmed_at TEXT NOT NULL,
+                PRIMARY KEY (system_address, body_id)
+            )
+            """
+        )
+
+        self.execute(
+            """
             CREATE TABLE IF NOT EXISTS heimdall_navigation_state
             (
                 id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -243,6 +256,7 @@ class DatabaseManager:
                 distance REAL NOT NULL,
                 status TEXT NOT NULL DEFAULT 'active',
                 current_waypoint_index INTEGER NOT NULL DEFAULT 1,
+                jumps_completed INTEGER NOT NULL DEFAULT 0,
                 json TEXT NOT NULL,
                 created_at TEXT NOT NULL
             )
@@ -253,6 +267,11 @@ class DatabaseManager:
             "heimdall_planned_routes",
             "current_waypoint_index",
             "INTEGER NOT NULL DEFAULT 1",
+        )
+        self._ensure_column(
+            "heimdall_planned_routes",
+            "jumps_completed",
+            "INTEGER NOT NULL DEFAULT 0",
         )
 
         self._ensure_column(

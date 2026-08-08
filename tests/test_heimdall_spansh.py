@@ -133,7 +133,9 @@ class SpanshRoutePlannerTestCase(unittest.TestCase):
         advanced = planner.advance_if_arrived("Neutrón")
 
         self.assertEqual(copied, ["Neutrón", "Destino"])
-        self.assertIsNone(ignored)
+        self.assertIsNotNone(ignored)
+        self.assertEqual(ignored.jumps_completed, 1)
+        self.assertEqual(ignored.jumps_remaining, 1)
         self.assertEqual(advanced.copied_system, "Destino")
         self.assertFalse(advanced.route_complete)
 
@@ -150,7 +152,8 @@ class SpanshRoutePlannerTestCase(unittest.TestCase):
         )
         planner.advance_if_arrived("Neutrón")
 
-        self.assertIsNone(planner.advance_if_arrived("Neutrón"))
+        repeated = planner.advance_if_arrived("Neutrón")
+        self.assertIsNotNone(repeated)
         completed = planner.advance_if_arrived("Destino")
 
         self.assertTrue(completed.route_complete)
@@ -202,11 +205,28 @@ class SpanshRoutePlannerTestCase(unittest.TestCase):
             ["Sistema intermedio", "Neutrón", "Destino"],
         )
 
-        self.assertIsNone(update)
+        self.assertIsNotNone(update)
+        self.assertEqual(update.jumps_completed, 1)
         rows = self.database.query(
             "SELECT status FROM heimdall_planned_routes ORDER BY id DESC LIMIT 1"
         )
         self.assertEqual(rows[0]["status"], "active")
+
+    def test_actual_jump_total_sums_conventional_segments(self) -> None:
+        result = dict(RESULT)
+        result["total_jumps"] = 2
+        result["system_jumps"] = [dict(item) for item in RESULT["system_jumps"]]
+        result["system_jumps"][1]["jumps"] = 4
+        result["system_jumps"][2]["jumps"] = 3
+        client = SpanshClient(
+            FakeSession([{"status": "ok", "result": result}]),
+            sleeper=lambda _: None,
+        )
+
+        plan = client.plan_neutron_route("Origen", "Destino", 66.12)
+
+        self.assertEqual(plan.total_jumps, 7)
+        self.assertEqual(plan.actual_total_jumps, 7)
 
     def test_pending_waypoint_can_be_restored_without_advancing(self) -> None:
         copied = []

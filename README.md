@@ -6,7 +6,7 @@ comandante y coordina oficiales especializados mediante un EventBus.
 
 ## Estado actual
 
-Versión actual: **v0.7.0 — HEIMDALL Navegante**.
+Versión actual: **v0.7.1 — MÍMIR y HEIMDALL consolidados**.
 
 HEIMDALL conserva el contexto de navegación de la nave, audita los controles,
 evalúa combustible y autonomía, reconoce cargas de cono y saltos potenciados,
@@ -14,6 +14,8 @@ y sigue rutas convencionales o de neutrones. Puede solicitar rutas a Spansh,
 copiar el siguiente waypoint al portapapeles y avanzar al confirmarse cada
 `FSDJump`. Si el comandante recalcula la ruta en el juego, archiva el plan
 anterior para no mantener instrucciones obsoletas.
+Durante una autopista muestra saltos realizados, restantes y total real,
+incluidos los saltos convencionales entre puntos principales de Spansh.
 
 MÍMIR, el oficial científico, recibe eventos `Scan` planetarios,
 normaliza sus datos, predice especies biológicas y publica una
@@ -27,6 +29,10 @@ Cuando el DSS confirma los géneros presentes, ODIN actualiza el informe y
 conserva las especies y variantes compatibles. Durante el trabajo de campo,
 MÍMIR cuenta las muestras 1/3, 2/3 y 3/3 y usa `Status.json` para calcular
 la distancia superficial necesaria antes de la siguiente recolección.
+Los candidatos científicos visibles incluyen su recompensa base individual y,
+cuando corresponde, el potencial First Logged. Un desembarco sobre un planeta
+que el último escaneo marcó sin pisada prepara además el aviso de voz de primera
+pisada, sin repetirlo ni mostrarlo en la consola.
 
 ## Flujo científico
 
@@ -59,6 +65,8 @@ de venta del Journal aportan el importe definitivo cobrado.
 Los eventos repetidos no duplican recompensas y un DSS actualiza el valor del
 cuerpo que ya había sido escaneado. El balance se reconstruye al iniciar ODIN
 desde la memoria local disponible.
+Al vender cartografía o exobiología, el acumulado pendiente correspondiente
+vuelve a cero y el importe cobrado permanece en el historial confirmado.
 
 ## Ejecutar las pruebas
 

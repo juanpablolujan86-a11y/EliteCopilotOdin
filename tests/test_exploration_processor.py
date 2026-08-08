@@ -1,5 +1,8 @@
+import tempfile
 import unittest
+from pathlib import Path
 
+from core.database import DatabaseManager
 from core.event_bus import EventBus
 from core.internal_events import InternalEvent
 from core.processors.exploration_processor import ExplorationProcessor
@@ -16,6 +19,46 @@ class FakeDatabase:
 
 
 class ExplorationProcessorTestCase(unittest.TestCase):
+    def test_first_footfall_voice_message_is_confirmed_once(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            database = DatabaseManager(Path(folder))
+            database.connect()
+            database.create_tables()
+            database.execute(
+                """
+                INSERT INTO stellar_bodies
+                (system_address, system_name, body_id, body_name, body_type,
+                 is_moon, terraformable, was_discovered, was_mapped,
+                 was_footfalled, landable, raw_json, scanned_at)
+                VALUES (42, 'Prueba', 7, 'Prueba 7', 'Planeta', 0, 0, 0, 0, 0, 1, '{}', '')
+                """
+            )
+            event_bus = EventBus()
+            messages = []
+            event_bus.subscribe(InternalEvent.VOICE_MESSAGE_READY, messages.append)
+            processor = ExplorationProcessor(
+                database,
+                CommanderState(system_address=42),
+                event_bus,
+            )
+            event = {
+                "event": "Disembark",
+                "timestamp": "2026-01-01T00:00:00Z",
+                "SystemAddress": 42,
+                "BodyID": 7,
+                "Body": "Prueba 7",
+                "OnPlanet": True,
+            }
+
+            processor.handle_disembark(event)
+            processor.handle_disembark(event)
+
+            self.assertEqual(len(messages), 1)
+            self.assertIn("mono pulgoso", messages[0].message)
+            self.assertIn("Darwin", messages[0].message)
+            self.assertEqual(messages[0].body_name, "Prueba 7")
+            database.disconnect()
+
     def test_duplicate_all_bodies_found_report_is_ignored(self) -> None:
         database = FakeDatabase()
         processor = ExplorationProcessor(

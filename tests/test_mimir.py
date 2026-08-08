@@ -360,6 +360,10 @@ class MimirTestCase(unittest.TestCase):
         self.assertIsNotNone(report)
         self.assertIn("primera pisada todavía está disponible", report.message)
         self.assertIn("100,054,000 créditos (×5)", report.message)
+        self.assertTrue(report.probable_species_values)
+        self.assertTrue(
+            all(potential == base * 5 for _, base, potential in report.probable_species_values)
+        )
         self.assertTrue(
             any(
                 "La bonificación First Logged es potencial" in detail
@@ -380,6 +384,9 @@ class MimirTestCase(unittest.TestCase):
         self.assertIsNotNone(report)
         self.assertNotIn("(×5)", report.message)
         self.assertIn("Primera pisada reclamada: Sí", report.details)
+        self.assertTrue(
+            all(potential == base for _, base, potential in report.probable_species_values)
+        )
 
     def test_planet_without_biology_remains_silent(self) -> None:
         event = {

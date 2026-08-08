@@ -9,6 +9,7 @@ from models.officer_report import OfficerReport
 from models.events.organic_scan_updated import OrganicScanUpdated
 from models.events.surface_navigation_updated import SurfaceNavigationUpdated
 from ui.console_presenter import ConsolePresenter
+from heimdall.spansh import RouteClipboardUpdate
 
 
 class ConsolePresenterTestCase(unittest.TestCase):
@@ -68,6 +69,7 @@ class ConsolePresenterTestCase(unittest.TestCase):
                     body_name="Prueba 4",
                     confirmed_genus_names=("Bacteria",),
                     probable_species=("Bacterium Informem",),
+                    probable_species_values=(("Bacterium Informem", 8_418_000, 42_090_000),),
                     has_biological_signal=True,
                 )
             )
@@ -76,6 +78,8 @@ class ConsolePresenterTestCase(unittest.TestCase):
         self.assertIn("Planeta              : Prueba 4", visible)
         self.assertIn("Géneros DSS          : Bacteria", visible)
         self.assertIn("Bacterium Informem", visible)
+        self.assertIn("8,418,000 CR base", visible)
+        self.assertIn("42,090,000 CR potencial First Logged", visible)
         self.assertNotIn("Explicación para voz", visible)
         self.assertNotIn("regla interna", visible)
 
@@ -172,6 +176,22 @@ class ConsolePresenterTestCase(unittest.TestCase):
         self.assertIn("~500,000 CR", visible)
         self.assertIn("5,000,000 CR", visible)
         self.assertIn("Total base pendiente", visible)
+
+    def test_heimdall_route_progress_is_compact(self) -> None:
+        output = io.StringIO()
+        with redirect_stdout(output):
+            self.presenter.show_route_progress(RouteClipboardUpdate(
+                arrived_system="Intermedio",
+                copied_system=None,
+                route_complete=False,
+                waypoint_index=1,
+                jumps_completed=30,
+                jumps_remaining=58,
+                total_jumps=88,
+            ))
+
+        self.assertIn("30/88 saltos", output.getvalue())
+        self.assertIn("faltan 58", output.getvalue())
 
 
 if __name__ == "__main__":

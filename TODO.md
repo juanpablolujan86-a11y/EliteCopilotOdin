@@ -28,6 +28,8 @@
 - [x] Recomendaciones
 - [x] Predicción científica cerrada mediante DSS
 - [x] Registro persistente para pruebas beta
+- [x] Mostrar junto a cada especie probable su recompensa individual estimada:
+  valor base y, cuando corresponda, potencial con bonificación First Logged
 
 ---
 
@@ -36,6 +38,9 @@
 - [ ] Definir el alcance operativo
 - [x] Registrar ubicaciones de muestras durante la sesión activa
 - [x] Ayudar a respetar la distancia mínima entre muestras
+- [x] Detectar la primera pisada y preparar para voz la frase:
+  «Felicidades, sos el primer descendiente de un mono pulgoso en pisar este
+  planeta. Darwin estaría orgulloso de vos.»
 - [ ] Diseñar la futura presentación por voz
 
 ---
@@ -47,6 +52,8 @@
 - [x] Separar exobiología base y potencial First Logged
 - [x] Registrar ventas confirmadas por el Journal
 - [x] Evitar recompensas duplicadas
+- [x] Reiniciar a cero los acumulados pendientes después de confirmar una venta
+  de cartografía o exobiología, conservando por separado el historial cobrado
 
 ---
 
@@ -87,6 +94,8 @@
     - [x] Copiar el primer waypoint al crear la ruta
     - [x] Avanzar y copiar el siguiente solamente tras `FSDJump` confirmado
     - [x] Persistir el índice y evitar avances duplicados
+    - [x] Mostrar durante la autopista el progreso de la expedición: saltos
+      realizados, saltos restantes y total de saltos previsto hasta el destino
     - [ ] Guiar entrada al cono, carga y salida segura
 - [ ] Síntesis de salto autorizada
 - [ ] Replanificación por desvío
