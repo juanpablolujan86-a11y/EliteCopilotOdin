@@ -27,4 +27,29 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
         self.assertFalse(center._voice_busy.is_set())
         center.wake_listener.resume.assert_called_once()
 
+    def test_processing_messages_match_the_requested_context(self):
+        self.assertEqual(
+            CommandCenter._processing_message_for("qué biologías hay"),
+            "Consultando los registros científicos.",
+        )
+        self.assertEqual(
+            CommandCenter._processing_message_for("cuánto combustible tengo"),
+            "Revisando los datos del comandante.",
+        )
+        self.assertEqual(
+            CommandCenter._processing_message_for("datos de este sistema"),
+            "Revisando la base de datos.",
+        )
+
+    def test_processing_message_signals_completion_without_resuming_listener(self):
+        center=CommandCenter.__new__(CommandCenter)
+        center.config=SimpleNamespace()
+        center.wake_listener=Mock()
+        completed=threading.Event()
+        with patch("core.command_center.OfficerVoiceService") as service:
+            center._run_processing_message("ODIN", "Procesando.", completed)
+        service.return_value.speak.assert_called_once_with("ODIN", "Procesando.")
+        self.assertTrue(completed.is_set())
+        center.wake_listener.resume.assert_not_called()
+
 if __name__=="__main__": unittest.main()

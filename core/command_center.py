@@ -111,6 +111,8 @@ class CommandCenter:
         self._voice_busy = threading.Event()
         self._voice_questions: queue.Queue[str] = queue.Queue()
         self._wake_activations: queue.Queue[bool] = queue.Queue()
+        self._route_acknowledgement_done = threading.Event()
+        self._route_acknowledgement_done.set()
         self._route_results: queue.Queue[tuple[object | None, str | None]] = queue.Queue()
         self._officer_voice_messages: queue.Queue[VoiceMessageReady] = queue.Queue()
         self._surface_ready_announced: set[tuple[int, int]] = set()
@@ -750,7 +752,16 @@ class CommandCenter:
 
     def _prepare_wake_acknowledgement(self) -> None:
         try:
-            OfficerVoiceService(self.config).prepare("ODIN", "Sí, comandante?")
+            voice = OfficerVoiceService(self.config)
+            for officer, message in (
+                ("ODIN", "Sí, comandante?"),
+                ("ODIN", "Revisando la base de datos."),
+                ("ODIN", "Consultando los registros científicos."),
+                ("ODIN", "Revisando los datos del comandante."),
+                ("ODIN", "Procesando la orden, comandante."),
+                ("HEIMDALL", "Calculando la ruta, comandante."),
+            ):
+                voice.prepare(officer, message)
         except (VoiceServiceError, OSError):
             pass
 
@@ -880,15 +891,52 @@ class CommandCenter:
         return None
 
     def _run_voice_response(self, question: str, context: str) -> None:
+        acknowledgement_done = threading.Event()
+        threading.Thread(
+            target=self._run_processing_message,
+            args=(
+                "ODIN",
+                self._processing_message_for(question),
+                acknowledgement_done,
+            ),
+            name="odin-processing-message",
+            daemon=True,
+        ).start()
         try:
-            answer = VoiceConversation(self.config).respond(question, context)
+            conversation = VoiceConversation(self.config)
+            answer = conversation.answer(question, context)
+            acknowledgement_done.wait()
+            conversation.voice.speak("ODIN", answer)
             print(f"\nVos: {question}")
             print(f"ODIN: {answer}\n")
         except (MicrophoneError, TranscriptionError, OllamaError, VoiceServiceError) as error:
             print(f"\nConversación por voz no disponible: {error}\n")
         finally:
+            acknowledgement_done.wait()
             self._voice_busy.clear()
             self.wake_listener.resume()
+
+    @staticmethod
+    def _processing_message_for(question: str) -> str:
+        lowered = question.casefold()
+        if any(word in lowered for word in ("biolog", "especie", "muestra", "mímir", "mimir")):
+            return "Consultando los registros científicos."
+        if any(word in lowered for word in ("crédito", "credito", "nave", "combustible", "comandante")):
+            return "Revisando los datos del comandante."
+        if any(word in lowered for word in ("sistema", "planeta", "base de datos", "escane")):
+            return "Revisando la base de datos."
+        return "Procesando la orden, comandante."
+
+    def _run_processing_message(
+        self, officer: str, message: str, completed: threading.Event
+    ) -> None:
+        try:
+            print(f"{officer}: {message}")
+            OfficerVoiceService(self.config).speak(officer, message)
+        except VoiceServiceError as error:
+            print(f"Voz de {officer} no disponible: {error}\n")
+        finally:
+            completed.set()
 
     def _remember_scientific_report(self, report) -> None:
         message = self.scientific_context.record(
@@ -915,6 +963,17 @@ class CommandCenter:
             max_jump_range=context.max_jump_range,
         )
         self._voice_busy.set()
+        self._route_acknowledgement_done.clear()
+        threading.Thread(
+            target=self._run_processing_message,
+            args=(
+                "HEIMDALL",
+                "Calculando la ruta, comandante.",
+                self._route_acknowledgement_done,
+            ),
+            name="heimdall-processing-message",
+            daemon=True,
+        ).start()
         print(
             f"\nHEIMDALL calcula una ruta de neutrones desde "
             f"{snapshot.current_system or 'origen desconocido'} hasta {destination}..."
@@ -941,6 +1000,7 @@ class CommandCenter:
             self._start_fixed_voice_response(
                 "No pude calcular la ruta de neutrones. Se produjo un error.",
                 officer="HEIMDALL",
+                wait_for=self._route_acknowledgement_done,
             )
             return
         try:
@@ -962,19 +1022,36 @@ class CommandCenter:
                 route_error,
             )
             answer = "La ruta fue calculada, pero se produjo un error al activarla."
-        self._start_fixed_voice_response(answer, officer="HEIMDALL")
+        self._start_fixed_voice_response(
+            answer,
+            officer="HEIMDALL",
+            wait_for=self._route_acknowledgement_done,
+        )
 
-    def _start_fixed_voice_response(self, answer: str, *, officer: str = "ODIN") -> None:
+    def _start_fixed_voice_response(
+        self,
+        answer: str,
+        *,
+        officer: str = "ODIN",
+        wait_for: threading.Event | None = None,
+    ) -> None:
         self._voice_busy.set()
         threading.Thread(
             target=self._run_fixed_voice_response,
-            args=(officer, answer),
+            args=(officer, answer, wait_for),
             name=f"{officer.lower()}-fixed-voice-response",
             daemon=True,
         ).start()
 
-    def _run_fixed_voice_response(self, officer: str, answer: str) -> None:
+    def _run_fixed_voice_response(
+        self,
+        officer: str,
+        answer: str,
+        wait_for: threading.Event | None = None,
+    ) -> None:
         try:
+            if wait_for is not None:
+                wait_for.wait()
             print(f"{officer}: {answer}\n")
             OfficerVoiceService(self.config).speak(officer, answer)
         except VoiceServiceError as error:

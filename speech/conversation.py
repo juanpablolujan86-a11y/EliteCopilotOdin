@@ -33,6 +33,9 @@ class VoiceConversation:
         return question, answer
 
     def respond(self, question: str, context: str = "") -> str:
-        answer = self.assistant.ask(question, context=context).text
+        answer = self.answer(question, context)
         self.voice.speak("ODIN", answer)
         return answer
+
+    def answer(self, question: str, context: str = "") -> str:
+        return self.assistant.ask(question, context=context).text
