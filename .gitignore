@@ -17,6 +17,7 @@ database/*.db
 
 # Archivos temporales
 *.tmp
+ELEVENLABS_API_KEY.txt
 
 # Compilación distribuible
 build/

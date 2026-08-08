@@ -1,0 +1,6 @@
+# CONFIGURACIÓN PERSONAL DE ELEVENLABS PARA ODIN
+# Copiá este archivo como ELEVENLABS_API_KEY.txt, pegá debajo tu propia API key
+# e iniciá ODIN. Después de validarla, ODIN quitará la clave de este TXT y la
+# protegerá en el Administrador de credenciales de tu usuario de Windows.
+
+PEGAR_API_KEY_AQUI

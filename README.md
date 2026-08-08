@@ -70,6 +70,31 @@ usuario actual. Nunca se escribe en `config.json`, en el archivo de preferencias
 ni en los registros de ODIN. Las asignaciones no secretas quedan en
 `%LOCALAPPDATA%\ODIN\voice\settings.json`.
 
+Cada comandante utiliza su propia cuenta de ElevenLabs. El archivo
+`ELEVENLABS_API_KEY.txt` sirve únicamente para el alta inicial: ODIN valida el
+acceso a las voces, migra la clave al Administrador de credenciales del usuario
+de Windows y elimina el secreto del TXT. El configurador muestra las voces
+disponibles en esa cuenta y permite asignar un `voice_id` diferente por oficial.
+
+## Inteligencia local sin créditos
+
+ODIN puede conversar mediante Ollama y `gemma3:4b`, ejecutados íntegramente en
+la computadora del comandante. Una prueba directa puede realizarse con:
+
+```powershell
+python main.py --test-ai "¿Cuál es tu función?"
+```
+
+El cliente usa solamente `127.0.0.1:11434`, evita mostrar razonamiento interno
+y falla de forma segura si Ollama o el modelo todavía no están disponibles.
+
+Cada usuario utiliza su propia cuenta: puede copiar
+`ELEVENLABS_API_KEY.example.txt` como `ELEVENLABS_API_KEY.txt`, pegar allí su
+API key personal e iniciar ODIN. La clave se valida, se migra al Administrador
+de credenciales de ese usuario de Windows y se elimina del TXT. Desde el
+configurador se pueden consultar las voces disponibles en esa cuenta y asignar
+un `voice_id` diferente a cada oficial.
+
 ## Balance de expedición
 
 ODIN conserva un libro persistente con sistemas visitados, cuerpos

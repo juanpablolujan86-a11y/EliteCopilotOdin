@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from voice.elevenlabs import ElevenLabsClient, ElevenLabsError
+from voice.key_file import PLACEHOLDER, import_key_file
 from voice.settings import VoiceSettingsRepository
 
 
@@ -58,6 +59,56 @@ class ElevenLabsClientTests(unittest.TestCase):
     def test_empty_key_is_rejected_before_network_call(self):
         with self.assertRaisesRegex(ElevenLabsError, "vacía"):
             ElevenLabsClient().validate("  ")
+
+    @patch("voice.elevenlabs.requests.get")
+    def test_lists_voices_owned_by_current_account(self, get: Mock):
+        response = Mock(status_code=200)
+        response.json.return_value = {
+            "voices": [
+                {"voice_id": "voice-b", "name": "Beta", "category": "premade"},
+                {"voice_id": "voice-a", "name": "Alfa", "category": "cloned"},
+            ]
+        }
+        get.return_value = response
+
+        voices = ElevenLabsClient().list_voices("personal-key")
+
+        self.assertEqual([voice.name for voice in voices], ["Alfa", "Beta"])
+        self.assertEqual(voices[0].voice_id, "voice-a")
+
+
+class KeyFileImportTests(unittest.TestCase):
+    def test_key_is_migrated_and_removed_from_text_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "ELEVENLABS_API_KEY.txt"
+            path.write_text("personal-secret\n", encoding="utf-8")
+            credentials = Mock()
+            client = Mock()
+
+            result = import_key_file(root, credentials, client)
+
+            self.assertTrue(result.imported)
+            client.list_voices.assert_called_once_with("personal-secret")
+            credentials.set.assert_called_once_with("personal-secret")
+            cleaned = path.read_text(encoding="utf-8")
+            self.assertIn(PLACEHOLDER, cleaned)
+            self.assertNotIn("personal-secret", cleaned)
+
+    def test_invalid_key_is_not_stored_or_removed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "ELEVENLABS_API_KEY.txt"
+            path.write_text("invalid-secret\n", encoding="utf-8")
+            credentials = Mock()
+            client = Mock()
+            client.list_voices.side_effect = ElevenLabsError("rechazada")
+
+            result = import_key_file(root, credentials, client)
+
+            self.assertFalse(result.imported)
+            credentials.set.assert_not_called()
+            self.assertEqual(path.read_text(encoding="utf-8"), "invalid-secret\n")
 
 
 if __name__ == "__main__":

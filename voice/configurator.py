@@ -34,6 +34,7 @@ def run_voice_configuration(config: Config | None = None) -> None:
     print("2. Eliminar clave ElevenLabs")
     print("3. Usar voces Windows recomendadas")
     print("4. Asignar proveedor y voz por oficial")
+    print("5. Mostrar voces disponibles en mi cuenta de ElevenLabs")
     print("0. Salir")
     option = input("\nOpción: ").strip()
 
@@ -41,7 +42,7 @@ def run_voice_configuration(config: Config | None = None) -> None:
         secret = getpass.getpass("Nueva API key (entrada oculta): ").strip()
         try:
             try:
-                subscription = ElevenLabsClient().validate(secret)
+                voices = ElevenLabsClient().list_voices(secret)
                 credentials.set(secret)
             except (ElevenLabsError, OSError, ValueError) as error:
                 print(f"No se guardó la clave: {error}")
@@ -50,8 +51,7 @@ def run_voice_configuration(config: Config | None = None) -> None:
             secret = ""
         print(
             "Clave validada y protegida por Windows. "
-            f"Plan: {subscription.tier}; uso: "
-            f"{subscription.used}/{subscription.limit}."
+            f"Voces disponibles: {len(voices)}."
         )
     elif option == "2":
         print("Clave eliminada." if credentials.delete() else "No había una clave guardada.")
@@ -86,5 +86,20 @@ def run_voice_configuration(config: Config | None = None) -> None:
                 assignment.voice = voice
         repository.save(settings)
         print("Asignaciones guardadas sin almacenar secretos.")
+    elif option == "5":
+        secret = credentials.get()
+        if not secret:
+            print("Primero configurá tu propia API key de ElevenLabs.")
+            return
+        try:
+            voices = ElevenLabsClient().list_voices(secret)
+        except ElevenLabsError as error:
+            print(f"No se pudieron consultar las voces: {error}")
+            return
+        finally:
+            secret = ""
+        print("\nVoces disponibles en esta cuenta:")
+        for voice in voices:
+            print(f"  - {voice.name} [{voice.voice_id}] ({voice.category or 'sin categoría'})")
     elif option != "0":
         print("Opción inválida.")

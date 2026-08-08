@@ -12,6 +12,7 @@ a = Analysis(
         (str(root / "knowledge" / "biology" / "species.json"), "knowledge/biology"),
         (str(root / "knowledge" / "biology" / "prediction_rules.json"), "knowledge/biology"),
         (str(root / "knowledge" / "external" / "explodata" / "LICENSE.txt"), "knowledge/external/explodata"),
+        (str(root / "ELEVENLABS_API_KEY.example.txt"), "."),
     ],
     hiddenimports=[],
     hookspath=[],
