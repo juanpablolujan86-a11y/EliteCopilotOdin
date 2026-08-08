@@ -34,7 +34,8 @@ class FreyjaPlannerTests(unittest.TestCase):
         quick=MarketOpportunity("plata","A","Uno","C","Tres",1000,3000,100,30,1,500,now)
         plan=QuickRouteOptimizer().choose(profile,[slow,quick])
         self.assertEqual(plan.opportunity.commodity,"plata")
-        self.assertEqual(plan.units,7)
-        self.assertEqual(plan.recommended_sale_tons,7)
+        self.assertEqual(plan.units,9)
+        self.assertEqual(plan.recommended_sale_tons,9)
+        self.assertLessEqual(plan.estimated_bulk_discount,0.08)
 
 if __name__=="__main__": unittest.main()

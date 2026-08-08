@@ -79,10 +79,11 @@ class FreyjaBubbleSimulationTests(unittest.TestCase):
         )
 
         self.assertEqual(profile.cargo_free, 700)
-        self.assertEqual(plan.units, 45)
-        self.assertEqual(plan.recommended_sale_tons, 45)
+        self.assertEqual(plan.units, 56)
+        self.assertEqual(plan.recommended_sale_tons, 56)
+        self.assertLessEqual(plan.estimated_bulk_discount, 0.08)
 
-    def test_sale_quantity_stays_at_or_below_quarter_of_demand(self) -> None:
+    def test_sale_quantity_stays_inside_accepted_bulk_discount(self) -> None:
         profile = TradeProfile(
             "Sol", 100_000_000, 5_000_000, 700, 0, 30, (0, 0, 0)
         )
@@ -92,11 +93,48 @@ class FreyjaBubbleSimulationTests(unittest.TestCase):
             [self.opportunity(supply=1_000, demand=1_003)],
         )
 
-        self.assertEqual(plan.units, 250)
-        self.assertEqual(plan.recommended_sale_tons, 250)
-        self.assertLessEqual(plan.recommended_sale_tons, 1_003 * 0.25)
-        self.assertIn("vendé 250 toneladas", plan.sale_instruction())
+        self.assertEqual(plan.units, 313)
+        self.assertEqual(plan.recommended_sale_tons, 313)
+        self.assertLessEqual(plan.estimated_bulk_discount, 0.08)
+        self.assertIn("vendé 313 toneladas", plan.sale_instruction())
         self.assertIn("Puerto Venta", plan.sale_instruction())
+        self.assertIn("dentro del límite aceptado", plan.sale_instruction())
+
+    def test_prefers_fuller_cargo_within_accepted_profit_sacrifice(self) -> None:
+        profile = TradeProfile(
+            "Sol", 100_000_000, 5_000_000, 100, 0, 30, (0, 0, 0)
+        )
+        fastest = self.opportunity(
+            commodity="oro", supply=50, demand=10_000,
+            buy_price=10_000, sell_price=30_000, jumps=1, distance_ls=100,
+        )
+        fuller = self.opportunity(
+            commodity="plata", supply=100, demand=10_000,
+            buy_price=10_000, sell_price=19_500, jumps=1, distance_ls=100,
+        )
+
+        plan = QuickRouteOptimizer().choose(profile, [fastest, fuller])
+
+        self.assertEqual(plan.opportunity.commodity, "plata")
+        self.assertEqual(plan.units, 100)
+        self.assertEqual(plan.cargo_utilization, 1.0)
+
+    def test_does_not_fill_cargo_when_profit_loss_exceeds_tolerance(self) -> None:
+        profile = TradeProfile(
+            "Sol", 100_000_000, 5_000_000, 100, 0, 30, (0, 0, 0)
+        )
+        best = self.opportunity(
+            commodity="oro", supply=50, demand=10_000,
+            buy_price=10_000, sell_price=30_000, jumps=1, distance_ls=100,
+        )
+        weak_full = self.opportunity(
+            commodity="plata", supply=100, demand=10_000,
+            buy_price=10_000, sell_price=18_000, jumps=1, distance_ls=100,
+        )
+
+        plan = QuickRouteOptimizer().choose(profile, [best, weak_full])
+
+        self.assertEqual(plan.opportunity.commodity, "oro")
 
     def test_stale_prices_are_rejected(self) -> None:
         stale = (datetime.now(timezone.utc) - timedelta(hours=12)).isoformat()

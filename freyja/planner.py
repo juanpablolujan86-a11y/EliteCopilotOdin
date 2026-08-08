@@ -35,14 +35,23 @@ class QuickTradePlan:
     estimated_profit: int; estimated_minutes: float
     profit_per_minute: float; stale_hours: float
     recommended_sale_tons: int
+    estimated_bulk_discount: float
+    estimated_sell_price: int
+    cargo_utilization: float
 
     def sale_instruction(self) -> str:
         unit = "tonelada" if self.recommended_sale_tons == 1 else "toneladas"
-        return (
+        instruction = (
             f"Comandante, vendé {self.recommended_sale_tons} {unit} de "
-            f"{self.opportunity.commodity} en {self.opportunity.sell_station} "
-            "para conservar la ganancia estimada."
+            f"{self.opportunity.commodity} en {self.opportunity.sell_station}. "
         )
+        if self.estimated_bulk_discount > 0:
+            return instruction + (
+                "La reducción estimada por volumen es de "
+                f"{self.estimated_bulk_discount * 100:.1f} por ciento, "
+                "dentro del límite aceptado."
+            )
+        return instruction + "No se estima penalización por volumen."
 
 class TradeProfileBuilder:
     LARGE_SHIPS = {
@@ -71,7 +80,19 @@ class TradeProfileBuilder:
         )
 
 class QuickRouteOptimizer:
-    def choose(self, profile: TradeProfile, opportunities, *, max_age_hours=8.0):
+    BULK_FULL_PRICE_RATIO = 0.25
+    BULK_FLOOR_RATIO = 0.80
+    BULK_WORST_DISCOUNT = 0.70
+
+    def choose(
+        self,
+        profile: TradeProfile,
+        opportunities,
+        *,
+        max_age_hours=8.0,
+        max_bulk_discount=0.08,
+        max_profit_sacrifice=0.08,
+    ):
         plans=[]
         excluded = {
             system.casefold()
@@ -90,15 +111,45 @@ class QuickRouteOptimizer:
                 continue
             age=self._age_hours(item.updated_at)
             if item.buy_price<=0 or item.sell_price<=item.buy_price or age>max_age_hours: continue
-            full_price_limit=max(1,math.floor(max(0,item.demand)*0.25))
+            maximum_demand_ratio = self._demand_ratio_for_discount(max_bulk_discount)
+            safe_demand_units=max(1,math.floor(max(0,item.demand)*maximum_demand_ratio))
             units=min(profile.cargo_free,profile.available_capital//item.buy_price,
-                      max(0,item.supply),max(0,item.demand),full_price_limit)
+                      max(0,item.supply),max(0,item.demand),safe_demand_units)
             if units<=0 or item.jumps<0: continue
-            profit=(item.sell_price-item.buy_price)*units
+            bulk_discount=self._bulk_discount(units,item.demand)
+            estimated_sell_price=math.floor(item.sell_price*(1.0-bulk_discount))
+            if estimated_sell_price<=item.buy_price: continue
+            profit=(estimated_sell_price-item.buy_price)*units
             minutes=max(1.0, 4.0+item.jumps*1.25+self._supercruise_minutes(item.station_distance_ls))
+            utilization=units/profile.cargo_free if profile.cargo_free else 0.0
             plans.append(QuickTradePlan(item,units,item.buy_price*units,profit,minutes,
-                                        profit/minutes,age,units))
-        return max(plans,key=lambda plan:plan.profit_per_minute,default=None)
+                                        profit/minutes,age,units,bulk_discount,
+                                        estimated_sell_price,utilization))
+        if not plans:
+            return None
+        best_profit_rate=max(plan.profit_per_minute for plan in plans)
+        acceptable=[
+            plan for plan in plans
+            if plan.profit_per_minute>=best_profit_rate*(1.0-max_profit_sacrifice)
+        ]
+        return max(acceptable,key=lambda plan:(plan.cargo_utilization,plan.profit_per_minute))
+
+    @classmethod
+    def _bulk_discount(cls, units: int, demand: int) -> float:
+        if demand<=0: return 1.0
+        ratio=units/demand
+        if ratio<=cls.BULK_FULL_PRICE_RATIO: return 0.0
+        progress=min(1.0,(ratio-cls.BULK_FULL_PRICE_RATIO)/(
+            cls.BULK_FLOOR_RATIO-cls.BULK_FULL_PRICE_RATIO
+        ))
+        return progress*cls.BULK_WORST_DISCOUNT
+
+    @classmethod
+    def _demand_ratio_for_discount(cls, discount: float) -> float:
+        accepted=max(0.0,min(cls.BULK_WORST_DISCOUNT,float(discount)))
+        return cls.BULK_FULL_PRICE_RATIO+(
+            accepted/cls.BULK_WORST_DISCOUNT
+        )*(cls.BULK_FLOOR_RATIO-cls.BULK_FULL_PRICE_RATIO)
 
     @staticmethod
     def _supercruise_minutes(distance_ls):
