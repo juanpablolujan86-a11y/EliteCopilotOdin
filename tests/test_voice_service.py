@@ -37,7 +37,9 @@ class OfficerVoiceServiceTests(unittest.TestCase):
             windows_player = Mock()
             service = OfficerVoiceService(config, Mock(), Mock(), Mock(), windows_player)
             service.speak("ODIN", "Prueba")
-            windows_player.speak.assert_called_once_with("Prueba")
+            windows_player.speak.assert_called_once_with(
+                "Prueba", "Microsoft Raul - Spanish (Mexico)", 0, 100
+            )
 
     def test_elevenlabs_failure_falls_back_to_windows(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -57,7 +59,9 @@ class OfficerVoiceServiceTests(unittest.TestCase):
             service = OfficerVoiceService(config, credentials, client, Mock(), windows_player)
             service.speak("ODIN", "Prueba")
 
-            windows_player.speak.assert_called_once_with("Prueba")
+            windows_player.speak.assert_called_once_with(
+                "Prueba", "Microsoft Raul - Spanish (Mexico)", 0, 100
+            )
 
 
 if __name__ == "__main__":

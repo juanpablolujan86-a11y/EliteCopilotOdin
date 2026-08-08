@@ -13,6 +13,13 @@ class VoiceServiceError(RuntimeError):
     pass
 
 
+WINDOWS_FALLBACKS = {
+    "ODIN": ("Microsoft Raul - Spanish (Mexico)", 0),
+    "MÍMIR": ("Microsoft Sabina - Spanish (Mexico)", 0),
+    "HEIMDALL": ("Microsoft Raul - Spanish (Mexico)", -2),
+}
+
+
 class OfficerVoiceService:
     def __init__(
         self,
@@ -36,7 +43,9 @@ class OfficerVoiceService:
             raise VoiceServiceError(f"No hay una voz configurada para {officer}.")
         if assignment.provider == "windows":
             try:
-                self.windows_player.speak(text)
+                self.windows_player.speak(
+                    text, assignment.voice, assignment.rate, assignment.volume
+                )
                 return
             except AudioPlaybackError as error:
                 raise VoiceServiceError(str(error)) from error
@@ -49,7 +58,12 @@ class OfficerVoiceService:
         except (ElevenLabsError, AudioPlaybackError, OSError) as error:
             if settings.fallback_to_windows:
                 try:
-                    self.windows_player.speak(text)
+                    fallback_voice, fallback_rate = WINDOWS_FALLBACKS.get(
+                        officer.upper(), WINDOWS_FALLBACKS["ODIN"]
+                    )
+                    self.windows_player.speak(
+                        text, fallback_voice, fallback_rate, assignment.volume
+                    )
                     return
                 except AudioPlaybackError:
                     pass
