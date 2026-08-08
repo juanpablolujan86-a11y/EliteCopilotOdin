@@ -25,6 +25,11 @@ el contexto galáctico de ExploData, los géneros confirmados por DSS,
 las condiciones planetarias y el estado de descubrimiento y primera
 pisada informado por el Journal.
 
+Al completarse el FSS, si el total confirmado de cuerpos coincide exactamente
+con el número de estrellas y no existen planetas ni lunas, MÍMIR anuncia por voz
+que el sistema no contiene planetas para escanear. El aviso se emite una sola
+vez por sistema y no se muestra como informe científico en pantalla.
+
 Cuando el DSS confirma los géneros presentes, ODIN actualiza el informe y
 conserva las especies y variantes compatibles. Durante el trabajo de campo,
 MÍMIR cuenta las muestras 1/3, 2/3 y 3/3 y usa `Status.json` para calcular

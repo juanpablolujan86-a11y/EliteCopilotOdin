@@ -63,6 +63,7 @@ class ExplorationProcessor:
             tuple[str, ...],
         ] = {}
         self._completed_system_reports: set[int] = set()
+        self._star_only_announced: set[int] = set()
         self._organic_scan_progress: dict[
             tuple[int, int | None, str, str],
             int,
@@ -92,6 +93,7 @@ class ExplorationProcessor:
         self._biological_body_ids.clear()
         self._organic_scan_progress.clear()
         self._completed_system_reports.discard(system_address)
+        self._star_only_announced.discard(system_address)
 
         self.database.execute(
             """
@@ -471,6 +473,8 @@ class ExplorationProcessor:
 
         self._completed_system_reports.add(system_address)
 
+        self._announce_star_only_system(system_address, system_name)
+
         self._publish_report(
             system_address,
             system_name,
@@ -844,6 +848,45 @@ class ExplorationProcessor:
         self._publish_report(
             system_address,
             system_name,
+        )
+
+    def _announce_star_only_system(
+        self, system_address: int, system_name: str
+    ) -> None:
+        """Avisa una vez cuando el FSS confirma que no existen planetas."""
+
+        if system_address in self._star_only_announced:
+            return
+        rows = self.database.query(
+            """
+            SELECT expected_body_count, discovered_body_count,
+                   star_count, planet_count, moon_count, all_bodies_found
+            FROM system_exploration WHERE system_address=?
+            """,
+            (system_address,),
+        )
+        if not rows:
+            return
+        data = rows[0]
+        expected = int(data["expected_body_count"] or 0)
+        stars = int(data["star_count"] or 0)
+        planets = int(data["planet_count"] or 0)
+        moons = int(data["moon_count"] or 0)
+        if not data["all_bodies_found"] or expected <= 0:
+            return
+        if stars != expected or planets or moons:
+            return
+        self._star_only_announced.add(system_address)
+        self.event_bus.publish_internal(
+            InternalEvent.VOICE_MESSAGE_READY,
+            VoiceMessageReady(
+                officer="MÍMIR",
+                message=(
+                    f"Comandante, el sistema {system_name} contiene solamente "
+                    "estrellas. No hay planetas para escanear."
+                ),
+                reason="Sistema compuesto solamente por estrellas",
+            ),
         )
 
     @staticmethod

@@ -17,8 +17,89 @@ class FakeDatabase:
     def execute(self, query, parameters=()) -> None:
         self.executions.append((query, parameters))
 
+    def query(self, query, parameters=()):
+        return []
+
 
 class ExplorationProcessorTestCase(unittest.TestCase):
+    def test_mimir_announces_system_with_only_stars_once(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            database = DatabaseManager(Path(folder))
+            database.connect()
+            database.create_tables()
+            event_bus = EventBus()
+            messages = []
+            event_bus.subscribe(InternalEvent.VOICE_MESSAGE_READY, messages.append)
+            processor = ExplorationProcessor(
+                database,
+                CommanderState(current_system="Estelar", system_address=42),
+                event_bus,
+            )
+            processor.handle_fsd_jump({
+                "event": "FSDJump", "StarSystem": "Estelar",
+                "SystemAddress": 42, "timestamp": "inicio",
+            })
+            for body_id in (0, 1):
+                processor.handle_scan({
+                    "event": "Scan", "ScanType": "Detailed",
+                    "StarSystem": "Estelar", "SystemAddress": 42,
+                    "BodyID": body_id, "BodyName": f"Estelar {body_id}",
+                    "StarType": "K", "timestamp": f"scan-{body_id}",
+                })
+            processor.handle_fss_discovery_scan({
+                "event": "FSSDiscoveryScan", "SystemName": "Estelar",
+                "SystemAddress": 42, "BodyCount": 2,
+            })
+            complete = {
+                "event": "FSSAllBodiesFound", "SystemName": "Estelar",
+                "SystemAddress": 42, "Count": 2,
+            }
+            processor.handle_fss_all_bodies_found(complete)
+            processor.handle_fss_all_bodies_found(complete)
+
+            star_only = [
+                message for message in messages
+                if message.reason == "Sistema compuesto solamente por estrellas"
+            ]
+            self.assertEqual(len(star_only), 1)
+            self.assertIn("No hay planetas para escanear", star_only[0].message)
+            database.disconnect()
+
+    def test_mimir_does_not_announce_star_only_when_planet_exists(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            database = DatabaseManager(Path(folder))
+            database.connect()
+            database.create_tables()
+            event_bus = EventBus()
+            messages = []
+            event_bus.subscribe(InternalEvent.VOICE_MESSAGE_READY, messages.append)
+            processor = ExplorationProcessor(
+                database,
+                CommanderState(current_system="Mixto", system_address=7),
+                event_bus,
+            )
+            processor.handle_fsd_jump({
+                "event": "FSDJump", "StarSystem": "Mixto", "SystemAddress": 7,
+            })
+            processor.handle_scan({
+                "event": "Scan", "StarSystem": "Mixto", "SystemAddress": 7,
+                "BodyID": 0, "BodyName": "Mixto A", "StarType": "G",
+            })
+            processor.handle_scan({
+                "event": "Scan", "StarSystem": "Mixto", "SystemAddress": 7,
+                "BodyID": 1, "BodyName": "Mixto A 1", "PlanetClass": "Rocky body",
+            })
+            processor.handle_fss_all_bodies_found({
+                "event": "FSSAllBodiesFound", "SystemName": "Mixto",
+                "SystemAddress": 7, "Count": 2,
+            })
+
+            self.assertFalse(any(
+                message.reason == "Sistema compuesto solamente por estrellas"
+                for message in messages
+            ))
+            database.disconnect()
+
     def test_first_footfall_voice_message_is_confirmed_once(self) -> None:
         with tempfile.TemporaryDirectory() as folder:
             database = DatabaseManager(Path(folder))

@@ -31,6 +31,7 @@ from mimir.event_subscriber import MimirEventSubscriber
 from mimir.officer_handler import MimirOfficerHandler
 from mimir.scientific_officer import ScientificOfficer
 from mimir.surface_navigation import SurfaceNavigationTracker
+from models.events.voice_message_ready import VoiceMessageReady
 from core.processors.jump_advisor import JumpAdvisor
 from core.processors.jump_processor import JumpProcessor
 from core.processors.jump_store import JumpStore
@@ -99,6 +100,7 @@ class CommandCenter:
         self._voice_busy = threading.Event()
         self._voice_questions: queue.Queue[str] = queue.Queue()
         self._route_results: queue.Queue[tuple[object | None, str | None]] = queue.Queue()
+        self._officer_voice_messages: queue.Queue[VoiceMessageReady] = queue.Queue()
         self.wake_listener = WakeWordListener(
             self.config.data_root, self._voice_questions.put
         )
@@ -488,6 +490,10 @@ class CommandCenter:
             InternalEvent.VOICE_MESSAGE_READY,
             mimir_diagnostics.record_voice_message,
         )
+        self.event_bus.subscribe(
+            InternalEvent.VOICE_MESSAGE_READY,
+            self._officer_voice_messages.put,
+        )
 
         self.event_bus.subscribe(
             InternalEvent.ORGANIC_SCAN_UPDATED,
@@ -613,6 +619,14 @@ class CommandCenter:
             if route_plan is not None or route_error is not None:
                 self._finish_voice_route(route_plan, route_error)
 
+            if not self._voice_busy.is_set():
+                try:
+                    officer_message = self._officer_voice_messages.get_nowait()
+                except queue.Empty:
+                    officer_message = None
+                if officer_message is not None:
+                    self._start_officer_voice_message(officer_message)
+
             events = self.watcher.poll()
 
             for event in events:
@@ -723,6 +737,25 @@ class CommandCenter:
             OfficerVoiceService(self.config).speak("ODIN", answer)
         except VoiceServiceError as error:
             print(f"Voz no disponible: {error}\n")
+        finally:
+            self._voice_busy.clear()
+            self.wake_listener.resume()
+
+    def _start_officer_voice_message(self, message: VoiceMessageReady) -> None:
+        self._voice_busy.set()
+        self.wake_listener.paused.set()
+        threading.Thread(
+            target=self._run_officer_voice_message,
+            args=(message,),
+            name=f"{message.officer.lower()}-voice-message",
+            daemon=True,
+        ).start()
+
+    def _run_officer_voice_message(self, message: VoiceMessageReady) -> None:
+        try:
+            OfficerVoiceService(self.config).speak(message.officer, message.message)
+        except VoiceServiceError as error:
+            print(f"Voz de {message.officer} no disponible: {error}\n")
         finally:
             self._voice_busy.clear()
             self.wake_listener.resume()
