@@ -1096,7 +1096,7 @@ class CommandCenter:
 
     def _start_officer_voice_message(self, message: VoiceMessageReady) -> None:
         self._voice_busy.set()
-        self.wake_listener.paused.set()
+        self.wake_listener.pause()
         threading.Thread(
             target=self._run_officer_voice_message,
             args=(message,),

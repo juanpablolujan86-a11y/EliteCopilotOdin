@@ -66,6 +66,7 @@ class WakeWordListener:
         self.stop_event = threading.Event()
         self.armed = threading.Event()
         self.paused = threading.Event()
+        self._pause_condition = threading.Condition()
 
     def arm(self) -> None:
         """F8 hace que la siguiente frase sea una consulta sin exigir 'ODIN'."""
@@ -75,13 +76,15 @@ class WakeWordListener:
     def run(self) -> None:
         waiting_for_question = False
         while not self.stop_event.is_set():
-            if self.paused.is_set():
-                self.stop_event.wait(0.1)
-                continue
+            with self._pause_condition:
+                while self.paused.is_set() and not self.stop_event.is_set():
+                    self._pause_condition.wait()
+            if self.stop_event.is_set():
+                break
             try:
                 audio = self.recorder.record_utterance(
                     self.audio_path,
-                    silence_seconds=1.0 if waiting_for_question else 0.45,
+                    silence_seconds=1.0 if waiting_for_question else 0.25,
                     stop_event=self.stop_event,
                 )
                 if audio is None:
@@ -106,14 +109,22 @@ class WakeWordListener:
             )
             if question is None:
                 if waiting_for_question and not was_waiting:
-                    self.paused.set()
+                    self.pause()
                     self.on_activation()
                 continue
-            self.paused.set()
+            self.pause()
             self.on_question(question)
 
     def stop(self) -> None:
         self.stop_event.set()
+        with self._pause_condition:
+            self._pause_condition.notify_all()
+
+    def pause(self) -> None:
+        with self._pause_condition:
+            self.paused.set()
 
     def resume(self) -> None:
-        self.paused.clear()
+        with self._pause_condition:
+            self.paused.clear()
+            self._pause_condition.notify_all()
