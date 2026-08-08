@@ -38,6 +38,7 @@ class WakeWordListener:
         data_root: Path,
         on_question: Callable[[str], None],
         on_activation: Callable[[], None] | None = None,
+        on_unclear: Callable[[], None] | None = None,
         recorder: MicrophoneRecorder | None = None,
         transcriber: WhisperTranscriber | None = None,
         wake_transcriber: WhisperTranscriber | None = None,
@@ -45,6 +46,7 @@ class WakeWordListener:
         self.audio_path = data_root / "speech" / "wake_command.wav"
         self.on_question = on_question
         self.on_activation = on_activation or (lambda: None)
+        self.on_unclear = on_unclear or (lambda: None)
         self.recorder = recorder or MicrophoneRecorder()
         # La escucha permanente debe competir lo mínimo posible con el juego.
         # Base reconoce órdenes breves con mucha menos carga que Small; los
@@ -96,7 +98,15 @@ class WakeWordListener:
                     if waiting_for_question or self.armed.is_set()
                     else self.wake_transcriber
                 )
-                text = recognizer.transcribe(audio).strip()
+                if recognizer is self.transcriber:
+                    text, confidence = recognizer.transcribe_with_confidence(audio)
+                    if confidence < 0.50:
+                        self.pause()
+                        self.on_unclear()
+                        continue
+                else:
+                    text = recognizer.transcribe(audio)
+                text = text.strip()
             except (
                 MicrophoneError, TranscriptionError, WakeRecognitionError,
                 UnicodeError, OSError,

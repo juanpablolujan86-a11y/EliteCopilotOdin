@@ -1,6 +1,7 @@
 from pathlib import Path
 from types import SimpleNamespace
 import tempfile
+import json
 import unittest
 from unittest.mock import Mock, patch
 
@@ -69,6 +70,39 @@ class SpeechTests(unittest.TestCase):
             root = Path(directory)
             with self.assertRaises(TranscriptionError):
                 WhisperTranscriber(root).transcribe(root / "audio.wav")
+
+    def test_whisper_exposes_average_word_confidence(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            runtime = root / "whisper.cpp" / "Release"
+            runtime.mkdir(parents=True)
+            (runtime / "whisper-cli.exe").touch()
+            models = root / "models"
+            models.mkdir()
+            (models / "ggml-base.bin").touch()
+            audio = root / "command.wav"
+            audio.touch()
+
+            def fake_run(command, **kwargs):
+                payload = {
+                    "transcription": [{
+                        "text": " combustible",
+                        "tokens": [
+                            {"text": " combustible", "p": 0.8},
+                            {"text": "[_EOT_]", "p": 0.99},
+                        ],
+                    }]
+                }
+                Path(command[command.index("-of") + 1] + ".json").write_text(
+                    json.dumps(payload), encoding="utf-8"
+                )
+                return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+            with patch("speech.whisper.subprocess.run", side_effect=fake_run):
+                text, confidence = WhisperTranscriber(root).transcribe_with_confidence(audio)
+
+            self.assertEqual(text, "combustible")
+            self.assertEqual(confidence, 0.8)
 
     def test_conversation_connects_recording_ai_and_voice(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

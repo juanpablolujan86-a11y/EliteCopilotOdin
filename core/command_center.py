@@ -120,6 +120,7 @@ class CommandCenter:
         self._voice_busy = threading.Event()
         self._voice_questions: queue.Queue[str] = queue.Queue()
         self._wake_activations: queue.Queue[bool] = queue.Queue()
+        self._unclear_voice_commands: queue.Queue[bool] = queue.Queue()
         self._wake_acknowledgement_index = 0
         self._wake_acknowledgement_lock = threading.Lock()
         self._route_acknowledgement_done = threading.Event()
@@ -136,6 +137,7 @@ class CommandCenter:
             self.config.data_root,
             self._voice_questions.put,
             lambda: self._wake_activations.put(True),
+            lambda: self._unclear_voice_commands.put(True),
         )
 
     def start(self) -> None:
@@ -722,6 +724,17 @@ class CommandCenter:
                     wake_activated = False
                 if wake_activated:
                     self._start_wake_acknowledgement()
+
+            if not self._voice_busy.is_set():
+                try:
+                    unclear_command = self._unclear_voice_commands.get_nowait()
+                except queue.Empty:
+                    unclear_command = False
+                if unclear_command:
+                    self.wake_listener.arm()
+                    self._start_fixed_voice_response(
+                        "No entendí la orden. Repítala, comandante."
+                    )
 
             if not self._voice_busy.is_set():
                 try:

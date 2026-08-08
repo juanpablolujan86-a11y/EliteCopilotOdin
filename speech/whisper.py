@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import json
 import subprocess
 import uuid
 from pathlib import Path
@@ -76,3 +77,48 @@ class WhisperTranscriber:
         if len(meaningful) < 3:
             raise TranscriptionError("No se detectó una frase clara.")
         return text
+
+    def transcribe_with_confidence(self, audio: Path) -> tuple[str, float]:
+        """Transcribe una orden y devuelve la confianza media de sus palabras."""
+
+        if not self.executable.exists() or not self.model.exists():
+            raise TranscriptionError("Falta instalar el motor local de reconocimiento de voz.")
+        output_base = audio.parent / f"{audio.stem}-{uuid.uuid4().hex}"
+        command = [
+            str(self.executable), "-m", str(self.model), "-f", str(audio),
+            "-l", "es", "-nt", "-ojf", "-of", str(output_base),
+            "-t", str(self.threads), "-ng", "-sns", "--prompt",
+            "ODIN, MÍMIR, HEIMDALL, Elite Dangerous, Colonia, "
+            "Stratum Tectonicas, exobiología, ruta de neutrones",
+        ]
+        try:
+            result = subprocess.run(
+                command, capture_output=True, text=True, encoding="utf-8",
+                errors="replace", timeout=120, check=False,
+                creationflags=getattr(subprocess, "BELOW_NORMAL_PRIORITY_CLASS", 0),
+            )
+        except (OSError, subprocess.TimeoutExpired) as error:
+            raise TranscriptionError(f"Falló el reconocimiento de voz: {error}") from error
+        transcript = output_base.with_suffix(".json")
+        if result.returncode != 0 or not transcript.exists():
+            detail = (result.stderr or result.stdout).strip()
+            raise TranscriptionError(detail or "Whisper no pudo transcribir el audio.")
+        try:
+            payload = json.loads(transcript.read_text(encoding="utf-8-sig"))
+            segments = payload.get("transcription", [])
+            text = "".join(str(segment.get("text", "")) for segment in segments).strip()
+            probabilities = [
+                float(token.get("p", 0.0))
+                for segment in segments
+                for token in segment.get("tokens", [])
+                if not str(token.get("text", "")).startswith("[")
+            ]
+        except (OSError, UnicodeError, ValueError, TypeError) as error:
+            raise TranscriptionError("Whisper devolvió una confianza inválida.") from error
+        finally:
+            transcript.unlink(missing_ok=True)
+        meaningful = "".join(character for character in text if character.isalnum())
+        if len(meaningful) < 3:
+            raise TranscriptionError("No se detectó una frase clara.")
+        confidence = sum(probabilities) / len(probabilities) if probabilities else 0.0
+        return text, confidence
