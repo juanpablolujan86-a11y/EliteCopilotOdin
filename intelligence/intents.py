@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from dataclasses import dataclass
 
 
@@ -15,11 +16,20 @@ class NeutronRouteIntent:
 class HomeRouteIntent:
     pass
 
+def _normalize_voice_text(text: str) -> str:
+    folded = unicodedata.normalize("NFKD", text.casefold())
+    plain = "".join(char for char in folded if not unicodedata.combining(char))
+    plain = re.sub(r"\ba\s*cass?a\b|\bacass?a\b", "a casa", plain)
+    plain = re.sub(r"\b(?:jevame|yevame)\b", "llevame", plain)
+    return " ".join(re.findall(r"[a-z0-9]+", plain))
+
 
 def parse_home_route_intent(text: str) -> HomeRouteIntent | None:
-    lowered = text.casefold()
+    lowered = _normalize_voice_text(text)
     home = re.search(r"\b(?:casa|base)\b", lowered)
-    movement = re.search(r"\b(?:vamos|ir|viaj|ruta|llev|regres|volv)", lowered)
+    movement = re.search(
+        r"\b(?:vamos|vamo|ir|viaj|ruta|llev|regres|volv|dorme)", lowered
+    )
     return HomeRouteIntent() if home and movement else None
 
 

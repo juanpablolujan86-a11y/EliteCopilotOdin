@@ -9,6 +9,10 @@ class VoiceIntentTests(unittest.TestCase):
         self.assertIsNotNone(parse_home_route_intent("ODIN vamos a casa"))
         self.assertIsNotNone(parse_home_route_intent("creá una ruta a la base"))
         self.assertIsNone(parse_home_route_intent("cuántas naves hay en la base"))
+        self.assertIsNotNone(parse_home_route_intent("Jevame, Acasa"))
+        self.assertIsNotNone(parse_home_route_intent("Dörme Acassa"))
+        self.assertIsNotNone(parse_home_route_intent("volvamos a casa"))
+        self.assertIsNone(parse_home_route_intent("qué biologías hay cerca de casa"))
 
     def test_extracts_destination_after_neutron_route(self) -> None:
         intent = parse_neutron_route_intent(
