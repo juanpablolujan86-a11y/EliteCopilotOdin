@@ -59,7 +59,7 @@ class OfficerVoiceServiceTests(unittest.TestCase):
             service.speak("ODIN", "Prueba")
 
             edge_client.synthesize.assert_called_once_with(
-                "Prueba", "es-AR-TomasNeural", rate=0, volume=100
+                "Prueba", "es-US-AlonsoNeural", rate=0, volume=100
             )
             player.play.assert_called_once_with(b"edge-mp3")
 

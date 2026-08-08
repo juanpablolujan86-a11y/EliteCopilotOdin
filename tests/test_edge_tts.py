@@ -16,7 +16,7 @@ class EdgeTtsClientTests(unittest.TestCase):
         communicate.return_value = communication
         audio = EdgeTtsClient().synthesize("Prueba", EDGE_LATIN_VOICES["ODIN"], rate=1)
         self.assertEqual(audio, b"firstsecond")
-        self.assertEqual(communicate.call_args.kwargs["voice"], "es-AR-TomasNeural")
+        self.assertEqual(communicate.call_args.kwargs["voice"], "es-US-AlonsoNeural")
         self.assertEqual(communicate.call_args.kwargs["rate"], "+10%")
 
     @patch("voice.edge.edge_tts.Communicate")

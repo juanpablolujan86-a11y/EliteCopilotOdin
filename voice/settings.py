@@ -20,7 +20,7 @@ class VoiceSettings:
     enabled: bool = True
     fallback_to_windows: bool = True
     officers: dict[str, OfficerVoice] = field(default_factory=lambda: {
-        "ODIN": OfficerVoice(provider="edge", voice="es-AR-TomasNeural"),
+        "ODIN": OfficerVoice(provider="edge", voice="es-US-AlonsoNeural"),
         "MÍMIR": OfficerVoice(provider="edge", voice="es-MX-DaliaNeural"),
         "HEIMDALL": OfficerVoice(provider="edge", voice="es-MX-JorgeNeural"),
     })

@@ -9,6 +9,7 @@ from typing import Callable
 
 from speech.recorder import MicrophoneError, MicrophoneRecorder
 from speech.whisper import TranscriptionError, WhisperTranscriber
+from speech.wake_recognizer import VoskWakeRecognizer, WakeRecognitionError
 
 
 def interpret_wake_phrase(
@@ -39,6 +40,7 @@ class WakeWordListener:
         on_activation: Callable[[], None] | None = None,
         recorder: MicrophoneRecorder | None = None,
         transcriber: WhisperTranscriber | None = None,
+        wake_transcriber: WhisperTranscriber | None = None,
     ) -> None:
         self.audio_path = data_root / "speech" / "wake_command.wav"
         self.on_question = on_question
@@ -50,6 +52,17 @@ class WakeWordListener:
         self.transcriber = transcriber or WhisperTranscriber(
             model_preference="base", threads=4
         )
+        if wake_transcriber is not None:
+            self.wake_transcriber = wake_transcriber
+        elif transcriber is not None:
+            self.wake_transcriber = self.transcriber
+        else:
+            try:
+                self.wake_transcriber = VoskWakeRecognizer(
+                    data_root / "speech" / "models" / "vosk-model-small-es-0.42"
+                )
+            except WakeRecognitionError:
+                self.wake_transcriber = self.transcriber
         self.stop_event = threading.Event()
         self.armed = threading.Event()
         self.paused = threading.Event()
@@ -73,8 +86,16 @@ class WakeWordListener:
                 )
                 if audio is None:
                     continue
-                text = self.transcriber.transcribe(audio).strip()
-            except (MicrophoneError, TranscriptionError, UnicodeError, OSError):
+                recognizer = (
+                    self.transcriber
+                    if waiting_for_question or self.armed.is_set()
+                    else self.wake_transcriber
+                )
+                text = recognizer.transcribe(audio).strip()
+            except (
+                MicrophoneError, TranscriptionError, WakeRecognitionError,
+                UnicodeError, OSError,
+            ):
                 continue
 
             forced = self.armed.is_set()
