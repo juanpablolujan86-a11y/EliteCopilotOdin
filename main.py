@@ -8,6 +8,7 @@ from intelligence.assistant import OdinLocalAssistant
 from intelligence.ollama import OllamaError
 from voice.configurator import run_voice_configuration
 from voice.key_file import import_key_file
+from voice.service import OfficerVoiceService, VoiceServiceError
 
 
 def main() -> None:
@@ -29,6 +30,27 @@ def main() -> None:
             print(OdinLocalAssistant().ask(question).text)
         except (OllamaError, ValueError) as error:
             print(f"IA local no disponible: {error}")
+        return
+
+    if "--test-voice" in sys.argv:
+        index = sys.argv.index("--test-voice")
+        officer = sys.argv[index + 1] if len(sys.argv) > index + 1 else "ODIN"
+        text = " ".join(sys.argv[index + 2:]).strip() or "Sistemas de voz operativos, comandante."
+        try:
+            OfficerVoiceService(config).speak(officer, text)
+        except VoiceServiceError as error:
+            print(f"Voz no disponible: {error}")
+        return
+
+    if "--ask-odin" in sys.argv:
+        index = sys.argv.index("--ask-odin")
+        question = " ".join(sys.argv[index + 1:]).strip()
+        try:
+            answer = OdinLocalAssistant().ask(question).text
+            print(answer)
+            OfficerVoiceService(config).speak("ODIN", answer)
+        except (OllamaError, ValueError, VoiceServiceError) as error:
+            print(f"ODIN no pudo responder: {error}")
         return
 
     instance = SingleInstance()

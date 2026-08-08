@@ -75,6 +75,13 @@ Cada comandante utiliza su propia cuenta de ElevenLabs. El archivo
 acceso a las voces, migra la clave al Administrador de credenciales del usuario
 de Windows y elimina el secreto del TXT. El configurador muestra las voces
 disponibles en esa cuenta y permite asignar un `voice_id` diferente por oficial.
+La selección interactiva de ElevenLabs muestra solamente voces verificadas en
+español latino. Si el servicio falla o no tiene cuota, ODIN recurre
+automáticamente a la síntesis local de Windows.
+
+```powershell
+python main.py --test-voice ODIN "Sistemas operativos, comandante."
+```
 
 ## Inteligencia local sin créditos
 
@@ -87,13 +94,6 @@ python main.py --test-ai "¿Cuál es tu función?"
 
 El cliente usa solamente `127.0.0.1:11434`, evita mostrar razonamiento interno
 y falla de forma segura si Ollama o el modelo todavía no están disponibles.
-
-Cada usuario utiliza su propia cuenta: puede copiar
-`ELEVENLABS_API_KEY.example.txt` como `ELEVENLABS_API_KEY.txt`, pegar allí su
-API key personal e iniciar ODIN. La clave se valida, se migra al Administrador
-de credenciales de ese usuario de Windows y se elimina del TXT. Desde el
-configurador se pueden consultar las voces disponibles en esa cuenta y asignar
-un `voice_id` diferente a cada oficial.
 
 ## Balance de expedición
 

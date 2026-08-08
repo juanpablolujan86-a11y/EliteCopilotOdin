@@ -69,6 +69,19 @@ def run_voice_configuration(config: Config | None = None) -> None:
         repository.save(settings)
         print("Voces locales recomendadas guardadas.")
     elif option == "4":
+        eleven_voices = ()
+        secret = credentials.get()
+        if secret:
+            try:
+                eleven_voices = tuple(
+                    voice
+                    for voice in ElevenLabsClient().list_voices(secret)
+                    if voice.is_latin_spanish
+                )
+            except ElevenLabsError:
+                pass
+            finally:
+                secret = ""
         for officer, assignment in settings.officers.items():
             provider = input(
                 f"Proveedor de {officer} [windows/elevenlabs] "
@@ -79,11 +92,19 @@ def run_voice_configuration(config: Config | None = None) -> None:
                     print(f"Proveedor inválido para {officer}; se conserva el anterior.")
                     continue
                 assignment.provider = provider
-            voice = input(
-                f"Voz o voice_id de {officer} ({assignment.voice}): "
-            ).strip()
-            if voice:
-                assignment.voice = voice
+            if assignment.provider == "elevenlabs" and eleven_voices:
+                print(f"\nVoces ElevenLabs verificadas en español latino para {officer}:")
+                for number, voice in enumerate(eleven_voices, 1):
+                    print(f"  {number}. {voice.name}")
+                selection = input("Número de voz (Enter conserva la actual): ").strip()
+                if selection.isdigit() and 1 <= int(selection) <= len(eleven_voices):
+                    assignment.voice = eleven_voices[int(selection) - 1].voice_id
+            else:
+                voice = input(
+                    f"Voz de Windows de {officer} ({assignment.voice}): "
+                ).strip()
+                if voice:
+                    assignment.voice = voice
         repository.save(settings)
         print("Asignaciones guardadas sin almacenar secretos.")
     elif option == "5":

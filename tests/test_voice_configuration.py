@@ -65,8 +65,18 @@ class ElevenLabsClientTests(unittest.TestCase):
         response = Mock(status_code=200)
         response.json.return_value = {
             "voices": [
-                {"voice_id": "voice-b", "name": "Beta", "category": "premade"},
-                {"voice_id": "voice-a", "name": "Alfa", "category": "cloned"},
+                {
+                    "voice_id": "voice-b",
+                    "name": "Beta",
+                    "category": "premade",
+                    "verified_languages": [{"language": "en", "accent": "american"}],
+                },
+                {
+                    "voice_id": "voice-a",
+                    "name": "Alfa",
+                    "category": "cloned",
+                    "verified_languages": [{"language": "es", "accent": "latin american"}],
+                },
             ]
         }
         get.return_value = response
@@ -75,6 +85,8 @@ class ElevenLabsClientTests(unittest.TestCase):
 
         self.assertEqual([voice.name for voice in voices], ["Alfa", "Beta"])
         self.assertEqual(voices[0].voice_id, "voice-a")
+        self.assertTrue(voices[0].is_latin_spanish)
+        self.assertFalse(voices[1].is_latin_spanish)
 
 
 class KeyFileImportTests(unittest.TestCase):
