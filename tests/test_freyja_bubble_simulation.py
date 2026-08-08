@@ -1,0 +1,155 @@
+"""Escenarios sintéticos de comercio dentro de la Burbuja."""
+
+from __future__ import annotations
+
+import tempfile
+import unittest
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+from core.database import DatabaseManager
+from freyja.market_source import MarketCache
+from freyja.planner import MarketOpportunity, QuickRouteOptimizer, TradeProfile
+
+
+class FreyjaBubbleSimulationTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.database = DatabaseManager(Path(self.temp.name))
+        self.database.connect()
+        self.database.create_tables()
+        self.cache = MarketCache(self.database)
+        self.now = datetime.now(timezone.utc).isoformat()
+
+    def tearDown(self) -> None:
+        self.database.disconnect()
+        self.temp.cleanup()
+
+    def opportunity(
+        self,
+        *,
+        commodity: str = "oro",
+        buy_price: int = 10_000,
+        sell_price: int = 20_000,
+        supply: int = 1_000,
+        demand: int = 1_000,
+        jumps: int = 2,
+        distance_ls: float = 500,
+        updated_at: str | None = None,
+    ) -> MarketOpportunity:
+        return MarketOpportunity(
+            commodity,
+            "Sistema Compra",
+            "Puerto Compra",
+            "Sistema Venta",
+            "Puerto Venta",
+            buy_price,
+            sell_price,
+            supply,
+            demand,
+            jumps,
+            distance_ls,
+            updated_at or self.now,
+        )
+
+    def test_small_ship_is_limited_by_available_capital(self) -> None:
+        profile = TradeProfile("Sol", 100_000, 50_000, 32, 0, 25, (0, 0, 0))
+
+        plan = QuickRouteOptimizer().choose(profile, [self.opportunity()])
+
+        self.assertEqual(plan.units, 5)
+        self.assertEqual(plan.investment, 50_000)
+        self.assertEqual(plan.estimated_profit, 50_000)
+
+    def test_large_freighter_never_exceeds_observed_demand(self) -> None:
+        profile = TradeProfile("Sol", 100_000_000, 5_000_000, 720, 20, 30, (0, 0, 0))
+
+        plan = QuickRouteOptimizer().choose(
+            profile,
+            [self.opportunity(supply=900, demand=180)],
+        )
+
+        self.assertEqual(profile.cargo_free, 700)
+        self.assertEqual(plan.units, 180)
+
+    def test_stale_prices_are_rejected(self) -> None:
+        stale = (datetime.now(timezone.utc) - timedelta(hours=12)).isoformat()
+        profile = TradeProfile("Sol", 10_000_000, 500_000, 100, 0, 30, (0, 0, 0))
+
+        plan = QuickRouteOptimizer().choose(
+            profile,
+            [self.opportunity(updated_at=stale)],
+            max_age_hours=8,
+        )
+
+        self.assertIsNone(plan)
+
+    def test_near_route_beats_slow_high_margin_route_per_minute(self) -> None:
+        profile = TradeProfile("Sol", 10_000_000, 500_000, 100, 0, 30, (0, 0, 0))
+        nearby = self.opportunity(
+            commodity="plata", sell_price=18_000, jumps=1, distance_ls=300
+        )
+        slow = self.opportunity(
+            commodity="paladio", sell_price=30_000, jumps=12, distance_ls=250_000
+        )
+
+        plan = QuickRouteOptimizer().choose(profile, [slow, nearby])
+
+        self.assertEqual(plan.opportunity.commodity, "plata")
+
+    def test_full_cargo_hold_produces_no_trade_plan(self) -> None:
+        profile = TradeProfile("Sol", 10_000_000, 500_000, 100, 100, 30, (0, 0, 0))
+
+        self.assertIsNone(
+            QuickRouteOptimizer().choose(profile, [self.opportunity()])
+        )
+
+    def test_market_cache_estimates_bubble_jumps_from_ship_range(self) -> None:
+        self.cache.ingest_spansh_station({
+            "market_id": 101,
+            "system_name": "Burbuja A",
+            "name": "Estación Alfa",
+            "system_x": 0,
+            "system_y": 0,
+            "system_z": 0,
+            "distance_to_arrival": 250,
+            "market_updated_at": self.now,
+            "market": [{
+                "commodity": "silver", "buy_price": 5_000,
+                "sell_price": 4_000, "supply": 500, "demand": 0,
+            }],
+        })
+        self.cache.ingest_spansh_station({
+            "market_id": 202,
+            "system_name": "Burbuja B",
+            "name": "Estación Beta",
+            "system_x": 45,
+            "system_y": 0,
+            "system_z": 0,
+            "distance_to_arrival": 400,
+            "market_updated_at": self.now,
+            "market": [{
+                "commodity": "silver", "buy_price": 0,
+                "sell_price": 12_000, "supply": 0, "demand": 200,
+            }],
+        })
+        profile = TradeProfile(
+            "Burbuja A", 5_000_000, 250_000, 64, 0, 20, (0, 0, 0)
+        )
+
+        opportunities = self.cache.opportunities(profile)
+
+        self.assertEqual(len(opportunities), 1)
+        self.assertEqual(opportunities[0].jumps, 3)
+        self.assertEqual(opportunities[0].station_distance_ls, 650)
+
+    def test_missing_position_or_jump_range_fails_conservatively(self) -> None:
+        no_position = TradeProfile("Sol", 1_000_000, 50_000, 32, 0, 20, None)
+        no_range = TradeProfile("Sol", 1_000_000, 50_000, 32, 0, 0, (0, 0, 0))
+
+        self.assertEqual(self.cache.opportunities(no_position), [])
+        self.assertEqual(self.cache.opportunities(no_range), [])
+
+
+if __name__ == "__main__":
+    unittest.main()
