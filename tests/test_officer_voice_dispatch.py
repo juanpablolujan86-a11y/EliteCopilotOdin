@@ -16,6 +16,53 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
         service.return_value.speak.assert_called_once_with("HEIMDALL","Ruta calculada.")
         center.wake_listener.resume.assert_called_once()
 
+    def test_freyja_trade_request_opens_four_option_menu_and_arms_reply(self):
+        center=CommandCenter.__new__(CommandCenter)
+        center._pending_freyja_trade_menu=False
+        center.commander_state=SimpleNamespace(fid="",commander_name="")
+        center._last_voice_question=""
+        center._start_fixed_voice_response=Mock()
+
+        center._start_voice_response("Freyja, quiero comerciar")
+
+        self.assertTrue(center._pending_freyja_trade_menu)
+        answer=center._start_fixed_voice_response.call_args.args[0]
+        self.assertIn("cuatro modelos",answer)
+        self.assertIn("ruta r\u00e1pida",answer)
+        self.assertIn("tres estaciones",answer)
+        self.assertIn("treinta saltos",answer)
+        self.assertIn("Powerplay",answer)
+        self.assertEqual(
+            center._start_fixed_voice_response.call_args.kwargs,
+            {"officer":"FREYJA","arm_after":True},
+        )
+
+    def test_freyja_pending_menu_starts_selected_calculation_without_wake_word(self):
+        center=CommandCenter.__new__(CommandCenter)
+        center._pending_freyja_trade_menu=True
+        center._start_freyja_trade_calculation=Mock()
+
+        center._start_voice_response("la cuarta, Powerplay")
+
+        self.assertFalse(center._pending_freyja_trade_menu)
+        center._start_freyja_trade_calculation.assert_called_once_with("powerplay")
+
+    def test_freyja_menu_understands_all_four_spoken_choices(self):
+        self.assertEqual(CommandCenter._freyja_trade_selection("uno"),"quick")
+        self.assertEqual(CommandCenter._freyja_trade_selection("circuito"),"three_station")
+        self.assertEqual(CommandCenter._freyja_trade_selection("treinta saltos"),"expedition")
+        self.assertEqual(CommandCenter._freyja_trade_selection("m\u00e9ritos"),"powerplay")
+
+    def test_fixed_response_can_arm_direct_follow_up(self):
+        center=CommandCenter.__new__(CommandCenter)
+        center.config=SimpleNamespace()
+        center._voice_busy=threading.Event(); center._voice_busy.set()
+        center.wake_listener=Mock()
+        with patch("core.command_center.OfficerVoiceService"):
+            center._run_fixed_voice_response("FREYJA","Elija una opci\u00f3n.",arm_after=True)
+        center.wake_listener.arm.assert_called_once()
+        center.wake_listener.resume.assert_not_called()
+
     def test_wake_acknowledgement_uses_odin_and_resumes_listener(self):
         center=CommandCenter.__new__(CommandCenter)
         center.config=SimpleNamespace()

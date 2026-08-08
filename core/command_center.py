@@ -45,7 +45,13 @@ from ui.console_presenter import ConsolePresenter
 from core.version import CAPABILITY, VERSION
 from core.diagnostics import FreyjaDiagnostics, HeimdallDiagnostics, MimirDiagnostics, OdinDiagnostics
 from freyja.ledger import TradeLedger
-from freyja.planner import TradeProfileBuilder
+from freyja.planner import (
+    PowerplayTradeOptimizer,
+    QuickRouteOptimizer,
+    ThreeStationOptimizer,
+    TradeExpeditionOptimizer,
+    TradeProfileBuilder,
+)
 from freyja.market_source import MarketCache
 from heimdall.bindings import BindingAudit, BindingCustodian
 from heimdall.cockpit import CockpitAdvisor, parse_cockpit_intent
@@ -116,6 +122,8 @@ class CommandCenter:
         self.exploration_processor: ExplorationProcessor | None = None
         self.expedition_ledger: ExpeditionLedger | None = None
         self.trade_profile = None
+        self.market_cache: MarketCache | None = None
+        self._pending_freyja_trade_menu = False
         self.voice_hotkey = WindowsHotkey()
         self._voice_busy = threading.Event()
         self._voice_questions: queue.Queue[str] = queue.Queue()
@@ -395,6 +403,7 @@ class CommandCenter:
         for event_name in TradeLedger.EVENTS:
             self.event_bus.subscribe(event_name, freyja_ledger.handle)
         market_cache = MarketCache(self.database)
+        self.market_cache = market_cache
         self.event_bus.subscribe(
             "Market", lambda _event: market_cache.ingest_market_file(self.config.market_file)
         )
@@ -815,6 +824,18 @@ class CommandCenter:
 
     def _start_voice_response(self, question: str) -> None:
         """Responde en segundo plano sin detener el seguimiento del Journal."""
+        if self._pending_freyja_trade_menu:
+            selection = self._freyja_trade_selection(question)
+            if selection is not None:
+                self._pending_freyja_trade_menu = False
+                self._start_freyja_trade_calculation(selection)
+                return
+            self._start_fixed_voice_response(
+                "No reconoc\u00ed la modalidad. Eleg\u00ed uno: ruta r\u00e1pida; dos: circuito de tres estaciones; tres: expedici\u00f3n de hasta treinta saltos; o cuatro: comercio Powerplay.",
+                officer="FREYJA",
+                arm_after=True,
+            )
+            return
         if not self._is_credible_voice_question(question):
             self.wake_listener.arm()
             self._start_fixed_voice_response(
@@ -824,6 +845,15 @@ class CommandCenter:
         commander = self.commander_state.fid or self.commander_state.commander_name or "default"
         lowered = question.casefold().strip()
         previous_question = self._last_voice_question
+
+        if self._is_freyja_trade_request(question):
+            self._pending_freyja_trade_menu = True
+            self._start_fixed_voice_response(
+                "Tengo cuatro modelos disponibles para usted, comandante. Uno: ruta r\u00e1pida, para maximizar ganancias por minuto. Dos: circuito de tres estaciones, comerciando tres productos diferentes. Tres: expedici\u00f3n comercial de hasta treinta saltos, para maximizar el ingreso total. Cuatro: comercio Powerplay, para buscar cr\u00e9ditos y m\u00e9ritos de su potencia. Indique el n\u00famero o el nombre de la modalidad.",
+                officer="FREYJA",
+                arm_after=True,
+            )
+            return
 
         cockpit_intent = parse_cockpit_intent(question)
         if cockpit_intent is not None:
@@ -1123,11 +1153,12 @@ class CommandCenter:
         *,
         officer: str = "ODIN",
         wait_for: threading.Event | None = None,
+        arm_after: bool = False,
     ) -> None:
         self._voice_busy.set()
         threading.Thread(
             target=self._run_fixed_voice_response,
-            args=(officer, answer, wait_for),
+            args=(officer, answer, wait_for, arm_after),
             name=f"{officer.lower()}-fixed-voice-response",
             daemon=True,
         ).start()
@@ -1137,6 +1168,7 @@ class CommandCenter:
         officer: str,
         answer: str,
         wait_for: threading.Event | None = None,
+        arm_after: bool = False,
     ) -> None:
         try:
             if wait_for is not None:
@@ -1147,7 +1179,84 @@ class CommandCenter:
             print(f"Voz de {officer} no disponible: {error}\n")
         finally:
             self._voice_busy.clear()
-            self.wake_listener.resume()
+            if arm_after:
+                self.wake_listener.arm()
+            else:
+                self.wake_listener.resume()
+
+    @staticmethod
+    def _is_freyja_trade_request(text: str) -> bool:
+        lowered = text.casefold()
+        return "comerci" in lowered and (
+            "freyja" in lowered or "freya" in lowered or "quiero" in lowered
+        )
+
+    @staticmethod
+    def _freyja_trade_selection(text: str) -> str | None:
+        lowered = text.casefold()
+        if re.search(r"\b(?:1|uno|primera|rapida|r\u00e1pida)\b", lowered):
+            return "quick"
+        if re.search(r"\b(?:2|dos|segunda|tres estaciones|circuito)\b", lowered):
+            return "three_station"
+        if re.search(r"\b(?:3|tres|tercera|treinta saltos|expedicion|expedici\u00f3n)\b", lowered):
+            return "expedition"
+        if re.search(r"\b(?:4|cuatro|cuarta|powerplay|meritos|m\u00e9ritos)\b", lowered):
+            return "powerplay"
+        return None
+
+    def _start_freyja_trade_calculation(self, selection: str) -> None:
+        if self.navigation_manager is None or self.market_cache is None:
+            self._start_fixed_voice_response(
+                "El planificador comercial todav\u00eda no tiene disponible el estado de navegaci\u00f3n.",
+                officer="FREYJA",
+            )
+            return
+        self.trade_profile = TradeProfileBuilder.build(
+            self.commander_state,
+            self.navigation_manager.context,
+            self.config.cargo_file,
+        )
+        opportunities = self.market_cache.opportunities(self.trade_profile)
+        if selection == "quick":
+            plan = QuickRouteOptimizer().choose(self.trade_profile, opportunities)
+        elif selection == "three_station":
+            plan = ThreeStationOptimizer().choose(self.trade_profile, opportunities)
+        elif selection == "expedition":
+            plan = TradeExpeditionOptimizer().choose(
+                self.trade_profile, opportunities, max_jumps=30
+            )
+        else:
+            if not self.trade_profile.powerplay_power:
+                self._start_fixed_voice_response(
+                    "No encuentro una potencia Powerplay afiliada en los datos del comandante.",
+                    officer="FREYJA",
+                )
+                return
+            plan = PowerplayTradeOptimizer().choose(
+                self.trade_profile, opportunities
+            )
+        if plan is None:
+            self._start_fixed_voice_response(
+                "No encontr\u00e9 una operaci\u00f3n factible con los mercados actualizados disponibles. Necesito recibir m\u00e1s datos de mercado dentro de la Burbuja.",
+                officer="FREYJA",
+            )
+            return
+        if selection == "quick":
+            answer = self._quick_trade_voice_summary(plan)
+        else:
+            answer = plan.summary()
+        self._start_fixed_voice_response(answer, officer="FREYJA")
+
+    @staticmethod
+    def _quick_trade_voice_summary(plan) -> str:
+        item = plan.opportunity
+        return (
+            f"Compre {plan.units} toneladas de {item.commodity} en "
+            f"{item.buy_station}, sistema {item.buy_system}, y v\u00e9ndalas en "
+            f"{item.sell_station}, sistema {item.sell_system}. La ganancia "
+            f"estimada es de {plan.estimated_profit:,} cr\u00e9ditos en "
+            f"{item.jumps} saltos."
+        )
 
     def _start_officer_voice_message(self, message: VoiceMessageReady) -> None:
         self._voice_busy.set()
