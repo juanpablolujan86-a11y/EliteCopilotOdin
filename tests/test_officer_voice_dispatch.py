@@ -76,7 +76,7 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
         with patch("core.command_center.OfficerVoiceService"):
             center._run_fixed_voice_response("FREYJA","Elija una opci\u00f3n.",arm_after=True)
         center.wake_listener.arm.assert_called_once()
-        center.wake_listener.resume.assert_not_called()
+        center.wake_listener.resume.assert_called_once()
 
     def test_wake_acknowledgement_uses_odin_and_resumes_listener(self):
         center=CommandCenter.__new__(CommandCenter)

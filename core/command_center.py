@@ -1181,8 +1181,7 @@ class CommandCenter:
             self._voice_busy.clear()
             if arm_after:
                 self.wake_listener.arm()
-            else:
-                self.wake_listener.resume()
+            self.wake_listener.resume()
 
     @staticmethod
     def _is_freyja_trade_request(text: str) -> bool:
