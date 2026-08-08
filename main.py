@@ -6,6 +6,9 @@ from core.diagnostics import configure_diagnostics, log_fatal_error
 from core.single_instance import SingleInstance
 from intelligence.assistant import OdinLocalAssistant
 from intelligence.ollama import OllamaError
+from speech.conversation import VoiceConversation
+from speech.recorder import MicrophoneError
+from speech.whisper import TranscriptionError
 from voice.configurator import run_voice_configuration
 from voice.key_file import import_key_file
 from voice.service import OfficerVoiceService, VoiceServiceError
@@ -51,6 +54,18 @@ def main() -> None:
             OfficerVoiceService(config).speak("ODIN", answer)
         except (OllamaError, ValueError, VoiceServiceError) as error:
             print(f"ODIN no pudo responder: {error}")
+        return
+
+    if "--talk" in sys.argv:
+        index = sys.argv.index("--talk")
+        try:
+            seconds = float(sys.argv[index + 1]) if len(sys.argv) > index + 1 else 7.0
+            print(f"Escuchando durante {seconds:g} segundos. Hablá ahora...")
+            question, answer = VoiceConversation(config).listen_once(seconds)
+            print(f"Vos: {question}")
+            print(f"ODIN: {answer}")
+        except (ValueError, MicrophoneError, TranscriptionError, OllamaError, VoiceServiceError) as error:
+            print(f"Conversación por voz no disponible: {error}")
         return
 
     instance = SingleInstance()

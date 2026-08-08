@@ -98,6 +98,21 @@ la computadora del comandante. Una prueba directa puede realizarse con:
 python main.py --test-ai "¿Cuál es tu función?"
 ```
 
+## Conversación por voz
+
+El modo inicial de pulsar para hablar graba una ventana breve desde el
+micrófono predeterminado, transcribe localmente en español con whisper.cpp,
+consulta a Ollama y reproduce la respuesta con la voz configurada para ODIN:
+
+```powershell
+python main.py --talk 7
+```
+
+El número indica los segundos de escucha. El audio y la transcripción no se
+envían a servicios externos; Edge TTS sólo recibe el texto final que ODIN debe
+pronunciar. Los fragmentos demasiado breves se descartan para evitar respuestas
+activadas por ruido ambiente.
+
 El cliente usa solamente `127.0.0.1:11434`, evita mostrar razonamiento interno
 y falla de forma segura si Ollama o el modelo todavía no están disponibles.
 
