@@ -26,5 +26,11 @@ class EDDNVoiceStatusTests(unittest.TestCase):
         self.assertIn("transmisión está desactivada",
                       CommandCenter._eddn_voice_summary(empty,True,False))
 
+    def test_startup_status_makes_network_mode_explicit(self):
+        self.assertIn("desactivado",CommandCenter._eddn_startup_status(False,False,True))
+        self.assertIn("sin transmisión",CommandCenter._eddn_startup_status(True,False,True))
+        self.assertIn("pruebas",CommandCenter._eddn_startup_status(True,True,True))
+        self.assertIn("pública activa",CommandCenter._eddn_startup_status(True,True,False))
+
 
 if __name__=="__main__": unittest.main()

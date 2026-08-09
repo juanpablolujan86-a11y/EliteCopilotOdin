@@ -190,6 +190,11 @@ class CommandCenter:
                     self.config.data_root
                 )
                 self.eddn_delivery_service.start()
+        print(self._eddn_startup_status(
+            self.config.eddn_capture_enabled,
+            self.config.eddn_upload_enabled,
+            self.config.eddn_test_mode,
+        ))
 
         self._initialize_heimdall()
 
@@ -1380,6 +1385,20 @@ class CommandCenter:
             r"\b(?:estado|funciona|activo|activa|transmisi[oó]n|env[ií]os?|datos)\b",
             lowered,
         ))
+
+    @staticmethod
+    def _eddn_startup_status(
+        capture_enabled: bool, upload_enabled: bool, test_mode: bool
+    ) -> str:
+        if not capture_enabled:
+            state = "desactivado"
+        elif not upload_enabled:
+            state = "captura local, sin transmisión"
+        elif test_mode:
+            state = "transmisión de pruebas"
+        else:
+            state = "transmisión pública activa"
+        return f"EDDN                  : {state}"
 
     @staticmethod
     def _eddn_voice_summary(
