@@ -59,14 +59,22 @@
 
 ## Sprint 4 - Oficial Comercial
 
-- [ ] FREYJA: libro comercial local y carga actual
-- [ ] Mercado comunitario con oferta, demanda y antigüedad verificables
-- [ ] Perfil automático de nave, capital, permisos y preferencias
-- [ ] Ruta rápida optimizada por beneficio por minuto
-- [ ] Cadena de tres estaciones y hasta tres productos
-- [ ] Expedición comercial de hasta 30 saltos
-- [ ] Replanificación y progreso persistente
-- [ ] Consultas e informes por voz
+- [x] FREYJA: libro comercial local y carga actual
+- [x] Mercado comunitario con oferta, demanda y antigüedad verificables
+- [x] Perfil automático de nave, capital, permisos y preferencias
+- [x] Ruta rápida optimizada por beneficio por minuto
+- [x] Cadena de tres estaciones y hasta tres productos
+- [x] Expedición comercial de hasta 30 saltos
+- [x] Replanificación y progreso persistente
+- [x] Consultas e informes por voz
+
+### Integraciones comunitarias
+
+- [x] Transmisión pública y anónima a EDDN con consentimiento explícito
+- [x] Sincronización privada y opcional con EDSM
+- [x] Preparar sincronización privada y opcional con Inara
+- [ ] Recibir la autorización de Inara para el nombre de aplicación `ODIN`
+- [ ] Ejecutar una prueba controlada de Inara antes de habilitar su transmisión
 
 ---
 

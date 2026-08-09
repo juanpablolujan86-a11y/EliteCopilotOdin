@@ -54,6 +54,11 @@ Events currently implemented:
 
 ## Estado de activación
 
+La solicitud de autorización para el nombre de aplicación `ODIN` fue enviada
+manualmente por el comandante en el hilo oficial de la API de Inara el
+9 de agosto de 2026. El proyecto se encuentra a la espera de la respuesta de
+Inara.
+
 Mantener `inara_capture_enabled` e `inara_upload_enabled` desactivados hasta que
 Inara confirme que `ODIN` fue agregado a su lista autorizada. Después de la
 confirmación se debe realizar primero una prueba controlada con una cuenta y

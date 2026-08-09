@@ -73,10 +73,12 @@ una ruta más corta ofrece mejor rendimiento o menor riesgo.
 - progreso persistente y siguiente estación copiada sólo tras llegada
   confirmada.
 
-El optimizador ya encadena operaciones mediante una búsqueda acotada, descarta
+El optimizador encadena operaciones mediante una búsqueda acotada, descarta
 tramos desconectados o inviables y nunca supera el presupuesto configurado de
-30 saltos. El seguimiento persistente y el avance por llegada quedan como la
-siguiente etapa de integración.
+30 saltos. El seguimiento de la ruta queda guardado entre reinicios. FREYJA
+confirma las llegadas mediante el Journal, copia al portapapeles el sistema de
+compra o venta correspondiente y sólo avanza al siguiente tramo después de
+confirmar la venta completa, incluidas las ventas parciales.
 
 ## Función objetivo
 
