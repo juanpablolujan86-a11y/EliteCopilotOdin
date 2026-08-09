@@ -106,8 +106,8 @@ en el mismo monitor, incluso en escritorios con coordenadas negativas.
 El panel de Heimdall permite pegar un sistema de destino y solicitar una ruta
 de neutrones sin usar la voz; `Enter` y el botón `CALCULAR` ejecutan el mismo
 planificador asíncrono y dejan visible el siguiente salto.
-Junto al sistema actual, Heimdall distingue entre `REGISTRO PREVIO` y
-`SIN REGISTRO` en EDSM. La segunda marca significa que la comunidad todavía
+En el bloque del comandante, junto a la ubicación actual, ODIN distingue entre
+`REGISTRO PREVIO` y `SIN REGISTRO` en EDSM. La segunda marca significa que la comunidad todavía
 no aportó datos conocidos; no garantiza por sí sola el primer descubrimiento.
 
 Cerrar la ventana solicita primero el cierre ordenado del observador del

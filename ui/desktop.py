@@ -224,9 +224,20 @@ class OdinDesktopApp:
         tk.Label(body, textvariable=self.values["commander"], anchor="w",
                  bg=ELITE["surface"], fg=ELITE["text"],
                  font=("Segoe UI", 13, "bold")).pack(fill="x")
-        tk.Label(body, textvariable=self.values["system"], anchor="w",
+        location_row = tk.Frame(body, bg=ELITE["surface"])
+        location_row.pack(fill="x", pady=(2, 8))
+        tk.Label(location_row, textvariable=self.values["system"], anchor="w",
                  bg=ELITE["surface"], fg=ELITE["orange"],
-                 font=("Segoe UI", 10)).pack(fill="x", pady=(2, 8))
+                 font=("Segoe UI", 10), wraplength=190).pack(
+                     side="left", fill="x", expand=True
+                 )
+        self.values["community_status"] = tk.StringVar(value="○ CONSULTANDO")
+        self.community_status_label = tk.Label(
+            location_row, textvariable=self.values["community_status"],
+            bg=ELITE["surface"], fg=ELITE["muted"], anchor="e",
+            font=("Segoe UI", 8, "bold"),
+        )
+        self.community_status_label.pack(side="right")
         tk.Label(body, textvariable=self.values["ship"], anchor="w",
                  bg=ELITE["surface"], fg=ELITE["text"],
                  font=("Segoe UI", 10, "bold")).pack(fill="x")
@@ -259,21 +270,6 @@ class OdinDesktopApp:
         self._section_title(panel, "HEIMDALL · RUTA ACTIVA")
         body = tk.Frame(panel, bg=ELITE["surface"], padx=12, pady=10)
         body.pack(fill="x")
-        current_row = tk.Frame(body, bg=ELITE["surface"])
-        current_row.pack(fill="x", pady=(0, 7))
-        self.values["heimdall_current_system"] = tk.StringVar(value="Sin sistema")
-        self.values["community_status"] = tk.StringVar(value="○ CONSULTANDO")
-        tk.Label(
-            current_row, textvariable=self.values["heimdall_current_system"],
-            bg=ELITE["surface"], fg=ELITE["text"], anchor="w",
-            font=("Cascadia Mono", 9, "bold"), wraplength=190,
-        ).pack(side="left", fill="x", expand=True)
-        self.community_status_label = tk.Label(
-            current_row, textvariable=self.values["community_status"],
-            bg=ELITE["surface"], fg=ELITE["muted"], anchor="e",
-            font=("Segoe UI", 8, "bold"),
-        )
-        self.community_status_label.pack(side="right")
         self.values["route_destination_input"] = tk.StringVar()
         destination_row = tk.Frame(body, bg=ELITE["surface"])
         destination_row.pack(fill="x", pady=(0, 9))
@@ -379,9 +375,6 @@ class OdinDesktopApp:
         self.values["cartography"].set(self._credits(expedition.get("cartography", 0), True))
         self.values["exobiology"].set(self._credits(expedition.get("exobiology_base", 0), True))
         route = snapshot.get("route", {})
-        self.values["heimdall_current_system"].set(
-            snapshot.get("system") or "Sin sistema"
-        )
         community_status = snapshot.get("community_status", "unknown")
         if community_status == "registered":
             self.values["community_status"].set("◆ REGISTRO PREVIO")
