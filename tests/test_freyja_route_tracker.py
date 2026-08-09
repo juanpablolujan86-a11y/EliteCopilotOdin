@@ -58,6 +58,7 @@ class ActiveTradeRouteTests(unittest.TestCase):
             self.assertIn("Siguiente tramo",message)
             self.assertIn("24 toneladas de gold",message)
 
+            restored.handle_market_buy({"Type":"gold","Count":24})
             restored.handle_market_sell({"Type":"gold"})
             self.assertIsNone(restored.state)
             self.assertFalse(path.exists())
@@ -75,6 +76,26 @@ class ActiveTradeRouteTests(unittest.TestCase):
             tracker.handle_market_sell({"Type":"gold"})
             self.assertEqual(tracker.state["index"],0)
             bus.publish_internal.assert_not_called()
+
+    def test_partial_sale_survives_restart_and_advances_only_when_complete(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/"active.json"
+            bus=Mock()
+            tracker=ActiveTradeRoute(path,bus,Mock())
+            tracker.activate(self.trade("silver","A","B"))
+            tracker.handle_market_buy({"Type":"silver","Count":24})
+            tracker.handle_market_sell({"Type":"silver","Count":10})
+            self.assertEqual(tracker.state["index"],0)
+            self.assertIn("venda 14 toneladas",tracker.status_message())
+
+            restored=ActiveTradeRoute(path,bus,Mock())
+            self.assertIn("venda 14 toneladas",restored.status_message())
+            restored.handle_market_sell({"Type":"silver","Count":14})
+            self.assertIsNone(restored.state)
+            self.assertIn(
+                "Ruta comercial completada",
+                bus.publish_internal.call_args.args[1].message,
+            )
 
 
 if __name__=="__main__":

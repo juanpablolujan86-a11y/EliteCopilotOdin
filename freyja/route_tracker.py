@@ -42,6 +42,9 @@ class ActiveTradeRoute:
             leg["commodity"]
         ):
             return
+        count = max(0, int(event.get("Count", leg["units"]) or 0))
+        self.state["bought_units"] = int(self.state.get("bought_units", 0)) + count
+        self.state["sold_units"] = 0
         self.state["phase"] = "to_sell"
         self.state["last_arrival"] = ""
         self._save()
@@ -66,6 +69,26 @@ class ActiveTradeRoute:
         sold = self._commodity(event.get("Type", ""))
         if sold != self._commodity(legs[index]["commodity"]):
             return
+        if self.state.get("phase", "to_buy") != "to_sell":
+            return
+        target = int(self.state.get("bought_units", legs[index]["units"]) or 0)
+        sold_units = int(self.state.get("sold_units", 0)) + max(
+            0, int(event.get("Count", target) or 0)
+        )
+        self.state["sold_units"] = sold_units
+        if sold_units < target:
+            self._save()
+            remaining = target - sold_units
+            self.event_bus.publish_internal(
+                InternalEvent.VOICE_MESSAGE_READY,
+                VoiceMessageReady(
+                    "FREYJA",
+                    f"Venta parcial confirmada. Quedan {remaining} toneladas "
+                    f"de {legs[index]['commodity']} por vender.",
+                    "venta comercial parcial",
+                ),
+            )
+            return
         index += 1
         if index >= len(legs):
             self.state = None
@@ -75,6 +98,8 @@ class ActiveTradeRoute:
             self.state["index"] = index
             self.state["phase"] = "to_buy"
             self.state["last_arrival"] = ""
+            self.state["bought_units"] = 0
+            self.state["sold_units"] = 0
             self._save()
             leg = legs[index]
             self.clipboard_writer(leg["buy_system"])
@@ -155,8 +180,13 @@ class ActiveTradeRoute:
                 f"{leg['buy_station']}, sistema {leg['buy_system']}"
             )
         else:
+            remaining = max(
+                0,
+                int(self.state.get("bought_units", leg["units"]))
+                - int(self.state.get("sold_units", 0)),
+            )
             action = (
-                f"venda {leg['units']} toneladas de {leg['commodity']} en "
+                f"venda {remaining} toneladas de {leg['commodity']} en "
                 f"{leg['sell_station']}, sistema {leg['sell_system']}"
             )
         return f"Tramo {index + 1} de {total}: {action}."
