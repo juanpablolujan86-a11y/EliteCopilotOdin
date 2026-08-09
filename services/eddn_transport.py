@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+import logging
+import threading
 from dataclasses import dataclass
 
 import requests
 
 from services.eddn_outbox import EDDNOutbox
+from core.database import DatabaseManager
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,3 +66,50 @@ class EDDNDeliveryWorker:
                 self.outbox.mark_rejected(item.message_key, result.detail, now=now)
             processed += 1
         return processed
+
+
+class EDDNDeliveryService:
+    """Procesa la cola en otro hilo para no bloquear juego, voz ni Journal."""
+
+    def __init__(
+        self, data_root, *, client_factory=EDDNHTTPClient, poll_seconds: float = 5.0
+    ) -> None:
+        self.data_root = data_root
+        self.client_factory = client_factory
+        self.poll_seconds = max(1.0, float(poll_seconds))
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+        self.logger = logging.getLogger("odin.eddn")
+
+    def start(self) -> None:
+        if self._thread is not None and self._thread.is_alive():
+            return
+        self._stop.clear()
+        self._thread = threading.Thread(
+            target=self._run, name="odin-eddn-delivery", daemon=True
+        )
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=5)
+
+    def process_once(self, *, now=None) -> int:
+        database = DatabaseManager(self.data_root)
+        database.connect()
+        try:
+            database.create_tables()
+            return EDDNDeliveryWorker(
+                EDDNOutbox(database), self.client_factory()
+            ).run_once(now=now)
+        finally:
+            database.disconnect()
+
+    def _run(self) -> None:
+        while not self._stop.is_set():
+            try:
+                self.process_once()
+            except Exception:
+                self.logger.exception("Fallo inesperado procesando la cola EDDN")
+            self._stop.wait(self.poll_seconds)

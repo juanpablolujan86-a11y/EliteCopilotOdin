@@ -97,3 +97,12 @@ class Config:
         if isinstance(value, str):
             return value.strip().casefold() in {"1", "true", "yes", "si", "sí"}
         return bool(value)
+
+    @property
+    def eddn_upload_enabled(self) -> bool:
+        """El envío requiere una autorización separada de la captura."""
+
+        value = self.data.get("eddn_upload_enabled", False)
+        if isinstance(value, str):
+            return value.strip().casefold() in {"1", "true", "yes", "si", "sí"}
+        return bool(value)

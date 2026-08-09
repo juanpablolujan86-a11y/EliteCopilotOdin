@@ -8,7 +8,9 @@ import requests
 
 from core.database import DatabaseManager
 from services.eddn_outbox import EDDNOutbox
-from services.eddn_transport import EDDNDeliveryWorker, EDDNHTTPClient
+from services.eddn_transport import (
+    EDDNDeliveryService, EDDNDeliveryWorker, EDDNHTTPClient,
+)
 
 
 class EDDNTransportTests(unittest.TestCase):
@@ -58,6 +60,19 @@ class EDDNTransportTests(unittest.TestCase):
         )
         worker=EDDNDeliveryWorker(self.outbox,client)
         self.assertEqual(worker.run_once(now=self.now),2)
+        self.assertEqual(self.outbox.pending_count(),0)
+
+    def test_background_service_uses_independent_database_connection(self):
+        self.outbox.enqueue(self.envelope,now=self.now)
+        delivery_client=Mock()
+        from services.eddn_transport import EDDNDeliveryResult
+        delivery_client.send.return_value=EDDNDeliveryResult(True,False,200,"OK")
+        service=EDDNDeliveryService(
+            Path(self.temp.name),client_factory=lambda: delivery_client
+        )
+
+        self.assertEqual(service.process_once(now=self.now),1)
+
         self.assertEqual(self.outbox.pending_count(),0)
 
 

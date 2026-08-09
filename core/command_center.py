@@ -43,6 +43,7 @@ from core.processors.jump_store import JumpStore
 from core.processors.system_memory import SystemMemory
 from services.edsm_service import EDSMService
 from services.eddn_pipeline import EDDNJournalPipeline
+from services.eddn_transport import EDDNDeliveryService
 from state.commander_state import CommanderState
 from ui.console_presenter import ConsolePresenter
 from core.version import CAPABILITY, VERSION
@@ -115,6 +116,7 @@ class CommandCenter:
 
         self.watcher: JournalWatcher | None = None
         self.eddn_pipeline: EDDNJournalPipeline | None = None
+        self.eddn_delivery_service: EDDNDeliveryService | None = None
         self.status_watcher = StatusWatcher(self.config.status_file)
         self.surface_navigation = SurfaceNavigationTracker()
         self.binding_custodian = BindingCustodian(
@@ -180,6 +182,12 @@ class CommandCenter:
             self.eddn_pipeline = EDDNJournalPipeline.create(
                 self.config.data_root, self.database, VERSION
             )
+            self.eddn_pipeline.bootstrap_journal(journal)
+            if self.config.eddn_upload_enabled:
+                self.eddn_delivery_service = EDDNDeliveryService(
+                    self.config.data_root
+                )
+                self.eddn_delivery_service.start()
 
         self._initialize_heimdall()
 
@@ -221,6 +229,8 @@ class CommandCenter:
 
         finally:
             self.wake_listener.stop()
+            if self.eddn_delivery_service is not None:
+                self.eddn_delivery_service.stop()
             self.database.disconnect()
             print("Base de datos desconectada correctamente.")
 
