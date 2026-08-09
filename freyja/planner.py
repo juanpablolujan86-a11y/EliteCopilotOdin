@@ -290,7 +290,12 @@ class QuickRouteOptimizer:
     def _age_hours(value):
         try:
             stamp=datetime.fromisoformat(value.replace("Z","+00:00"))
-            return max(0.0,(datetime.now(timezone.utc)-stamp).total_seconds()/3600)
+            if stamp.tzinfo is None:
+                stamp=stamp.replace(tzinfo=timezone.utc)
+            age=(datetime.now(timezone.utc)-stamp).total_seconds()/3600
+            # Una pequeña diferencia de reloj es tolerable; una fecha situada
+            # más de una hora en el futuro no demuestra frescura del mercado.
+            return math.inf if age < -1.0 else max(0.0,age)
         except (ValueError,TypeError): return math.inf
 
 

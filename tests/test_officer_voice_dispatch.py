@@ -1,4 +1,5 @@
 from dataclasses import replace
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 import threading
@@ -53,7 +54,7 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
         )
         cached=MarketOpportunity(
             "silver","A","Compra","B","Venta",10_000,20_000,
-            100,100,1,100,"2099-01-01T00:00:00+00:00",
+            100,100,1,100,datetime.now(timezone.utc).isoformat(),
         )
         cache=Mock()
         cache.refresh_region.side_effect=MarketSourceError("sin red")

@@ -2,6 +2,7 @@
 from __future__ import annotations
 import json
 import math
+from datetime import datetime, timezone
 from pathlib import Path
 import requests
 from core.database import DatabaseManager
@@ -108,7 +109,9 @@ class MarketCache:
             sell=(row["sx"],row["sy"],row["sz"])
             distance=math.dist(origin,buy)+math.dist(buy,sell)
             jumps=math.ceil(distance/profile.jump_range)
-            updated=min(str(row["buy_updated"]),str(row["sell_updated"]))
+            updated=self._oldest_update(
+                row["buy_updated"], row["sell_updated"]
+            )
             result.append(MarketOpportunity(
               row["commodity"],row["buy_system"],row["buy_station"],
               row["sell_system"],row["sell_station"],row["buy_price"],row["sell_price"],
@@ -127,14 +130,39 @@ class MarketCache:
          VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(market_id) DO UPDATE SET system_name=excluded.system_name,
         station_name=excluded.station_name,updated_at=excluded.updated_at,source=excluded.source,
-        x=excluded.x,y=excluded.y,z=excluded.z,distance_to_arrival=excluded.distance_to_arrival,
-        has_large_pad=excluded.has_large_pad,is_planetary=excluded.is_planetary,
-        power_name=excluded.power_name,power_state=excluded.power_state,
-        station_type=excluded.station_type""",
+        x=COALESCE(excluded.x,freyja_markets.x),
+        y=COALESCE(excluded.y,freyja_markets.y),
+        z=COALESCE(excluded.z,freyja_markets.z),
+        distance_to_arrival=COALESCE(
+            excluded.distance_to_arrival,freyja_markets.distance_to_arrival
+        ),
+        has_large_pad=CASE WHEN excluded.source='local'
+            THEN freyja_markets.has_large_pad ELSE excluded.has_large_pad END,
+        is_planetary=CASE WHEN excluded.source='local'
+            THEN freyja_markets.is_planetary ELSE excluded.is_planetary END,
+        power_name=CASE WHEN excluded.source='local'
+            THEN freyja_markets.power_name ELSE excluded.power_name END,
+        power_state=CASE WHEN excluded.source='local'
+            THEN freyja_markets.power_state ELSE excluded.power_state END,
+        station_type=CASE WHEN excluded.source='local'
+            THEN freyja_markets.station_type ELSE excluded.station_type END""",
         (int(market_id),system,station,updated,source,record.get("system_x"),
          record.get("system_y"),record.get("system_z"),record.get("distance_to_arrival"),
          int(bool(record.get("has_large_pad"))),int(bool(record.get("is_planetary"))),
          self._power_name(record),self._power_state(record),str(record.get("type","") or "")))
+
+    @staticmethod
+    def _oldest_update(*values) -> str:
+        parsed = []
+        for value in values:
+            try:
+                stamp = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+                if stamp.tzinfo is None:
+                    stamp = stamp.replace(tzinfo=timezone.utc)
+                parsed.append((stamp.astimezone(timezone.utc), str(value)))
+            except (ValueError, TypeError):
+                return ""
+        return min(parsed, key=lambda item: item[0])[1] if parsed else ""
 
     @staticmethod
     def _power_name(record):
