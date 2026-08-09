@@ -48,6 +48,17 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
             "¿cuántos saltos quedan en la ruta?"
         ))
 
+    def test_heimdall_requires_explicit_fsd_injection_authorization_phrase(self):
+        self.assertTrue(CommandCenter._is_fsd_injection_authorization(
+            "autorizo la inyección FSD"
+        ))
+        self.assertTrue(CommandCenter._is_fsd_injection_authorization(
+            "confirmo esta inyección FSD"
+        ))
+        self.assertFalse(CommandCenter._is_fsd_injection_authorization(
+            "quizás usemos una inyección FSD"
+        ))
+
     def test_all_trade_modes_use_bubble_market_anchor_when_commander_is_far(self):
         center=CommandCenter.__new__(CommandCenter)
         center.trade_profile=TradeProfile(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass
 from math import dist
 from pathlib import Path
@@ -56,6 +57,16 @@ class RouteInjectionRequirement:
     recommendation: FSDInjectionRecommendation
 
 
+@dataclass(frozen=True, slots=True)
+class PendingFSDInjectionAuthorization:
+    grade: str
+    distance_ly: float
+    boosted_range_ly: float
+    source_system: str
+    destination_system: str
+    expires_at: float
+
+
 class FSDInjectionInventory:
     """Conserva únicamente materias primas relevantes para el salto."""
 
@@ -65,9 +76,11 @@ class FSDInjectionInventory:
         for material in recipe
     )
 
-    def __init__(self, path: Path) -> None:
+    def __init__(self, path: Path, *, clock=time.monotonic) -> None:
         self.path = path
+        self.clock = clock
         self.materials = self._load()
+        self.pending_authorization: PendingFSDInjectionAuthorization | None = None
 
     def handle(self, event: dict) -> None:
         kind = str(event.get("event", ""))
@@ -162,6 +175,7 @@ class FSDInjectionInventory:
 
     def recommendation_voice(self, distance_ly: float, base_range_ly: float) -> str:
         recommendation = self.recommend(distance_ly, base_range_ly)
+        self.pending_authorization = None
         if recommendation.base_range_ly <= 0:
             return "Todavía no conozco el alcance real de la nave, comandante."
         if recommendation.already_reachable:
@@ -180,10 +194,12 @@ class FSDInjectionInventory:
                 f"El salto requiere como mínimo una inyección {label}, pero no hay "
                 "materiales suficientes para fabricarla."
             )
+        self._prepare_authorization(recommendation)
         return (
             f"El salto requiere como mínimo una inyección {label}. Elevaría el "
             f"alcance a {recommendation.boosted_range_ly:.1f} años luz. No la "
-            "utilizaré sin su autorización, comandante."
+            "utilizaré sin su autorización. Si desea continuar, diga: autorizo "
+            "la inyección FSD."
         )
 
     def route_requirements(
@@ -221,6 +237,7 @@ class FSDInjectionInventory:
     ) -> str:
         if base_range_ly <= 0:
             return "Todavía no conozco el alcance real de la nave, comandante."
+        self.pending_authorization = None
         requirements = self.route_requirements(route, current_index, base_range_ly)
         if current_index is None:
             return "El sistema actual no coincide con la ruta cargada, comandante."
@@ -238,12 +255,60 @@ class FSDInjectionInventory:
             detail = f"requiere como mínimo una inyección {label}"
             if not recommendation.available:
                 detail += ", pero faltan materiales"
+            else:
+                self._prepare_authorization(
+                    recommendation,
+                    first.source_system,
+                    first.destination_system,
+                )
         count_text = "1 tramo" if len(requirements) == 1 else f"{len(requirements)} tramos"
         return (
             f"Encontré {count_text} fuera del alcance normal. El "
             f"primero va de {first.source_system} a {first.destination_system}, "
             f"son {recommendation.distance_ly:.1f} años luz y {detail}. No "
             "utilizaré materiales sin su autorización."
+        )
+
+    def authorize_pending_voice(self) -> str:
+        pending = self.pending_authorization
+        self.pending_authorization = None
+        if pending is None:
+            return (
+                "No hay una propuesta de inyección FSD pendiente. Primero debo "
+                "evaluar un salto concreto."
+            )
+        if self.clock() > pending.expires_at:
+            return (
+                "La propuesta de inyección FSD venció. Debo volver a evaluar el "
+                "salto antes de autorizarla."
+            )
+        label = FSD_INJECTION_LABELS[pending.grade]
+        route_detail = (
+            f" para el salto de {pending.source_system} a {pending.destination_system}"
+            if pending.source_system and pending.destination_system else ""
+        )
+        return (
+            f"Autorización registrada para una inyección {label}{route_detail}. "
+            "Realice la síntesis desde el panel de inventario. HEIMDALL verificará "
+            "el evento del Journal; ODIN no enviará pulsaciones."
+        )
+
+    def _prepare_authorization(
+        self,
+        recommendation: FSDInjectionRecommendation,
+        source_system: str = "",
+        destination_system: str = "",
+    ) -> None:
+        if recommendation.grade is None or not recommendation.available:
+            self.pending_authorization = None
+            return
+        self.pending_authorization = PendingFSDInjectionAuthorization(
+            recommendation.grade,
+            recommendation.distance_ly,
+            recommendation.boosted_range_ly,
+            source_system,
+            destination_system,
+            self.clock() + 60.0,
         )
 
     def _save(self) -> None:

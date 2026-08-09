@@ -155,6 +155,48 @@ class FSDInjectionInventoryTests(unittest.TestCase):
                 "no hace falta", inventory.route_voice_summary(route, 0, 66.12)
             )
 
+    def test_explicit_authorization_is_single_use_and_tied_to_proposal(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            inventory = FSDInjectionInventory(Path(directory) / "materials.json")
+            inventory.handle({
+                "event": "Materials",
+                "Raw": [
+                    {"Name": "carbon", "Count": 2},
+                    {"Name": "vanadium", "Count": 2},
+                    {"Name": "germanium", "Count": 2},
+                ],
+            })
+            proposal = inventory.recommendation_voice(80, 66.12)
+            authorized = inventory.authorize_pending_voice()
+            repeated = inventory.authorize_pending_voice()
+
+            self.assertIn("autorizo la inyección FSD", proposal)
+            self.assertIn("Autorización registrada", authorized)
+            self.assertIn("inyección básica", authorized)
+            self.assertIn("no enviará pulsaciones", authorized)
+            self.assertIn("No hay una propuesta", repeated)
+
+    def test_authorization_expires_and_unavailable_grade_cannot_be_approved(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            now = [100.0]
+            inventory = FSDInjectionInventory(
+                Path(directory) / "materials.json", clock=lambda: now[0]
+            )
+            inventory.recommendation_voice(80, 66.12)
+            self.assertIn("No hay una propuesta", inventory.authorize_pending_voice())
+
+            inventory.handle({
+                "event": "Materials",
+                "Raw": [
+                    {"Name": "carbon", "Count": 1},
+                    {"Name": "vanadium", "Count": 1},
+                    {"Name": "germanium", "Count": 1},
+                ],
+            })
+            inventory.recommendation_voice(80, 66.12)
+            now[0] = 161.0
+            self.assertIn("venció", inventory.authorize_pending_voice())
+
 
 if __name__ == "__main__":
     unittest.main()

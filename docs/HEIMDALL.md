@@ -175,6 +175,14 @@ cono, y sólo marca los saltos convencionales que exceden el alcance normal. La
 consulta «¿necesito alguna inyección en esta ruta?» informa el primer tramo
 problemático, su distancia, el grado mínimo y si existen materiales.
 
+Si la inyección es factible, HEIMDALL abre una propuesta temporal de 60
+segundos. La frase exacta «autorizo la inyección FSD» registra una autorización
+de un solo uso vinculada a esa propuesta; una confirmación sin propuesta,
+vencida o sin materiales es rechazada. En esta etapa la autorización habilita
+únicamente la guía para realizar la síntesis manual desde el panel de
+inventario. ODIN no envía pulsaciones y el evento `Synthesis` actualiza después
+el inventario conocido.
+
 #### Fuente comunitaria de rutas
 
 HEIMDALL utiliza Spansh como proveedor externo de rutas rápidas. No mantiene

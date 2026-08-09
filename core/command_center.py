@@ -1090,6 +1090,11 @@ class CommandCenter:
             return
 
         lowered_question = question.casefold()
+        if self._is_fsd_injection_authorization(question):
+            self._start_fixed_voice_response(
+                self.fsd_injections.authorize_pending_voice(), officer="HEIMDALL"
+            )
+            return
         injection_distance = self._fsd_injection_distance_request(question)
         if injection_distance is not None:
             jump_range = (
@@ -1262,6 +1267,14 @@ class CommandCenter:
             or "inyección" in lowered
             or ("sintesis" in lowered or "síntesis" in lowered)
         )
+
+    @staticmethod
+    def _is_fsd_injection_authorization(text: str) -> bool:
+        lowered = text.casefold()
+        return bool(re.search(
+            r"\b(?:autorizo|confirmo|apruebo)\b.*\b(?:inyeccion|inyección)\b.*\bfsd\b",
+            lowered,
+        ))
 
     def _open_freyja_trade_menu(self) -> None:
         self._pending_freyja_trade_menu = True

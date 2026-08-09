@@ -125,7 +125,8 @@
   - [x] Proponer el grado mínimo sólo cuando resuelva un salto inaccesible
   - [x] Revisar los tramos futuros de `NavRoute.json`
   - [x] Excluir de la síntesis los segmentos potenciados por cono
-  - [ ] Exigir autorización antes de cualquier uso
+  - [x] Exigir una autorización temporal, explícita y de un solo uso
+  - [ ] Ejecutar síntesis desde la interfaz sólo tras validación real en juego
 - [ ] Replanificación por desvío
 - [ ] Luces y visión nocturna opcionales
 - [ ] Solicitud contextual de aterrizaje
