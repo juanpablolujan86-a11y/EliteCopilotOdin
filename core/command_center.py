@@ -797,7 +797,7 @@ class CommandCenter:
                 ready = warm_up()
                 print(
                     "Reconocimiento de voz: "
-                    + ("large-v3-turbo listo en GPU" if ready else "whisper.cpp de respaldo")
+                    + ("Faster Whisper Small listo" if ready else "whisper.cpp de respaldo")
                 )
             voice = OfficerVoiceService(self.config)
             messages = tuple(

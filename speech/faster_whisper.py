@@ -20,14 +20,14 @@ PROMPT = (
 
 
 class FasterWhisperTranscriber:
-    """Mantiene large-v3-turbo residente en GPU entre órdenes."""
+    """Mantiene un modelo compacto residente sin competir con el juego."""
 
     def __init__(
         self,
         config: Config | None = None,
         fallback: WhisperTranscriber | None = None,
         *,
-        model_name: str = "large-v3-turbo",
+        model_name: str = "small",
     ) -> None:
         self.config = config or Config()
         self.fallback = fallback or WhisperTranscriber(model_preference="small")
@@ -95,8 +95,12 @@ class FasterWhisperTranscriber:
 
             self._model = WhisperModel(
                 self.model_name,
-                device="cuda",
-                compute_type="int8_float16",
+                # Elite Dangerous ocupa casi toda la VRAM de una RTX 4060 de
+                # 8 GB. Small/int8 en CPU deja la GPU disponible para el juego
+                # y evita que una orden quede esperando indefinidamente.
+                device="cpu",
+                compute_type="int8",
+                cpu_threads=4,
                 download_root=str(self.config.faster_whisper_model_root),
                 local_files_only=True,
             )

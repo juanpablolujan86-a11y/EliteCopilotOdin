@@ -9,6 +9,10 @@ from speech.faster_whisper import FasterWhisperTranscriber
 
 
 class FasterWhisperTranscriberTests(unittest.TestCase):
+    def test_default_model_is_compact_for_live_gameplay(self):
+        transcriber=FasterWhisperTranscriber()
+        self.assertEqual(transcriber.model_name,"small")
+
     def test_gpu_transcription_returns_text_and_segment_confidence(self):
         with tempfile.TemporaryDirectory() as directory:
             audio=Path(directory)/"order.wav"; audio.write_bytes(b"audio")
