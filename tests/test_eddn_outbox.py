@@ -47,15 +47,22 @@ class EDDNOutboxTests(unittest.TestCase):
         self.outbox.mark_failed(item.message_key,"sin red",now=self.now)
 
         self.assertEqual(self.outbox.due(now=self.now),())
-        retry=self.outbox.due(now=self.now+timedelta(seconds=15))[0]
+        retry=self.outbox.due(now=self.now+timedelta(seconds=60))[0]
         self.assertEqual(retry.attempts,1)
-        self.outbox.mark_failed(retry.message_key,"sin red",now=self.now+timedelta(seconds=15))
+        self.outbox.mark_failed(retry.message_key,"sin red",now=self.now+timedelta(seconds=60))
         self.assertEqual(
-            self.outbox.due(now=self.now+timedelta(seconds=44)),()
+            self.outbox.due(now=self.now+timedelta(seconds=179)),()
         )
         self.assertEqual(
-            self.outbox.due(now=self.now+timedelta(seconds=45))[0].attempts,2
+            self.outbox.due(now=self.now+timedelta(seconds=180))[0].attempts,2
         )
+
+    def test_rejected_message_is_never_retried(self):
+        self.outbox.enqueue(self.envelope,now=self.now)
+        item=self.outbox.due(now=self.now)[0]
+        self.outbox.mark_rejected(item.message_key,"HTTP 400",now=self.now)
+        self.assertEqual(self.outbox.pending_count(),0)
+        self.assertEqual(self.outbox.due(now=self.now+timedelta(days=30)),())
 
     def test_sent_message_leaves_pending_queue(self):
         self.outbox.enqueue(self.envelope,now=self.now)

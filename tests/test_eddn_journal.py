@@ -26,6 +26,7 @@ class EDDNJournalMessageBuilderTests(unittest.TestCase):
         self.assertEqual(envelope["header"]["uploaderID"],"anonymous-test")
         self.assertEqual(envelope["header"]["softwareName"],"ODIN")
         self.assertEqual(envelope["header"]["gameversion"],"4.1.3.0")
+        self.assertEqual(envelope["header"]["gamebuild"],"r312345")
         self.assertEqual(envelope["message"]["StarSystem"],"Sol")
 
     def test_enriches_scan_from_last_valid_system_context(self):
@@ -73,6 +74,21 @@ class EDDNJournalMessageBuilderTests(unittest.TestCase):
             "timestamp":"2026-08-09T00:02:00Z","event":"Scan","BodyID":1,
         })
         self.assertEqual(scan["message"]["StarSystem"],"Sol")
+
+    def test_rejects_augmentation_when_event_conflicts_with_context(self):
+        self.builder.prepare(self.location())
+        self.assertIsNone(self.builder.prepare({
+            "timestamp":"2026-08-09T00:02:00Z","event":"Scan",
+            "SystemAddress":999,"BodyID":1,
+        }))
+
+    def test_load_game_flags_are_added_only_when_known(self):
+        self.builder.prepare({
+            "event":"LoadGame","Horizons":True,"Odyssey":False,
+        })
+        envelope=self.builder.prepare(self.location())
+        self.assertTrue(envelope["message"]["horizons"])
+        self.assertFalse(envelope["message"]["odyssey"])
 
 
 if __name__=="__main__":

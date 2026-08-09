@@ -22,7 +22,7 @@ class EDDNOutboxItem:
 class EDDNOutbox:
     """Conserva mensajes, deduplica y calcula reintentos sin transmitirlos."""
 
-    BASE_RETRY_SECONDS = 15
+    BASE_RETRY_SECONDS = 60
     MAX_RETRY_SECONDS = 3600
 
     def __init__(self, database: DatabaseManager) -> None:
@@ -73,6 +73,19 @@ class EDDNOutbox:
             """UPDATE eddn_outbox SET status='sent',sent_at=?,last_error=''
             WHERE message_key=? AND status='pending'""",
             (self._stamp(now or datetime.now(timezone.utc)), message_key),
+        )
+
+    def mark_rejected(
+        self, message_key: str, error: Exception | str,
+        *, now: datetime | None = None,
+    ) -> None:
+        self.database.execute(
+            """UPDATE eddn_outbox SET status='rejected',sent_at=?,last_error=?
+            WHERE message_key=? AND status='pending'""",
+            (
+                self._stamp(now or datetime.now(timezone.utc)),
+                str(error)[:500], message_key,
+            ),
         )
 
     def mark_failed(
