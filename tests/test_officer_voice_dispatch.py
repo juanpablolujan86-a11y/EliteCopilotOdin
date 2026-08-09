@@ -65,6 +65,23 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
         self.assertTrue(center._freyja_used_stale_cache)
         self.assertEqual(plan.opportunity.commodity,"silver")
 
+    def test_new_trade_mode_cannot_replace_cargo_pending_for_sale(self):
+        center=CommandCenter.__new__(CommandCenter)
+        center.active_trade_route=Mock()
+        center.active_trade_route.recalculation_blocker.return_value=(
+            "Quedan 24 toneladas por vender."
+        )
+        center._start_fixed_voice_response=Mock()
+        center.navigation_manager=Mock()
+        cache=Mock()
+
+        center._calculate_freyja_trade("expedition",cache)
+
+        center._start_fixed_voice_response.assert_called_once_with(
+            "Quedan 24 toneladas por vender.",officer="FREYJA"
+        )
+        cache.opportunities.assert_not_called()
+
     def test_freyja_sends_credit_amount_to_voice_without_separators(self):
         plan=SimpleNamespace(
             units=24,

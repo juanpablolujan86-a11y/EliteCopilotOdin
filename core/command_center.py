@@ -1440,6 +1440,9 @@ class CommandCenter:
             self.wake_listener.resume()
 
     def _calculate_freyja_trade(self, selection: str, market_cache: MarketCache) -> None:
+        if blocker := self.active_trade_route.recalculation_blocker():
+            self._start_fixed_voice_response(blocker, officer="FREYJA")
+            return
         if self.navigation_manager is None:
             self._start_fixed_voice_response(
                 "El planificador comercial todav\u00eda no tiene disponible el estado de navegaci\u00f3n.",
