@@ -418,6 +418,9 @@ class CommandCenter:
         self.event_bus.subscribe(
             "MarketSell", self.active_trade_route.handle_market_sell
         )
+        self.event_bus.subscribe(
+            "MarketBuy", self.active_trade_route.handle_market_buy
+        )
         market_cache = MarketCache(self.database)
         self.market_cache = market_cache
         self.event_bus.subscribe(

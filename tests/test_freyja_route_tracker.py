@@ -21,15 +21,23 @@ class ActiveTradeRouteTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path=Path(directory)/"active.json"
             bus=Mock()
-            tracker=ActiveTradeRoute(path,bus)
+            copied=[]
+            tracker=ActiveTradeRoute(path,bus,copied.append)
             tracker.activate(SimpleNamespace(legs=(
                 self.trade("silver","A","B"),self.trade("gold","B","C"),
             )))
-            restored=ActiveTradeRoute(path,bus)
+            self.assertEqual(copied,["A"])
+            restored=ActiveTradeRoute(path,bus,copied.append)
             self.assertEqual(restored.state["index"],0)
 
+            restored.handle_market_buy({"Type":"silver"})
+            self.assertEqual(copied[-1],"B")
+            self.assertIn(
+                "Compra confirmada",bus.publish_internal.call_args.args[1].message
+            )
             restored.handle_market_sell({"Type":"silver"})
             self.assertEqual(restored.state["index"],1)
+            self.assertEqual(copied[-1],"B")
             message=bus.publish_internal.call_args.args[1].message
             self.assertIn("Siguiente tramo",message)
             self.assertIn("24 toneladas de gold",message)
@@ -45,7 +53,7 @@ class ActiveTradeRouteTests(unittest.TestCase):
     def test_ignores_sale_from_another_commodity(self):
         with tempfile.TemporaryDirectory() as directory:
             bus=Mock()
-            tracker=ActiveTradeRoute(Path(directory)/"active.json",bus)
+            tracker=ActiveTradeRoute(Path(directory)/"active.json",bus,Mock())
             tracker.activate(self.trade("silver","A","B"))
             tracker.handle_market_sell({"Type":"gold"})
             self.assertEqual(tracker.state["index"],0)
