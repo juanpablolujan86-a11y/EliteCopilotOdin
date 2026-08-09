@@ -316,6 +316,8 @@ class FreyjaBubbleSimulationTests(unittest.TestCase):
         self.assertEqual(plan.total_jumps, 7)
         self.assertGreater(plan.estimated_profit, 0)
         self.assertIn("Estación A → Estación B → Estación C → Estación A", plan.summary())
+        self.assertIn("Primer tramo: compre 100 toneladas de oro", plan.summary())
+        self.assertIn("sistema Sistema A", plan.summary())
 
     def test_three_station_chain_rejects_open_or_incompatible_cycle(self) -> None:
         profile = TradeProfile(
@@ -356,6 +358,8 @@ class FreyjaBubbleSimulationTests(unittest.TestCase):
         self.assertLessEqual(plan.total_jumps, 30)
         self.assertGreater(plan.estimated_profit, 0)
         self.assertIn("24 saltos", plan.summary())
+        self.assertIn("Primer tramo:", plan.summary())
+        self.assertIn("toneladas de producto", plan.summary())
 
     def test_trade_expedition_rejects_invalid_budget_and_disconnected_edges(self) -> None:
         profile = TradeProfile(

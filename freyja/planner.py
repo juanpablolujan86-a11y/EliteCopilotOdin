@@ -71,10 +71,15 @@ class ThreeStationTradePlan:
     def summary(self) -> str:
         stations = [self.legs[0].opportunity.buy_station]
         stations.extend(leg.opportunity.sell_station for leg in self.legs)
+        first = self.legs[0]
+        item = first.opportunity
         return (
             " → ".join(stations)
             + f": {self.estimated_profit} créditos estimados en "
-            f"{self.total_jumps} saltos."
+            f"{self.total_jumps} saltos. Primer tramo: compre {first.units} "
+            f"toneladas de {item.commodity} en {item.buy_station}, sistema "
+            f"{item.buy_system}, y véndalas en {item.sell_station}, sistema "
+            f"{item.sell_system}."
         )
 
 
@@ -94,7 +99,9 @@ class TradeExpeditionPlan:
             f"{first.buy_system}, y finaliza en {last.sell_station}, sistema "
             f"{last.sell_system}. Son {len(self.legs)} operaciones y "
             f"{self.total_jumps} saltos, con {self.estimated_profit} "
-            "créditos estimados."
+            f"créditos estimados. Primer tramo: compre {self.legs[0].units} "
+            f"toneladas de {first.commodity} en {first.buy_station} y "
+            f"véndalas en {first.sell_station}, sistema {first.sell_system}."
         )
         if any(leg.stale_hours > 24 for leg in self.legs):
             summary += " Confirme los precios al llegar; algunos mercados tienen más de un día."
