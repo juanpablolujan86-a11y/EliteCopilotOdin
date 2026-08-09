@@ -913,6 +913,17 @@ class CommandCenter:
             )
             return
 
+        if self._is_freyja_trade_recalculate_request(question):
+            strategy = self.active_trade_route.active_strategy()
+            if strategy is None:
+                self._start_fixed_voice_response(
+                    "No hay una ruta comercial activa para recalcular.",
+                    officer="FREYJA",
+                )
+            else:
+                self._start_freyja_trade_calculation(strategy)
+            return
+
         if self._is_freyja_trade_cancel_request(question):
             cancelled = self.active_trade_route.cancel()
             self._start_fixed_voice_response(
@@ -1310,6 +1321,17 @@ class CommandCenter:
         )
 
     @staticmethod
+    def _is_freyja_trade_recalculate_request(text: str) -> bool:
+        lowered = text.casefold()
+        return bool(
+            re.search(
+                r"\b(?:recalcula|recalculá|recalcular|actualiza|actualizá)\b"
+                r".*\bruta\s+comercial\b",
+                lowered,
+            )
+        )
+
+    @staticmethod
     def _freyja_trade_selection(text: str) -> str | None:
         lowered = text.casefold()
         if re.search(r"\b(?:1|uno|primera|rapida|r\u00e1pida)\b", lowered):
@@ -1501,7 +1523,7 @@ class CommandCenter:
             answer = self._quick_trade_voice_summary(plan)
         else:
             answer = plan.summary()
-        self.active_trade_route.activate(plan)
+        self.active_trade_route.activate(plan, selection)
         if self._freyja_used_stale_cache:
             answer = (
                 "El mercado comunitario no respondió; calculé con la última "

@@ -17,7 +17,8 @@ PROMPT = (
     "vamos a comerciar, opción uno, opción dos, opción tres, opción cuatro, "
     "comercio Powerplay, ruta de neutrones, exobiología, Stratum Tectonicas, "
     "estado de la ruta comercial, qué tengo que comprar, qué tengo que vender, "
-    "cancela la ruta comercial, repetí la instrucción comercial"
+    "cancela la ruta comercial, recalculá la ruta comercial, "
+    "repetí la instrucción comercial"
 )
 
 

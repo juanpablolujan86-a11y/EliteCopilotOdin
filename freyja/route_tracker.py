@@ -15,7 +15,7 @@ class ActiveTradeRoute:
         self.clipboard_writer = clipboard_writer
         self.state = self._load()
 
-    def activate(self, plan) -> None:
+    def activate(self, plan, strategy: str = "quick") -> None:
         trades = tuple(getattr(plan, "legs", ()) or ())
         if not trades:
             trade = getattr(plan, "trade", plan)
@@ -31,7 +31,10 @@ class ActiveTradeRoute:
                 "sell_system": item.sell_system,
                 "sell_station": item.sell_station,
             })
-        self.state = {"index": 0, "phase": "to_buy", "last_arrival": "", "legs": legs}
+        self.state = {
+            "index": 0, "phase": "to_buy", "last_arrival": "",
+            "strategy": strategy, "legs": legs,
+        }
         self._save()
         if legs:
             self.clipboard_writer(legs[0]["buy_system"])
@@ -197,6 +200,14 @@ class ActiveTradeRoute:
         self.state = None
         self.path.unlink(missing_ok=True)
         return True
+
+    def active_strategy(self) -> str | None:
+        if not self.state:
+            return None
+        strategy = str(self.state.get("strategy", "") or "")
+        return strategy if strategy in {
+            "quick", "three_station", "expedition", "powerplay"
+        } else None
 
     def _save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)

@@ -102,6 +102,15 @@ class ActiveTradeRouteTests(unittest.TestCase):
             path=Path(directory)/"active.json"
             tracker=ActiveTradeRoute(path,Mock(),Mock())
             self.assertFalse(tracker.cancel())
+
+    def test_strategy_is_persisted_for_recalculation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/"active.json"
+            tracker=ActiveTradeRoute(path,Mock(),Mock())
+            self.assertIsNone(tracker.active_strategy())
+            tracker.activate(self.trade("silver","A","B"),"expedition")
+            restored=ActiveTradeRoute(path,Mock(),Mock())
+            self.assertEqual(restored.active_strategy(),"expedition")
             tracker.activate(self.trade("silver","A","B"))
             self.assertTrue(path.exists())
             self.assertTrue(tracker.cancel())
