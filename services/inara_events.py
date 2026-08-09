@@ -42,6 +42,10 @@ class InaraEventMapper:
             return self._cargo(journal_event, timestamp)
         if kind == "Materials":
             return self._materials(journal_event, timestamp)
+        if kind in {"Touchdown", "DropShipDeploy"}:
+            return self._land(journal_event, timestamp)
+        if kind == "CarrierJump":
+            return self._carrier_jump(journal_event, timestamp)
         return ()
 
     @staticmethod
@@ -263,6 +267,37 @@ class InaraEventMapper:
                     continue
                 translated.append({"itemName": str(item["Name"]), "itemCount": count})
         return (self._event("setCommanderInventoryMaterials", timestamp, translated),)
+
+    def _land(self, event: dict, timestamp: str) -> tuple[dict, ...]:
+        system = event.get("StarSystem")
+        body = event.get("Body") or event.get("BodyName")
+        if not system or not body:
+            return ()
+        data = {
+            "starsystemName": str(system),
+            "starsystemBodyName": str(body),
+        }
+        self._optional(data, "starsystemCoords", event.get("StarPos"), (list, tuple))
+        if isinstance(event.get("Latitude"), (int, float)) and isinstance(
+            event.get("Longitude"), (int, float)
+        ):
+            data["starsystemBodyCoords"] = [
+                float(event["Latitude"]), float(event["Longitude"])
+            ]
+        self._travel_mode(data, event)
+        if event.get("event") == "DropShipDeploy":
+            data["isTaxiDropship"] = True
+        return (self._event("addCommanderTravelLand", timestamp, data),)
+
+    def _carrier_jump(self, event: dict, timestamp: str) -> tuple[dict, ...]:
+        system = event.get("StarSystem")
+        if not system:
+            return ()
+        data = {"starsystemName": str(system)}
+        self._optional(data, "starsystemCoords", event.get("StarPos"), (list, tuple))
+        self._optional(data, "stationName", event.get("StationName"), str)
+        self._optional(data, "marketID", event.get("MarketID"), int)
+        return (self._event("addCommanderTravelCarrierJump", timestamp, data),)
 
     @staticmethod
     def _optional(data: dict, key: str, value, expected) -> None:

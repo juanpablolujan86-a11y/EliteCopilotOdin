@@ -150,5 +150,33 @@ class InaraEventMapperTests(unittest.TestCase):
         self.assertEqual(self.mapper.map({"timestamp":self.timestamp,"event":"Materials",
                                           "Raw":[],"Manufactured":[]}),())
 
+    def test_touchdown_maps_body_and_surface_coordinates(self):
+        mapped=self.mapper.map({
+            "timestamp":self.timestamp,"event":"Touchdown","StarSystem":"Sol",
+            "Body":"Earth","Latitude":51.5,"Longitude":-0.1,"Taxi":False,
+        })[0]
+        self.assertEqual(mapped["eventName"],"addCommanderTravelLand")
+        self.assertEqual(mapped["eventData"],{
+            "starsystemName":"Sol","starsystemBodyName":"Earth",
+            "starsystemBodyCoords":[51.5,-0.1],
+        })
+
+    def test_dropship_deploy_is_identified_as_frontline_transport(self):
+        mapped=self.mapper.map({
+            "timestamp":self.timestamp,"event":"DropShipDeploy",
+            "StarSystem":"Sol","BodyName":"Earth",
+        })[0]
+        self.assertTrue(mapped["eventData"]["isTaxiDropship"])
+
+    def test_carrier_jump_maps_destination_without_inventing_distance(self):
+        mapped=self.mapper.map({
+            "timestamp":self.timestamp,"event":"CarrierJump",
+            "StarSystem":"Colonia","StarPos":[-9530.5,-910.3,19808.1],
+            "StationName":"ABC-123","MarketID":123456,
+        })[0]
+        self.assertEqual(mapped["eventName"],"addCommanderTravelCarrierJump")
+        self.assertNotIn("jumpDistance",mapped["eventData"])
+        self.assertEqual(mapped["eventData"]["stationName"],"ABC-123")
+
 
 if __name__=="__main__": unittest.main()
