@@ -11,6 +11,9 @@ from speech.recorder import MicrophoneError
 from speech.whisper import TranscriptionError
 from voice.configurator import run_voice_configuration
 from voice.key_file import import_key_file
+from voice.key_file import application_directory
+from services.edsm_key_file import import_edsm_key_file
+from services.inara_key_file import import_inara_key_file
 from voice.service import OfficerVoiceService, VoiceServiceError
 
 
@@ -19,6 +22,13 @@ def main() -> None:
     key_import = import_key_file()
     if key_import.message:
         print(key_import.message)
+    credential_directory = application_directory()
+    for personal_import in (
+        import_edsm_key_file(credential_directory),
+        import_inara_key_file(credential_directory),
+    ):
+        if personal_import.message:
+            print(personal_import.message)
 
     if "--configure-voice" in sys.argv:
         run_voice_configuration(config)
