@@ -17,6 +17,26 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
             self.assertEqual(planned.system,"Lembava")
             self.assertEqual(planned.position,center.BUBBLE_TRADE_CENTER)
 
+    def test_freyja_explains_full_cargo_before_querying_markets(self):
+        profile=TradeProfile(
+            "Wredgu MR-N d6-39",3_357_092_535,167_854_627,
+            24,24,66.12,(-9491.0,-9.3,-451.2),
+        )
+
+        blocker=CommandCenter._freyja_trade_profile_blocker(profile)
+
+        self.assertIn("bodega está llena",blocker)
+        self.assertIn("24 de 24 toneladas",blocker)
+        self.assertIn("Libere espacio",blocker)
+
+    def test_freyja_accepts_current_ship_when_cargo_is_free(self):
+        profile=TradeProfile(
+            "Lembava",3_357_092_535,167_854_627,
+            24,0,66.12,CommandCenter.BUBBLE_TRADE_CENTER,
+        )
+
+        self.assertIsNone(CommandCenter._freyja_trade_profile_blocker(profile))
+
     def test_fixed_response_uses_requested_officer(self):
         center=CommandCenter.__new__(CommandCenter)
         center.config=SimpleNamespace()

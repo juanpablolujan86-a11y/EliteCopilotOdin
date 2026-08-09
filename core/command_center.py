@@ -1337,6 +1337,10 @@ class CommandCenter:
             self.navigation_manager.context,
             self.config.cargo_file,
         )
+        profile_blocker = self._freyja_trade_profile_blocker(self.trade_profile)
+        if profile_blocker is not None:
+            self._start_fixed_voice_response(profile_blocker, officer="FREYJA")
+            return
         planning_profile = self._freyja_planning_profile(selection)
         opportunities = (
             [] if selection == "powerplay"
@@ -1430,6 +1434,31 @@ class CommandCenter:
         else:
             answer = plan.summary()
         self._start_fixed_voice_response(answer, officer="FREYJA")
+
+    @staticmethod
+    def _freyja_trade_profile_blocker(profile) -> str | None:
+        if profile.cargo_capacity <= 0:
+            return (
+                "No puedo iniciar una operación comercial porque la nave no "
+                "tiene capacidad de carga disponible."
+            )
+        if profile.cargo_free <= 0:
+            return (
+                "No puedo iniciar esta modalidad porque la bodega está llena, "
+                f"con {profile.cargo_used} de {profile.cargo_capacity} toneladas "
+                "ocupadas. Libere espacio de carga y vuelva a solicitar el cálculo."
+            )
+        if profile.available_capital <= 0:
+            return (
+                "No puedo iniciar una operación comercial sin créditos disponibles "
+                "por encima de la reserva de seguridad."
+            )
+        if profile.jump_range <= 0:
+            return (
+                "No puedo calcular la operación porque todavía no conozco el "
+                "alcance de salto de la nave."
+            )
+        return None
 
     def _freyja_planning_profile(self, selection: str):
         """Separa el viaje a la Burbuja del presupuesto de la expedici\u00f3n."""
