@@ -119,6 +119,30 @@ class ActiveTradeRoute:
             VoiceMessageReady("FREYJA", message, "llegada comercial"),
         )
 
+    def handle_docked(self, event: dict) -> None:
+        leg = self._current_leg()
+        if leg is None:
+            return
+        phase = self.state.get("phase", "to_buy")
+        station_key = "buy_station" if phase == "to_buy" else "sell_station"
+        station = str(event.get("StationName", "") or "")
+        if station.casefold() != str(leg[station_key]).casefold():
+            return
+        dock_key = f"docked:{phase}:{station.casefold()}"
+        if self.state.get("last_docked") == dock_key:
+            return
+        self.state["last_docked"] = dock_key
+        self._save()
+        action = "Compre" if phase == "to_buy" else "Venda"
+        message = (
+            f"Atraque confirmado en {station}. {action} "
+            f"{leg['units']} toneladas de {leg['commodity']}."
+        )
+        self.event_bus.publish_internal(
+            InternalEvent.VOICE_MESSAGE_READY,
+            VoiceMessageReady("FREYJA", message, "atraque comercial"),
+        )
+
     def _save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(

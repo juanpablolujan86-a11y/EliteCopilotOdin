@@ -35,6 +35,9 @@ class ActiveTradeRouteTests(unittest.TestCase):
             calls=bus.publish_internal.call_count
             restored.handle_fsd_jump({"StarSystem":"A"})
             self.assertEqual(bus.publish_internal.call_count,calls)
+            restored.handle_docked({"StationName":"A Port"})
+            self.assertIn("Atraque confirmado",bus.publish_internal.call_args.args[1].message)
+            self.assertIn("Compre 24 toneladas",bus.publish_internal.call_args.args[1].message)
             restored.handle_market_buy({"Type":"silver"})
             self.assertEqual(copied[-1],"B")
             self.assertIn(
@@ -43,6 +46,8 @@ class ActiveTradeRouteTests(unittest.TestCase):
             restored.handle_fsd_jump({"StarSystem":"B"})
             self.assertIn("Llegamos al sistema de venta",bus.publish_internal.call_args.args[1].message)
             self.assertIn("B Port",bus.publish_internal.call_args.args[1].message)
+            restored.handle_docked({"StationName":"B Port"})
+            self.assertIn("Venda 24 toneladas",bus.publish_internal.call_args.args[1].message)
             restored.handle_market_sell({"Type":"silver"})
             self.assertEqual(restored.state["index"],1)
             self.assertEqual(copied[-1],"B")
