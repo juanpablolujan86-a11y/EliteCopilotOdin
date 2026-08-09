@@ -73,7 +73,7 @@ class ThreeStationTradePlan:
         stations.extend(leg.opportunity.sell_station for leg in self.legs)
         return (
             " → ".join(stations)
-            + f": {self.estimated_profit:,} créditos estimados en "
+            + f": {self.estimated_profit} créditos estimados en "
             f"{self.total_jumps} saltos."
         )
 
@@ -93,7 +93,7 @@ class TradeExpeditionPlan:
             f"La expedición comienza en {first.buy_station}, sistema "
             f"{first.buy_system}, y finaliza en {last.sell_station}, sistema "
             f"{last.sell_system}. Son {len(self.legs)} operaciones y "
-            f"{self.total_jumps} saltos, con {self.estimated_profit:,} "
+            f"{self.total_jumps} saltos, con {self.estimated_profit} "
             "créditos estimados."
         )
         if any(leg.stale_hours > 24 for leg in self.legs):
@@ -119,7 +119,7 @@ class PowerplayTradePlan:
             f"Compre {self.trade.units} toneladas de {item.commodity} en "
             f"{item.buy_station}, sistema {item.buy_system}, y v\u00e9ndalas en "
             f"{item.sell_station}, sistema {item.sell_system}. La ganancia "
-            f"estimada es de {self.trade.estimated_profit:,} cr\u00e9ditos en "
+            f"estimada es de {self.trade.estimated_profit} cr\u00e9ditos en "
             f"{item.jumps} saltos. {eligibility}"
         )
 

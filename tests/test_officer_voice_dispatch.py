@@ -64,6 +64,22 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
         self.assertTrue(center._freyja_used_stale_cache)
         self.assertEqual(plan.opportunity.commodity,"silver")
 
+    def test_freyja_sends_credit_amount_to_voice_without_separators(self):
+        plan=SimpleNamespace(
+            units=24,
+            estimated_profit=359520,
+            stale_hours=1,
+            opportunity=SimpleNamespace(
+                commodity="silver",buy_station="Compra",buy_system="A",
+                sell_station="Venta",sell_system="B",jumps=1,
+            ),
+        )
+
+        answer=CommandCenter._quick_trade_voice_summary(plan)
+
+        self.assertIn("359520 créditos",answer)
+        self.assertNotIn("359,520",answer)
+
     def test_fixed_response_uses_requested_officer(self):
         center=CommandCenter.__new__(CommandCenter)
         center.config=SimpleNamespace()

@@ -1525,7 +1525,7 @@ class CommandCenter:
             f"Compre {plan.units} toneladas de {item.commodity} en "
             f"{item.buy_station}, sistema {item.buy_system}, y v\u00e9ndalas en "
             f"{item.sell_station}, sistema {item.sell_system}. La ganancia "
-            f"estimada es de {plan.estimated_profit:,} cr\u00e9ditos en "
+            f"estimada es de {plan.estimated_profit} cr\u00e9ditos en "
             f"{item.jumps} saltos."
             + (
                 " Confirme el precio al llegar; uno de los mercados tiene m\u00e1s de un d\u00eda."
