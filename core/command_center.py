@@ -49,6 +49,9 @@ from services.edsm_pipeline import EDSMJournalPipeline
 from services.edsm_outbox import EDSMOutbox
 from services.edsm_delivery import EDSMDeliveryService
 from services.edsm_discard import EDSMDiscardRegistry
+from services.inara_delivery import InaraDeliveryService
+from services.inara_outbox import InaraOutbox
+from services.inara_pipeline import InaraJournalPipeline
 from state.commander_state import CommanderState
 from ui.console_presenter import ConsolePresenter
 from core.version import CAPABILITY, VERSION
@@ -124,6 +127,8 @@ class CommandCenter:
         self.eddn_delivery_service: EDDNDeliveryService | None = None
         self.edsm_pipeline: EDSMJournalPipeline | None = None
         self.edsm_delivery_service: EDSMDeliveryService | None = None
+        self.inara_pipeline: InaraJournalPipeline | None = None
+        self.inara_delivery_service: InaraDeliveryService | None = None
         self.status_watcher = StatusWatcher(self.config.status_file)
         self.surface_navigation = SurfaceNavigationTracker()
         self.binding_custodian = BindingCustodian(
@@ -215,6 +220,11 @@ class CommandCenter:
                 discard_registry=edsm_discard_registry,
             )
             self.edsm_delivery_service.start()
+        if self.config.inara_capture_enabled:
+            self.inara_pipeline = InaraJournalPipeline(InaraOutbox(self.database))
+        if self.config.inara_upload_enabled:
+            self.inara_delivery_service = InaraDeliveryService(self.config.data_root)
+            self.inara_delivery_service.start()
 
         self._initialize_heimdall()
 
@@ -260,6 +270,8 @@ class CommandCenter:
                 self.eddn_delivery_service.stop()
             if self.edsm_delivery_service is not None:
                 self.edsm_delivery_service.stop()
+            if self.inara_delivery_service is not None:
+                self.inara_delivery_service.stop()
             self.database.disconnect()
             print("Base de datos desconectada correctamente.")
 
@@ -850,6 +862,8 @@ class CommandCenter:
                     )
                 if self.edsm_pipeline is not None:
                     self.edsm_pipeline.capture(event)
+                if self.inara_pipeline is not None:
+                    self.inara_pipeline.capture(event)
                 self.event_bus.publish(event)
 
             time.sleep(0.1)

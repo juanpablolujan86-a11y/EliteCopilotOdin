@@ -131,3 +131,11 @@ class Config:
     @property
     def edsm_upload_enabled(self) -> bool:
         return self._enabled(self.data.get("edsm_upload_enabled"))
+
+    @property
+    def inara_capture_enabled(self) -> bool:
+        return self._enabled(self.data.get("inara_capture_enabled"))
+
+    @property
+    def inara_upload_enabled(self) -> bool:
+        return self._enabled(self.data.get("inara_upload_enabled"))
