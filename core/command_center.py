@@ -222,6 +222,7 @@ class CommandCenter:
             self.edsm_delivery_service.start()
         if self.config.inara_capture_enabled:
             self.inara_pipeline = InaraJournalPipeline(InaraOutbox(self.database))
+            self.inara_pipeline.bootstrap_journal(journal)
         if self.config.inara_upload_enabled:
             self.inara_delivery_service = InaraDeliveryService(self.config.data_root)
             self.inara_delivery_service.start()

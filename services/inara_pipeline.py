@@ -27,6 +27,18 @@ class InaraJournalPipeline:
             self.logger.exception("No se pudo conservar un evento para Inara")
         return queued
 
+    def bootstrap_journal(self, journal: Path) -> None:
+        try:
+            with Path(journal).open("r", encoding="utf-8", errors="ignore") as stream:
+                for line in stream:
+                    try:
+                        event = json.loads(line)
+                    except (json.JSONDecodeError, TypeError):
+                        continue
+                    self.mapper.remember_location(event)
+        except OSError:
+            return
+
     @staticmethod
     def _with_cargo_inventory(event: dict, cargo_file: Path | None) -> dict:
         if event.get("event") != "Cargo" or cargo_file is None:

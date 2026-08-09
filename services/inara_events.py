@@ -15,6 +15,10 @@ class InaraEventMapper:
         "Empire": "empire",
     }
 
+    def __init__(self) -> None:
+        self.current_system = ""
+        self.current_station = ""
+
     def map(self, journal_event: dict) -> tuple[dict, ...]:
         if not isinstance(journal_event, dict):
             return ()
@@ -22,6 +26,7 @@ class InaraEventMapper:
         if not timestamp:
             return ()
         kind = journal_event.get("event")
+        self.remember_location(journal_event)
         if kind == "LoadGame":
             return self._credits(journal_event, timestamp)
         if kind == "Statistics":
@@ -53,7 +58,23 @@ class InaraEventMapper:
             return self._powerplay(journal_event, timestamp)
         if kind == "Reputation":
             return self._major_reputation(journal_event, timestamp)
+        if kind == "MissionAccepted":
+            return self._mission_accepted(journal_event, timestamp)
+        if kind in {"MissionCompleted", "MissionAbandoned", "MissionFailed"}:
+            return self._mission_status(journal_event, timestamp)
         return ()
+
+    def remember_location(self, event: dict) -> None:
+        kind = event.get("event")
+        if kind in {"FSDJump", "CarrierJump"} and event.get("StarSystem"):
+            self.current_system = str(event["StarSystem"])
+            self.current_station = ""
+        elif kind == "Docked" and event.get("StarSystem") and event.get("StationName"):
+            self.current_system = str(event["StarSystem"])
+            self.current_station = str(event["StationName"])
+        elif kind == "Location" and event.get("StarSystem"):
+            self.current_system = str(event["StarSystem"])
+            self.current_station = str(event.get("StationName", "")) if event.get("Docked") else ""
 
     @staticmethod
     def _event(name: str, timestamp: str, data) -> dict:
@@ -368,6 +389,72 @@ class InaraEventMapper:
         return (self._event(
             "setCommanderReputationMinorFaction", timestamp, reputations
         ),)
+
+    def _mission_accepted(self, event: dict, timestamp: str) -> tuple[dict, ...]:
+        name, mission_id = event.get("Name"), event.get("MissionID")
+        if not name or not isinstance(mission_id, int) or isinstance(mission_id, bool):
+            return ()
+        data = {"missionName": str(name), "missionGameID": mission_id}
+        for target, source, expected in (
+            ("missionExpiry", "Expiry", str),
+            ("influenceGain", "Influence", str),
+            ("reputationGain", "Reputation", str),
+            ("minorfactionNameOrigin", "Faction", str),
+            ("starsystemNameTarget", "DestinationSystem", str),
+            ("stationNameTarget", "DestinationStation", str),
+            ("minorfactionNameTarget", "TargetFaction", str),
+            ("commodityName", "Commodity", str),
+            ("commodityCount", "Count", int),
+            ("targetName", "Target", str),
+            ("targetType", "TargetType", str),
+            ("killCount", "KillCount", int),
+            ("passengerType", "PassengerType", str),
+            ("passengerCount", "PassengerCount", int),
+            ("passengerIsVIP", "PassengerVIPs", bool),
+            ("passengerIsWanted", "PassengerWanted", bool),
+        ):
+            self._optional(data, target, event.get(source), expected)
+        if self.current_system:
+            data["starsystemNameOrigin"] = self.current_system
+        if self.current_station:
+            data["stationNameOrigin"] = self.current_station
+        return (self._event("addCommanderMission", timestamp, data),)
+
+    def _mission_status(self, event: dict, timestamp: str) -> tuple[dict, ...]:
+        mission_id = event.get("MissionID")
+        if not isinstance(mission_id, int) or isinstance(mission_id, bool):
+            return ()
+        kind = event.get("event")
+        names = {
+            "MissionCompleted": "setCommanderMissionCompleted",
+            "MissionAbandoned": "setCommanderMissionAbandoned",
+            "MissionFailed": "setCommanderMissionFailed",
+        }
+        data = {"missionGameID": mission_id}
+        if kind == "MissionCompleted":
+            donation = event.get("Donation", event.get("Donated"))
+            self._optional(data, "donationCredits", donation, int)
+            self._optional(data, "rewardCredits", event.get("Reward"), int)
+            materials = self._reward_items(event.get("MaterialsReward"))
+            if materials:
+                data["rewardMaterials"] = materials
+            commodities = self._reward_items(event.get("CommodityReward"))
+            if commodities:
+                data["rewardCommodities"] = commodities
+        return (self._event(names[kind], timestamp, data),)
+
+    @staticmethod
+    def _reward_items(items) -> list[dict]:
+        if not isinstance(items, list):
+            return []
+        rewards = []
+        for item in items:
+            if not isinstance(item, dict) or not item.get("Name"):
+                continue
+            count = item.get("Count")
+            if isinstance(count, int) and not isinstance(count, bool) and count > 0:
+                rewards.append({"itemName": str(item["Name"]), "itemCount": count})
+        return rewards
 
     @staticmethod
     def _reputation(value: int | float) -> float:

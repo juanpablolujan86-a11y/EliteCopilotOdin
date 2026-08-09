@@ -220,5 +220,45 @@ class InaraEventMapperTests(unittest.TestCase):
             "minorfactionName":"Mother Gaia","minorfactionReputation":0.75,
         }])
 
+    def test_accepted_mission_uses_known_origin_and_journal_details(self):
+        self.mapper.map({"timestamp":self.timestamp,"event":"Docked",
+                         "StarSystem":"Sol","StationName":"Galileo"})
+        mapped=self.mapper.map({
+            "timestamp":self.timestamp,"event":"MissionAccepted",
+            "Name":"Mission_Massacre_Legal","MissionID":123,"Expiry":"2026-08-10T00:00:00Z",
+            "Faction":"Mother Gaia","DestinationSystem":"Achenar",
+            "DestinationStation":"Dawes Hub","TargetFaction":"Pirates",
+            "TargetType":"$MissionUtil_FactionTag_Pirate;","KillCount":10,
+            "Influence":"+++","Reputation":"++",
+        })[0]
+        self.assertEqual(mapped["eventName"],"addCommanderMission")
+        self.assertEqual(mapped["eventData"]["starsystemNameOrigin"],"Sol")
+        self.assertEqual(mapped["eventData"]["stationNameOrigin"],"Galileo")
+        self.assertEqual(mapped["eventData"]["killCount"],10)
+
+    def test_mission_completion_maps_rewards_without_changing_inventories(self):
+        mapped=self.mapper.map({
+            "timestamp":self.timestamp,"event":"MissionCompleted","MissionID":123,
+            "Reward":12000,"Donation":500,
+            "MaterialsReward":[{"Name":"arsenic","Count":2}],
+        })[0]
+        self.assertEqual(mapped["eventName"],"setCommanderMissionCompleted")
+        self.assertEqual(mapped["eventData"]["rewardCredits"],12000)
+        self.assertEqual(mapped["eventData"]["rewardMaterials"],[
+            {"itemName":"arsenic","itemCount":2}
+        ])
+
+    def test_abandoned_and_failed_missions_only_require_id(self):
+        abandoned=self.mapper.map({"timestamp":self.timestamp,
+                                    "event":"MissionAbandoned","MissionID":1})[0]
+        failed=self.mapper.map({"timestamp":self.timestamp,
+                                "event":"MissionFailed","MissionID":2})[0]
+        self.assertEqual(abandoned["eventName"],"setCommanderMissionAbandoned")
+        self.assertEqual(failed["eventName"],"setCommanderMissionFailed")
+
+    def test_mission_without_stable_id_is_ignored(self):
+        self.assertEqual(self.mapper.map({"timestamp":self.timestamp,
+                                          "event":"MissionAccepted","Name":"x"}),())
+
 
 if __name__=="__main__": unittest.main()

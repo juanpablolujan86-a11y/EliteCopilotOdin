@@ -46,5 +46,21 @@ class InaraJournalPipelineTests(unittest.TestCase):
             },cargo_file=self.root/"missing.json"),0)
         self.assertEqual(self.outbox.counts(),{})
 
+    def test_bootstrap_restores_location_without_queueing_history(self):
+        journal=self.root/"Journal.log"
+        journal.write_text(
+            '{"timestamp":"2026-08-09T11:00:00Z","event":"Location",'
+            '"StarSystem":"Sol","Docked":true,"StationName":"Galileo"}\n',
+            encoding="utf-8",
+        )
+        self.pipeline.bootstrap_journal(journal)
+        self.assertEqual(self.outbox.counts(),{})
+        self.pipeline.capture({"timestamp":"2026-08-09T12:00:00Z",
+                               "event":"MissionAccepted","Name":"Mission_Test",
+                               "MissionID":123})
+        queued=self.outbox.due()[0].event["eventData"]
+        self.assertEqual(queued["starsystemNameOrigin"],"Sol")
+        self.assertEqual(queued["stationNameOrigin"],"Galileo")
+
 
 if __name__=="__main__": unittest.main()
