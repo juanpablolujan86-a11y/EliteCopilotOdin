@@ -941,6 +941,7 @@ class CommandCenter:
         snapshot = {
             "status": "Operativo",
             "commander": self.commander_state.commander_name or "Comandante",
+            "frontier_id": self.commander_state.fid or "",
             "credits": int(self.commander_state.credits or 0),
             "system": self.commander_state.current_system or "Sin sistema",
             "body": self.commander_state.current_body or "",

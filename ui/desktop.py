@@ -388,7 +388,7 @@ class OdinDesktopApp:
     def _open_settings(self) -> None:
         window = tk.Toplevel(self.root)
         window.title("ODIN — Configuración del comandante")
-        window.geometry("580x650")
+        window.geometry("580x730")
         window.resizable(False, False)
         window.configure(bg=ELITE["background"])
         window.transient(self.root)
@@ -425,32 +425,80 @@ class OdinDesktopApp:
 
         credentials = self._settings_section(container, "API Y CREDENCIALES PERSONALES")
         commander = tk.StringVar(value=self.values["commander"].get())
-        frontier_id = tk.StringVar()
+        frontier_id = tk.StringVar(
+            value=str(
+                getattr(self.odin, "dashboard_snapshot", {}).get("frontier_id", "")
+                or getattr(getattr(self.odin, "commander_state", None), "fid", "")
+            )
+        )
         eleven_key = tk.StringVar()
         edsm_key = tk.StringVar()
         inara_key = tk.StringVar()
-        for label, variable, secret in (
-            ("Comandante", commander, False),
-            ("Frontier ID (para Inara)", frontier_id, False),
-            ("ElevenLabs API key", eleven_key, True),
-            ("EDSM API key", edsm_key, True),
-            ("Inara API key", inara_key, True),
+        installed = {
+            "elevenlabs": WindowsCredentialStore().exists(),
+            "edsm": EDSMCredentialStore().exists(),
+            "inara": InaraCredentialStore().exists(),
+        }
+        for label, variable, secret, readonly, service in (
+            ("Comandante", commander, False, False, ""),
+            ("Frontier ID (detectado desde el Journal)", frontier_id, False, True, ""),
+            ("ElevenLabs API key", eleven_key, True, False, "elevenlabs"),
+            ("EDSM API key", edsm_key, True, False, "edsm"),
+            ("Inara API key", inara_key, True, False, "inara"),
         ):
+            label_row = tk.Frame(credentials, bg=ELITE["surface"])
+            label_row.pack(fill="x", pady=(6, 2))
             tk.Label(
-                credentials, text=label, bg=ELITE["surface"], fg=ELITE["muted"],
+                label_row, text=label, bg=ELITE["surface"], fg=ELITE["muted"],
                 anchor="w", font=("Segoe UI", 9),
-            ).pack(fill="x", pady=(6, 2))
-            tk.Entry(
+            ).pack(side="left")
+            if service:
+                configured = installed[service]
+                tk.Label(
+                    label_row,
+                    text="● CONFIGURADA" if configured else "○ NO CONFIGURADA",
+                    bg=ELITE["surface"],
+                    fg=ELITE["green"] if configured else ELITE["muted"],
+                    font=("Segoe UI", 8, "bold"),
+                ).pack(side="right")
+            entry = tk.Entry(
                 credentials, textvariable=variable, show="●" if secret else "",
                 bg=ELITE["surface_alt"], fg=ELITE["text"], insertbackground=ELITE["orange"],
                 relief="flat", font=("Segoe UI", 10),
-            ).pack(fill="x", ipady=5)
+                readonlybackground=ELITE["surface_alt"],
+            )
+            if readonly:
+                entry.configure(state="readonly")
+            entry.pack(fill="x", ipady=5)
         tk.Label(
             credentials,
             text="Dejá una clave vacía para conservar la que ya está protegida en Windows.",
             bg=ELITE["surface"], fg=ELITE["muted"], anchor="w",
             font=("Segoe UI", 8), wraplength=510, justify="left",
         ).pack(fill="x", pady=(8, 0))
+
+        sound = self._settings_section(container, "VOLUMEN GENERAL DE OFICIALES")
+        voice_settings = self.voice_repository.load()
+        initial_volume = (
+            next(iter(voice_settings.officers.values())).volume
+            if voice_settings.officers else 100
+        )
+        volume = tk.IntVar(value=initial_volume)
+        volume_label = tk.StringVar(value=f"{initial_volume}%")
+        volume_row = tk.Frame(sound, bg=ELITE["surface"])
+        volume_row.pack(fill="x")
+        tk.Scale(
+            volume_row, from_=0, to=100, orient="horizontal", variable=volume,
+            command=lambda value: volume_label.set(f"{int(float(value))}%"),
+            bg=ELITE["surface"], fg=ELITE["text"], troughcolor=ELITE["surface_alt"],
+            activebackground=ELITE["orange"], highlightthickness=0,
+            showvalue=False, length=430,
+        ).pack(side="left", fill="x", expand=True)
+        tk.Label(
+            volume_row, textvariable=volume_label, width=5,
+            bg=ELITE["surface"], fg=ELITE["amber"],
+            font=("Segoe UI", 10, "bold"),
+        ).pack(side="right")
 
         def save() -> None:
             name = commander.get().strip()
@@ -474,6 +522,10 @@ class OdinDesktopApp:
                     inara_capture_enabled=network_vars["inara"].get(),
                     inara_upload_enabled=network_vars["inara"].get(),
                 )
+                voice_settings = self.voice_repository.load()
+                for assignment in voice_settings.officers.values():
+                    assignment.volume = volume.get()
+                self.voice_repository.save(voice_settings)
             except (OSError, ValueError) as error:
                 messagebox.showerror("ODIN", f"No se pudo guardar: {error}", parent=window)
                 return
@@ -483,12 +535,20 @@ class OdinDesktopApp:
             )
             window.destroy()
 
+        actions = tk.Frame(container, bg=ELITE["background"])
+        actions.pack(fill="x", pady=(12, 0))
         tk.Button(
-            container, text="GUARDAR CONFIGURACIÓN", command=save,
+            actions, text="CANCELAR", command=window.destroy,
+            bg=ELITE["surface_alt"], fg=ELITE["text"], relief="flat",
+            activebackground=ELITE["border"], activeforeground=ELITE["text"],
+            padx=12, pady=8, font=("Segoe UI", 10, "bold"), cursor="hand2",
+        ).pack(side="left", fill="x", expand=True, padx=(0, 5))
+        tk.Button(
+            actions, text="ACEPTAR", command=save,
             bg=ELITE["orange_soft"], fg=ELITE["background"], relief="flat",
             activebackground=ELITE["orange"], padx=12, pady=8,
             font=("Segoe UI", 10, "bold"), cursor="hand2",
-        ).pack(fill="x", pady=(12, 0))
+        ).pack(side="right", fill="x", expand=True, padx=(5, 0))
 
     def _settings_section(self, parent, title: str):
         panel = tk.Frame(

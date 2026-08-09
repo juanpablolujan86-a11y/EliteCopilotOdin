@@ -94,6 +94,11 @@ todos los oficiales. `CONFIGURACIÓN` permite guardar las API keys personales
 en el Administrador de credenciales de Windows y autorizar por separado los
 envíos a EDDN, EDSM e Inara. Las claves nunca se escriben en `config.json`;
 los cambios de transmisión se aplican en el siguiente inicio de ODIN.
+El Frontier ID se detecta automáticamente desde el Journal. El mismo panel
+incluye un volumen general para los oficiales y botones `ACEPTAR`/`CANCELAR`;
+cancelar cierra la ventana sin guardar ninguna modificación.
+Cada proveedor indica `CONFIGURADA` o `NO CONFIGURADA` sin mostrar el valor de
+la API key protegida.
 
 Cerrar la ventana solicita primero el cierre ordenado del observador del
 Journal y de los servicios de voz y red.
