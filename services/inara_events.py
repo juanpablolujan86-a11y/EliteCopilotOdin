@@ -30,6 +30,14 @@ class InaraEventMapper:
             return self._ranks(journal_event, timestamp, "rankValue", float_values=False)
         if kind == "Progress":
             return self._ranks(journal_event, timestamp, "rankProgress", float_values=True)
+        if kind == "FSDJump":
+            return self._fsd_jump(journal_event, timestamp)
+        if kind == "Docked":
+            return self._docked(journal_event, timestamp)
+        if kind == "Location":
+            return self._location(journal_event, timestamp)
+        if kind in {"Loadout", "SetUserShipName"}:
+            return self._ship(journal_event, timestamp)
         return ()
 
     @staticmethod
@@ -76,3 +84,74 @@ class InaraEventMapper:
         if not ranks:
             return ()
         return (self._event("setCommanderRankPilot", timestamp, ranks),)
+
+    def _fsd_jump(self, event: dict, timestamp: str) -> tuple[dict, ...]:
+        system = event.get("StarSystem")
+        if not system:
+            return ()
+        data = {"starsystemName": str(system)}
+        self._optional(data, "starsystemCoords", event.get("StarPos"), (list, tuple))
+        self._optional(data, "jumpDistance", event.get("JumpDist"), (int, float))
+        self._travel_mode(data, event)
+        return (self._event("addCommanderTravelFSDJump", timestamp, data),)
+
+    def _docked(self, event: dict, timestamp: str) -> tuple[dict, ...]:
+        system, station = event.get("StarSystem"), event.get("StationName")
+        if not system or not station:
+            return ()
+        data = {"starsystemName": str(system), "stationName": str(station)}
+        self._optional(data, "marketID", event.get("MarketID"), int)
+        self._travel_mode(data, event)
+        return (self._event("addCommanderTravelDock", timestamp, data),)
+
+    def _location(self, event: dict, timestamp: str) -> tuple[dict, ...]:
+        system = event.get("StarSystem")
+        if not system:
+            return ()
+        data = {"starsystemName": str(system)}
+        self._optional(data, "starsystemCoords", event.get("StarPos"), (list, tuple))
+        if event.get("Docked"):
+            self._optional(data, "stationName", event.get("StationName"), str)
+            self._optional(data, "marketID", event.get("MarketID"), int)
+        self._optional(data, "starsystemBodyName", event.get("Body"), str)
+        if isinstance(event.get("Latitude"), (int, float)) and isinstance(
+            event.get("Longitude"), (int, float)
+        ):
+            data["starsystemBodyCoords"] = [
+                float(event["Latitude"]), float(event["Longitude"])
+            ]
+        return (self._event("setCommanderTravelLocation", timestamp, data),)
+
+    def _ship(self, event: dict, timestamp: str) -> tuple[dict, ...]:
+        ship_type, ship_id = event.get("Ship"), event.get("ShipID")
+        if not ship_type or not isinstance(ship_id, int):
+            return ()
+        data = {
+            "shipType": str(ship_type),
+            "shipGameID": ship_id,
+            "isCurrentShip": True,
+        }
+        for target, source in (
+            ("shipName", "ShipName"), ("shipIdent", "ShipIdent"),
+            ("shipName", "UserShipName"), ("shipIdent", "UserShipId"),
+        ):
+            self._optional(data, target, event.get(source), str)
+        for target, source, expected in (
+            ("shipHullValue", "HullValue", (int, float)),
+            ("shipModulesValue", "ModulesValue", (int, float)),
+            ("shipRebuyCost", "Rebuy", (int, float)),
+            ("shipMaxJumpRange", "MaxJumpRange", (int, float)),
+            ("shipCargoCapacity", "CargoCapacity", (int, float)),
+        ):
+            self._optional(data, target, event.get(source), expected)
+        return (self._event("setCommanderShip", timestamp, data),)
+
+    @staticmethod
+    def _optional(data: dict, key: str, value, expected) -> None:
+        if isinstance(value, expected) and not isinstance(value, bool):
+            data[key] = list(value) if isinstance(value, tuple) else value
+
+    @staticmethod
+    def _travel_mode(data: dict, event: dict) -> None:
+        if event.get("Taxi") is True:
+            data["isTaxiShuttle"] = True

@@ -41,5 +41,45 @@ class InaraEventMapperTests(unittest.TestCase):
         self.assertEqual(self.mapper.map({"event":"Music"}),())
         self.assertEqual(self.mapper.map({"timestamp":self.timestamp,"event":"Music"}),())
 
+    def test_fsd_jump_maps_location_coordinates_and_distance(self):
+        mapped=self.mapper.map({"timestamp":self.timestamp,"event":"FSDJump",
+                                "StarSystem":"Sol","StarPos":[0,0,0],
+                                "JumpDist":12.5})[0]
+        self.assertEqual(mapped["eventName"],"addCommanderTravelFSDJump")
+        self.assertEqual(mapped["eventData"],{
+            "starsystemName":"Sol","starsystemCoords":[0,0,0],
+            "jumpDistance":12.5,
+        })
+
+    def test_docked_maps_station_and_market_without_session_location_duplication(self):
+        docked=self.mapper.map({"timestamp":self.timestamp,"event":"Docked",
+                                "StarSystem":"Sol","StationName":"Galileo",
+                                "MarketID":128})[0]
+        self.assertEqual(docked["eventName"],"addCommanderTravelDock")
+        location=self.mapper.map({"timestamp":self.timestamp,"event":"Location",
+                                  "StarSystem":"Sol","Docked":True,
+                                  "StationName":"Galileo","MarketID":128})[0]
+        self.assertEqual(location["eventName"],"setCommanderTravelLocation")
+
+    def test_location_maps_body_coordinates_when_known(self):
+        mapped=self.mapper.map({"timestamp":self.timestamp,"event":"Location",
+                                "StarSystem":"Sol","Body":"Earth",
+                                "Latitude":10.5,"Longitude":-20.25})[0]
+        self.assertEqual(mapped["eventData"]["starsystemBodyCoords"],[10.5,-20.25])
+
+    def test_loadout_and_ship_name_update_current_ship(self):
+        loadout=self.mapper.map({"timestamp":self.timestamp,"event":"Loadout",
+                                 "Ship":"anaconda","ShipID":7,"ShipName":"ODIN",
+                                 "ShipIdent":"NOR-1","Rebuy":123,"CargoCapacity":64})[0]
+        self.assertEqual(loadout["eventName"],"setCommanderShip")
+        self.assertEqual(loadout["eventData"]["shipGameID"],7)
+        self.assertEqual(loadout["eventData"]["shipRebuyCost"],123)
+        renamed=self.mapper.map({"timestamp":self.timestamp,
+                                 "event":"SetUserShipName","Ship":"anaconda",
+                                 "ShipID":7,"UserShipName":"Yggdrasil",
+                                 "UserShipId":"TREE"})[0]
+        self.assertEqual(renamed["eventData"]["shipName"],"Yggdrasil")
+        self.assertEqual(renamed["eventData"]["shipIdent"],"TREE")
+
 
 if __name__=="__main__": unittest.main()
