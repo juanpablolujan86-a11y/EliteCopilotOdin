@@ -394,8 +394,9 @@ class OdinDesktopApp:
     def _open_settings(self) -> None:
         window = tk.Toplevel(self.root)
         window.title("ODIN — Configuración del comandante")
-        window.geometry("580x730")
-        window.resizable(False, False)
+        window.geometry("620x650")
+        window.minsize(560, 560)
+        window.resizable(True, True)
         window.configure(bg=ELITE["background"])
         window.transient(self.root)
         window.grab_set()
@@ -408,7 +409,16 @@ class OdinDesktopApp:
             font=("Segoe UI", 14, "bold"), anchor="w",
         ).pack(fill="x", pady=(0, 12))
 
-        network = self._settings_section(container, "TRANSMISIÓN DE DATOS")
+        notebook = ttk.Notebook(container, style="Odin.TNotebook")
+        notebook.pack(fill="both", expand=True)
+        general_tab = tk.Frame(notebook, bg=ELITE["background"], padx=8, pady=8)
+        credentials_tab = tk.Frame(
+            notebook, bg=ELITE["background"], padx=8, pady=8
+        )
+        notebook.add(general_tab, text="GENERAL Y ESCUCHA")
+        notebook.add(credentials_tab, text="API Y CREDENCIALES")
+
+        network = self._settings_section(general_tab, "TRANSMISIÓN DE DATOS")
         network_vars = {}
         for key, label, enabled in (
             ("eddn", "Enviar mercados y Journal a EDDN", self.odin.config.eddn_upload_enabled),
@@ -429,7 +439,9 @@ class OdinDesktopApp:
             anchor="w",
         ).pack(fill="x", pady=(5, 0))
 
-        credentials = self._settings_section(container, "API Y CREDENCIALES PERSONALES")
+        credentials = self._settings_section(
+            credentials_tab, "API Y CREDENCIALES PERSONALES"
+        )
         commander = tk.StringVar(value=self.values["commander"].get())
         frontier_id = tk.StringVar(
             value=str(
@@ -483,7 +495,7 @@ class OdinDesktopApp:
             font=("Segoe UI", 8), wraplength=510, justify="left",
         ).pack(fill="x", pady=(8, 0))
 
-        sound = self._settings_section(container, "VOLUMEN GENERAL DE OFICIALES")
+        sound = self._settings_section(general_tab, "VOZ Y MODO DE ACTIVACIÓN")
         voice_settings = self.voice_repository.load()
         initial_volume = (
             next(iter(voice_settings.officers.values())).volume
