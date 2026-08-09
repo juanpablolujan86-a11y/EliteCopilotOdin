@@ -10,6 +10,7 @@ import sqlite3
 
 from core.database import DatabaseManager
 from services.eddn_journal import EDDNJournalMessageBuilder
+from services.eddn_commodity import EDDNCommodityMessageBuilder
 from services.eddn_outbox import EDDNOutbox
 
 
@@ -20,6 +21,7 @@ class EDDNJournalPipeline:
         self, builder: EDDNJournalMessageBuilder, outbox: EDDNOutbox
     ) -> None:
         self.builder = builder
+        self.commodity_builder = EDDNCommodityMessageBuilder(builder)
         self.outbox = outbox
         self.logger = logging.getLogger("odin.eddn")
 
@@ -36,8 +38,11 @@ class EDDNJournalPipeline:
             EDDNOutbox(database),
         )
 
-    def capture(self, event: dict) -> bool:
-        envelope = self.builder.prepare(event)
+    def capture(self, event: dict, *, market_file: Path | None = None) -> bool:
+        if event.get("event") == "Market":
+            envelope = self._prepare_market(event, market_file)
+        else:
+            envelope = self.builder.prepare(event)
         if envelope is None:
             return False
         try:
@@ -45,6 +50,16 @@ class EDDNJournalPipeline:
         except (sqlite3.Error, OSError, ValueError):
             self.logger.exception("No se pudo conservar un evento en la cola EDDN")
             return False
+
+    def _prepare_market(self, event: dict, market_file: Path | None):
+        if market_file is None:
+            return None
+        try:
+            payload = json.loads(market_file.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError, TypeError):
+            self.logger.exception("No se pudo leer Market.json para EDDN")
+            return None
+        return self.commodity_builder.prepare(event, payload)
 
     def bootstrap_journal(self, journal: Path) -> None:
         """Recupera metadatos/contexto sin encolar información histórica."""

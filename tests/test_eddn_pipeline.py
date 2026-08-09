@@ -86,6 +86,44 @@ class EDDNJournalPipelineTests(unittest.TestCase):
                 "StarSystem":"Sol","StarPos":[0,0,0],"SystemAddress":1,
             }))
 
+    def test_market_event_reads_matching_market_file_into_commodity_queue(self):
+        market=self.root/"Market.json"
+        market.write_text(
+            '{"timestamp":"2026-08-09T12:00:00Z","MarketID":7,'
+            '"StarSystem":"Sol","StationName":"Galileo","Items":[{'
+            '"Name":"gold","MeanPrice":90,"BuyPrice":100,"Stock":50,'
+            '"StockBracket":2,"SellPrice":80,"Demand":20,"DemandBracket":1}]}',
+            encoding="utf-8",
+        )
+        pipeline=EDDNJournalPipeline.create(self.root,self.database,"0.9.0")
+
+        captured=pipeline.capture({
+            "event":"Market","MarketID":7,"StarSystem":"Sol",
+            "StationName":"Galileo",
+        },market_file=market)
+
+        self.assertTrue(captured)
+        self.assertIn(
+            "/commodity/3/test",pipeline.outbox.due()[0].envelope["$schemaRef"]
+        )
+
+    def test_stale_market_file_is_not_queued(self):
+        market=self.root/"Market.json"
+        market.write_text(
+            '{"timestamp":"2026-08-09T12:00:00Z","MarketID":8,'
+            '"StarSystem":"Sol","StationName":"Old Port","Items":[]}',
+            encoding="utf-8",
+        )
+        pipeline=EDDNJournalPipeline.create(self.root,self.database,"0.9.0")
+
+        captured=pipeline.capture({
+            "event":"Market","MarketID":7,"StarSystem":"Sol",
+            "StationName":"Galileo",
+        },market_file=market)
+
+        self.assertFalse(captured)
+        self.assertEqual(pipeline.outbox.pending_count(),0)
+
 
 if __name__=="__main__":
     unittest.main()

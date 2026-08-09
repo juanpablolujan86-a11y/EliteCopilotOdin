@@ -817,7 +817,9 @@ class CommandCenter:
 
             for event in events:
                 if self.eddn_pipeline is not None:
-                    self.eddn_pipeline.capture(event)
+                    self.eddn_pipeline.capture(
+                        event, market_file=self.config.market_file
+                    )
                 self.event_bus.publish(event)
 
             time.sleep(0.1)
