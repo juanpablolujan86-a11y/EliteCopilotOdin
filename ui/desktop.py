@@ -259,6 +259,42 @@ class OdinDesktopApp:
         self._section_title(panel, "HEIMDALL · RUTA ACTIVA")
         body = tk.Frame(panel, bg=ELITE["surface"], padx=12, pady=10)
         body.pack(fill="x")
+        current_row = tk.Frame(body, bg=ELITE["surface"])
+        current_row.pack(fill="x", pady=(0, 7))
+        self.values["heimdall_current_system"] = tk.StringVar(value="Sin sistema")
+        self.values["community_status"] = tk.StringVar(value="○ CONSULTANDO")
+        tk.Label(
+            current_row, textvariable=self.values["heimdall_current_system"],
+            bg=ELITE["surface"], fg=ELITE["text"], anchor="w",
+            font=("Cascadia Mono", 9, "bold"), wraplength=190,
+        ).pack(side="left", fill="x", expand=True)
+        self.community_status_label = tk.Label(
+            current_row, textvariable=self.values["community_status"],
+            bg=ELITE["surface"], fg=ELITE["muted"], anchor="e",
+            font=("Segoe UI", 8, "bold"),
+        )
+        self.community_status_label.pack(side="right")
+        self.values["route_destination_input"] = tk.StringVar()
+        destination_row = tk.Frame(body, bg=ELITE["surface"])
+        destination_row.pack(fill="x", pady=(0, 9))
+        self.route_destination_entry = tk.Entry(
+            destination_row,
+            textvariable=self.values["route_destination_input"],
+            bg=ELITE["surface_alt"], fg=ELITE["text"],
+            insertbackground=ELITE["orange"], relief="flat",
+            font=("Cascadia Mono", 9),
+        )
+        self.route_destination_entry.pack(side="left", fill="x", expand=True, ipady=5)
+        self.route_destination_entry.bind(
+            "<Return>", lambda _event: self._request_neutron_route()
+        )
+        self.route_calculate_button = tk.Button(
+            destination_row, text="CALCULAR", command=self._request_neutron_route,
+            bg=ELITE["orange_soft"], fg=ELITE["background"], relief="flat",
+            activebackground=ELITE["orange"], padx=8, pady=5,
+            font=("Segoe UI", 8, "bold"), cursor="hand2",
+        )
+        self.route_calculate_button.pack(side="right", padx=(6, 0))
         self.values["next_system"] = tk.StringVar(value="Sin ruta activa")
         self.values["route_progress"] = tk.StringVar(value="—")
         tk.Label(body, text="SIGUIENTE SISTEMA", anchor="w", bg=ELITE["surface"],
@@ -343,6 +379,24 @@ class OdinDesktopApp:
         self.values["cartography"].set(self._credits(expedition.get("cartography", 0), True))
         self.values["exobiology"].set(self._credits(expedition.get("exobiology_base", 0), True))
         route = snapshot.get("route", {})
+        self.values["heimdall_current_system"].set(
+            snapshot.get("system") or "Sin sistema"
+        )
+        community_status = snapshot.get("community_status", "unknown")
+        if community_status == "registered":
+            self.values["community_status"].set("◆ REGISTRO PREVIO")
+            self.community_status_label.configure(fg=ELITE["green"])
+        elif community_status == "unregistered":
+            self.values["community_status"].set("◇ SIN REGISTRO")
+            self.community_status_label.configure(fg=ELITE["amber"])
+        else:
+            self.values["community_status"].set("○ CONSULTANDO")
+            self.community_status_label.configure(fg=ELITE["muted"])
+        calculating = bool(snapshot.get("route_calculating"))
+        self.route_calculate_button.configure(
+            text="CALCULANDO…" if calculating else "CALCULAR",
+            state="disabled" if calculating else "normal",
+        )
         self.values["next_system"].set(route.get("next_system") or "Sin ruta activa")
         self.values["route_progress"].set(
             f"{route.get('remaining_jumps', 0)} de {route.get('total_jumps', 0)} saltos restantes"
@@ -375,6 +429,22 @@ class OdinDesktopApp:
         system = self.values["next_system"].get().strip()
         if system and system != "Sin ruta activa":
             write_text(system)
+
+    def _request_neutron_route(self) -> None:
+        destination = self.values["route_destination_input"].get().strip()
+        if not destination:
+            messagebox.showwarning(
+                "HEIMDALL", "Pegá o escribí el sistema de destino.", parent=self.root
+            )
+            return
+        if self.odin.request_neutron_route(destination):
+            self.route_calculate_button.configure(text="SOLICITADO", state="disabled")
+            print(f"HEIMDALL: solicitud de ruta recibida hacia {destination}.")
+            return
+        messagebox.showinfo(
+            "HEIMDALL", "Ya hay una ruta en proceso. Esperá a que finalice.",
+            parent=self.root,
+        )
 
     def _toggle_mute(self) -> None:
         settings = self.voice_repository.load()

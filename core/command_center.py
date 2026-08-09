@@ -164,6 +164,8 @@ class CommandCenter:
         self._route_acknowledgement_done = threading.Event()
         self._route_acknowledgement_done.set()
         self._route_results: queue.Queue[tuple[object | None, str | None]] = queue.Queue()
+        self._manual_route_requests: queue.Queue[str] = queue.Queue()
+        self._route_calculation_busy = threading.Event()
         self._automatic_route_results: queue.Queue[
             tuple[object | None, str | None, str]
         ] = queue.Queue()
@@ -840,6 +842,14 @@ class CommandCenter:
             if self.navigation_manager is not None:
                 self.navigation_manager.poll_route()
 
+            if not self._route_calculation_busy.is_set():
+                try:
+                    requested_destination = self._manual_route_requests.get_nowait()
+                except queue.Empty:
+                    requested_destination = ""
+                if requested_destination:
+                    self._start_voice_route(requested_destination)
+
             if (
                 self.config.push_to_talk_enabled
                 and self.voice_hotkey.pressed()
@@ -945,12 +955,21 @@ class CommandCenter:
         except (RuntimeError, ValueError, TypeError):
             route = {}
         injections = self.fsd_injections.availability()
+        community_status = "unknown"
+        if self.commander_state.system_address:
+            rows = self.database.query(
+                "SELECT found FROM edsm_system_cache WHERE system_address = ?",
+                (self.commander_state.system_address,),
+            )
+            if rows:
+                community_status = "registered" if rows[0]["found"] else "unregistered"
         snapshot = {
             "status": "Operativo",
             "commander": self.commander_state.commander_name or "Comandante",
             "frontier_id": self.commander_state.fid or "",
             "credits": int(self.commander_state.credits or 0),
             "system": self.commander_state.current_system or "Sin sistema",
+            "community_status": community_status,
             "body": self.commander_state.current_body or "",
             "ship": (
                 navigation.ship_name or self.commander_state.ship_name
@@ -962,6 +981,10 @@ class CommandCenter:
             "jump_range": float(navigation.max_jump_range or 0),
             "fsd_health": navigation.fsd_health,
             "route": route,
+            "route_calculating": (
+                self._route_calculation_busy.is_set()
+                or not self._manual_route_requests.empty()
+            ),
             "biology": {
                 "bodies": len(predictions),
                 "species": sum(len(items) for items in predictions.values()),
@@ -1491,6 +1514,7 @@ class CommandCenter:
 
     def _start_voice_route(self, destination: str) -> None:
         if self.navigation_manager is None:
+            self._route_calculation_busy.clear()
             self._start_fixed_voice_response(
                 "Todavía no tengo disponible el contexto de navegación.",
                 officer="HEIMDALL",
@@ -1502,6 +1526,7 @@ class CommandCenter:
             max_jump_range=context.max_jump_range,
         )
         self._voice_busy.set()
+        self._route_calculation_busy.set()
         self._route_acknowledgement_done.clear()
         threading.Thread(
             target=self._run_processing_message,
@@ -1535,6 +1560,7 @@ class CommandCenter:
             self._route_results.put((None, "route_error"))
 
     def _finish_voice_route(self, plan, error: str | None) -> None:
+        self._route_calculation_busy.clear()
         if error is not None:
             self._start_fixed_voice_response(
                 "No pude calcular la ruta de neutrones. Se produjo un error.",
@@ -1579,6 +1605,19 @@ class CommandCenter:
             officer="HEIMDALL",
             wait_for=self._route_acknowledgement_done,
         )
+
+    def request_neutron_route(self, destination: str) -> bool:
+        """Encola una ruta solicitada por la GUI para procesarla en el motor."""
+
+        normalized = " ".join(str(destination).split())
+        if (
+            not normalized
+            or self._route_calculation_busy.is_set()
+            or not self._manual_route_requests.empty()
+        ):
+            return False
+        self._manual_route_requests.put(normalized)
+        return True
 
     def _start_fixed_voice_response(
         self,
