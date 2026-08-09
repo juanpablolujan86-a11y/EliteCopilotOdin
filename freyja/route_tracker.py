@@ -31,7 +31,7 @@ class ActiveTradeRoute:
                 "sell_system": item.sell_system,
                 "sell_station": item.sell_station,
             })
-        self.state = {"index": 0, "legs": legs}
+        self.state = {"index": 0, "phase": "to_buy", "last_arrival": "", "legs": legs}
         self._save()
         if legs:
             self.clipboard_writer(legs[0]["buy_system"])
@@ -42,6 +42,9 @@ class ActiveTradeRoute:
             leg["commodity"]
         ):
             return
+        self.state["phase"] = "to_sell"
+        self.state["last_arrival"] = ""
+        self._save()
         self.clipboard_writer(leg["sell_system"])
         self.event_bus.publish_internal(
             InternalEvent.VOICE_MESSAGE_READY,
@@ -70,6 +73,8 @@ class ActiveTradeRoute:
             message = "Ruta comercial completada, comandante."
         else:
             self.state["index"] = index
+            self.state["phase"] = "to_buy"
+            self.state["last_arrival"] = ""
             self._save()
             leg = legs[index]
             self.clipboard_writer(leg["buy_system"])
@@ -83,6 +88,35 @@ class ActiveTradeRoute:
         self.event_bus.publish_internal(
             InternalEvent.VOICE_MESSAGE_READY,
             VoiceMessageReady("FREYJA", message, "progreso comercial"),
+        )
+
+    def handle_fsd_jump(self, event: dict) -> None:
+        leg = self._current_leg()
+        if leg is None:
+            return
+        phase = self.state.get("phase", "to_buy")
+        target_key = "buy_system" if phase == "to_buy" else "sell_system"
+        arrived = str(event.get("StarSystem", "") or "")
+        if arrived.casefold() != str(leg[target_key]).casefold():
+            return
+        arrival_key = f"{phase}:{arrived.casefold()}"
+        if self.state.get("last_arrival") == arrival_key:
+            return
+        self.state["last_arrival"] = arrival_key
+        self._save()
+        if phase == "to_buy":
+            message = (
+                f"Llegamos al sistema de compra. Diríjase a {leg['buy_station']} "
+                f"y compre {leg['units']} toneladas de {leg['commodity']}."
+            )
+        else:
+            message = (
+                f"Llegamos al sistema de venta. Diríjase a {leg['sell_station']} "
+                f"y venda {leg['units']} toneladas de {leg['commodity']}."
+            )
+        self.event_bus.publish_internal(
+            InternalEvent.VOICE_MESSAGE_READY,
+            VoiceMessageReady("FREYJA", message, "llegada comercial"),
         )
 
     def _save(self) -> None:

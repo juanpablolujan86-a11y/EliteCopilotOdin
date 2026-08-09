@@ -421,6 +421,9 @@ class CommandCenter:
         self.event_bus.subscribe(
             "MarketBuy", self.active_trade_route.handle_market_buy
         )
+        self.event_bus.subscribe(
+            "FSDJump", self.active_trade_route.handle_fsd_jump
+        )
         market_cache = MarketCache(self.database)
         self.market_cache = market_cache
         self.event_bus.subscribe(

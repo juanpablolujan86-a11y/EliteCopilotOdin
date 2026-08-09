@@ -30,11 +30,19 @@ class ActiveTradeRouteTests(unittest.TestCase):
             restored=ActiveTradeRoute(path,bus,copied.append)
             self.assertEqual(restored.state["index"],0)
 
+            restored.handle_fsd_jump({"StarSystem":"A"})
+            self.assertIn("Llegamos al sistema de compra",bus.publish_internal.call_args.args[1].message)
+            calls=bus.publish_internal.call_count
+            restored.handle_fsd_jump({"StarSystem":"A"})
+            self.assertEqual(bus.publish_internal.call_count,calls)
             restored.handle_market_buy({"Type":"silver"})
             self.assertEqual(copied[-1],"B")
             self.assertIn(
                 "Compra confirmada",bus.publish_internal.call_args.args[1].message
             )
+            restored.handle_fsd_jump({"StarSystem":"B"})
+            self.assertIn("Llegamos al sistema de venta",bus.publish_internal.call_args.args[1].message)
+            self.assertIn("B Port",bus.publish_internal.call_args.args[1].message)
             restored.handle_market_sell({"Type":"silver"})
             self.assertEqual(restored.state["index"],1)
             self.assertEqual(copied[-1],"B")
