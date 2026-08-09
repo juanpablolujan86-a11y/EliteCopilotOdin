@@ -115,3 +115,19 @@ class Config:
         if isinstance(value, str):
             return value.strip().casefold() not in {"0", "false", "no"}
         return bool(value)
+
+    @staticmethod
+    def _enabled(value, default: bool = False) -> bool:
+        if value is None:
+            return default
+        if isinstance(value, str):
+            return value.strip().casefold() in {"1", "true", "yes", "si", "sí"}
+        return bool(value)
+
+    @property
+    def edsm_capture_enabled(self) -> bool:
+        return self._enabled(self.data.get("edsm_capture_enabled"))
+
+    @property
+    def edsm_upload_enabled(self) -> bool:
+        return self._enabled(self.data.get("edsm_upload_enabled"))
