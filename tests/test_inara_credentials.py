@@ -49,5 +49,18 @@ class InaraCredentialTests(unittest.TestCase):
             self.assertFalse(import_inara_key_file(root,credentials).imported)
             credentials.set.assert_not_called()
 
+    def test_import_accepts_api_key_pasted_on_its_own_line(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory); path=root/"INARA_API_KEY.txt"
+            path.write_text(
+                "COMMANDER=CMDR Test\nFRONTIER_ID=F123456\nsecret-key\n",
+                encoding="utf-8",
+            )
+            credentials=Mock()
+            result=import_inara_key_file(root,credentials)
+            self.assertTrue(result.imported)
+            credentials.set.assert_called_once_with("CMDR Test","secret-key","F123456")
+            self.assertNotIn("secret-key",path.read_text(encoding="utf-8"))
+
 
 if __name__=="__main__": unittest.main()
