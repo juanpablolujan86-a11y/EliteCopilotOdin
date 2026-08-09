@@ -126,6 +126,25 @@ class ActiveTradeRouteTests(unittest.TestCase):
             self.assertIsNone(tracker.state)
             self.assertFalse(tracker.cancel())
 
+    def test_records_route_lifecycle_without_changing_voice_flow(self):
+        with tempfile.TemporaryDirectory() as directory:
+            diagnostics=Mock()
+            tracker=ActiveTradeRoute(
+                Path(directory)/"active.json", Mock(), Mock(), diagnostics
+            )
+            tracker.activate(self.trade("silver","A","B"),"quick")
+            tracker.handle_fsd_jump({"StarSystem":"A"})
+            tracker.handle_docked({"StationName":"A Port"})
+            tracker.handle_market_buy({"Type":"silver","Count":24})
+            tracker.handle_market_sell({"Type":"silver","Count":10})
+            tracker.handle_market_sell({"Type":"silver","Count":14})
+
+            actions = [call.args[0] for call in diagnostics.record_route_event.call_args_list]
+            self.assertEqual(
+                actions,
+                ["activada","llegada","atraque","compra","venta_parcial","completada"],
+            )
+
 
 if __name__=="__main__":
     unittest.main()

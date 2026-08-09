@@ -407,13 +407,13 @@ class CommandCenter:
         self.exploration_processor = exploration_processor
 
         mimir_diagnostics = MimirDiagnostics(self.config.data_root)
-        freyja_ledger = TradeLedger(
-            self.database, FreyjaDiagnostics(self.config.data_root)
-        )
+        freyja_diagnostics = FreyjaDiagnostics(self.config.data_root)
+        freyja_ledger = TradeLedger(self.database, freyja_diagnostics)
         self.freyja_ledger = freyja_ledger
         self.active_trade_route = ActiveTradeRoute(
             self.config.data_root / "freyja" / "active_route.json",
             self.event_bus,
+            diagnostics=freyja_diagnostics,
         )
         for event_name in TradeLedger.EVENTS:
             self.event_bus.subscribe(event_name, freyja_ledger.handle)

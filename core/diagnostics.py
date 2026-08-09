@@ -336,3 +336,12 @@ class FreyjaDiagnostics:
             event.get("Count",1), event.get("MarketID","?"), summary.invested,
             summary.revenue, summary.realized_profit, summary.cargo_units,
         )
+
+    def record_route_event(self, action: str, **details) -> None:
+        """Registra el ciclo de una ruta sin mostrar detalles en la interfaz."""
+
+        payload = " | ".join(
+            f"{key}={value}" for key, value in details.items() if value is not None
+        )
+        suffix = f" | {payload}" if payload else ""
+        self.logger.info("ROUTE | accion=%s%s", action, suffix)

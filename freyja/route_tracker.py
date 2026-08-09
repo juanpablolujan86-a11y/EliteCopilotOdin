@@ -9,10 +9,13 @@ from models.events.voice_message_ready import VoiceMessageReady
 
 
 class ActiveTradeRoute:
-    def __init__(self, path: Path, event_bus, clipboard_writer=write_text) -> None:
+    def __init__(
+        self, path: Path, event_bus, clipboard_writer=write_text, diagnostics=None
+    ) -> None:
         self.path = path
         self.event_bus = event_bus
         self.clipboard_writer = clipboard_writer
+        self.diagnostics = diagnostics
         self.state = self._load()
 
     def activate(self, plan, strategy: str = "quick") -> None:
@@ -39,6 +42,8 @@ class ActiveTradeRoute:
             "legs": legs,
         }
         self._save()
+        self._record("activada", estrategia=strategy, tramos=len(legs),
+                     beneficio_estimado=self.state["estimated_profit"])
         if legs:
             self.clipboard_writer(legs[0]["buy_system"])
 
@@ -54,6 +59,8 @@ class ActiveTradeRoute:
         self.state["phase"] = "to_sell"
         self.state["last_arrival"] = ""
         self._save()
+        self._record("compra", producto=leg["commodity"], cantidad=count,
+                     objetivo=leg["units"], sistema_venta=leg["sell_system"])
         self.clipboard_writer(leg["sell_system"])
         self.event_bus.publish_internal(
             InternalEvent.VOICE_MESSAGE_READY,
@@ -85,6 +92,8 @@ class ActiveTradeRoute:
         if sold_units < target:
             self._save()
             remaining = target - sold_units
+            self._record("venta_parcial", producto=legs[index]["commodity"],
+                         vendido=sold_units, restante=remaining)
             self.event_bus.publish_internal(
                 InternalEvent.VOICE_MESSAGE_READY,
                 VoiceMessageReady(
@@ -97,8 +106,11 @@ class ActiveTradeRoute:
             return
         index += 1
         if index >= len(legs):
+            completed = legs[index - 1]
             self.state = None
             self.path.unlink(missing_ok=True)
+            self._record("completada", producto=completed["commodity"],
+                         tramos=len(legs))
             message = "Ruta comercial completada, comandante."
         else:
             self.state["index"] = index
@@ -108,6 +120,8 @@ class ActiveTradeRoute:
             self.state["sold_units"] = 0
             self._save()
             leg = legs[index]
+            self._record("tramo_completado", tramo=index, siguiente=index + 1,
+                         total=len(legs), siguiente_producto=leg["commodity"])
             self.clipboard_writer(leg["buy_system"])
             message = (
                 f"Siguiente tramo: compre {leg['units']} toneladas de "
@@ -135,6 +149,8 @@ class ActiveTradeRoute:
             return
         self.state["last_arrival"] = arrival_key
         self._save()
+        self._record("llegada", fase=phase, sistema=arrived,
+                     producto=leg["commodity"])
         if phase == "to_buy":
             message = (
                 f"Llegamos al sistema de compra. Diríjase a {leg['buy_station']} "
@@ -164,6 +180,8 @@ class ActiveTradeRoute:
             return
         self.state["last_docked"] = dock_key
         self._save()
+        self._record("atraque", fase=phase, estacion=station,
+                     producto=leg["commodity"])
         action = "Compre" if phase == "to_buy" else "Venda"
         message = (
             f"Atraque confirmado en {station}. {action} "
@@ -205,8 +223,11 @@ class ActiveTradeRoute:
     def cancel(self) -> bool:
         if not self.state:
             return False
+        index = int(self.state.get("index", 0))
+        phase = self.state.get("phase", "to_buy")
         self.state = None
         self.path.unlink(missing_ok=True)
+        self._record("cancelada", tramo=index + 1, fase=phase)
         return True
 
     def cancellation_warning(self) -> str | None:
@@ -267,6 +288,10 @@ class ActiveTradeRoute:
         index = int(self.state.get("index", 0))
         legs = self.state.get("legs", [])
         return legs[index] if 0 <= index < len(legs) else None
+
+    def _record(self, action: str, **details) -> None:
+        if self.diagnostics is not None:
+            self.diagnostics.record_route_event(action, **details)
 
     @staticmethod
     def _commodity(value: str) -> str:
