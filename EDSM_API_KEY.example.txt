@@ -1,0 +1,5 @@
+# Copia este archivo como EDSM_API_KEY.txt.
+# Completa el nombre exacto registrado en EDSM y tu clave API personal.
+
+COMMANDER=
+API_KEY=PEGAR_API_KEY_AQUI
