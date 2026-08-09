@@ -11,6 +11,17 @@ from freyja.market_source import MarketSourceError
 from freyja.planner import MarketOpportunity, TradeProfile
 
 class OfficerVoiceDispatchTests(unittest.TestCase):
+    def test_heimdall_recognizes_fsd_injection_inventory_questions(self):
+        self.assertTrue(CommandCenter._is_fsd_injection_status_request(
+            "cuántas inyecciones FSD puedo fabricar"
+        ))
+        self.assertTrue(CommandCenter._is_fsd_injection_status_request(
+            "tengo materiales para síntesis de salto"
+        ))
+        self.assertFalse(CommandCenter._is_fsd_injection_status_request(
+            "cuánto combustible tengo"
+        ))
+
     def test_all_trade_modes_use_bubble_market_anchor_when_commander_is_far(self):
         center=CommandCenter.__new__(CommandCenter)
         center.trade_profile=TradeProfile(

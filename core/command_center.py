@@ -71,6 +71,7 @@ from heimdall.cockpit import CockpitAdvisor, parse_cockpit_intent
 from heimdall.home_base import HomeBaseManager
 from heimdall.navigation import NavigationContext, NavigationContextManager
 from heimdall.spansh import HeimdallRoutePlanner, SpanshClient, SpanshRouteError
+from heimdall.synthesis import FSDInjectionInventory
 from intelligence.context import build_live_context
 from intelligence.command_memory import LearnedCommand, VoiceCommandMemory
 from intelligence.intents import parse_home_route_intent, parse_neutron_route_intent
@@ -137,6 +138,9 @@ class CommandCenter:
         )
         self.binding_audit: BindingAudit | None = None
         self.cockpit_advisor = CockpitAdvisor()
+        self.fsd_injections = FSDInjectionInventory(
+            self.config.data_root / "heimdall" / "fsd_materials.json"
+        )
         self.navigation_manager: NavigationContextManager | None = None
         self.heimdall_diagnostics = HeimdallDiagnostics(self.config.data_root)
         self.home_base_manager = HomeBaseManager(self.config.data_root)
@@ -230,6 +234,8 @@ class CommandCenter:
         self._initialize_heimdall()
 
         self._initialize_heimdall_navigation(journal)
+
+        self._initialize_fsd_materials()
 
         self._initialize_home_base()
 
@@ -379,6 +385,17 @@ class CommandCenter:
             f"{base.stored_ships} naves guardadas"
         )
 
+    def _initialize_fsd_materials(self) -> None:
+        event = JournalReader(self.config.journal_path).latest_materials_event()
+        if event is not None:
+            self.fsd_injections.handle(event)
+        available = self.fsd_injections.availability()
+        print(
+            "HEIMDALL síntesis     : "
+            f"{available.basic} básicas, {available.standard} estándar, "
+            f"{available.premium} premium"
+        )
+
     def _initialize_freyja_profile(self) -> None:
         if self.navigation_manager is None:
             return
@@ -488,6 +505,11 @@ class CommandCenter:
         self.event_bus.subscribe(
             "Docked", self.active_trade_route.handle_docked
         )
+        for event_name in (
+            "Materials", "MaterialCollected", "MaterialDiscarded", "Synthesis",
+            "MaterialTrade", "MissionCompleted",
+        ):
+            self.event_bus.subscribe(event_name, self.fsd_injections.handle)
         market_cache = MarketCache(self.database)
         self.market_cache = market_cache
         self.event_bus.subscribe(
@@ -1066,6 +1088,13 @@ class CommandCenter:
             self._last_learned_command = None
             self._start_fixed_voice_response(answer, officer="HEIMDALL")
             return
+
+        lowered_question = question.casefold()
+        if self._is_fsd_injection_status_request(lowered_question):
+            self._start_fixed_voice_response(
+                self.fsd_injections.voice_summary(), officer="HEIMDALL"
+            )
+            return
         if any(text in lowered for text in ("eso esta bien", "eso está bien", "orden correcta")):
             confirmed = bool(previous_question) and self.command_memory.confirm(
                 commander, previous_question
@@ -1167,6 +1196,21 @@ class CommandCenter:
         if route is not None:
             return LearnedCommand("neutron_route", {"destination": route.destination})
         return None
+
+    @staticmethod
+    def _is_fsd_injection_status_request(text: str) -> bool:
+        lowered = text.casefold()
+        mentions_injection = (
+            "inyeccion" in lowered or "inyección" in lowered
+        ) and any(
+            term in lowered for term in ("fsd", "salto", "sintesis", "síntesis")
+        )
+        mentions_jump_synthesis = (
+            "material" in lowered
+            and ("sintesis" in lowered or "síntesis" in lowered)
+            and ("fsd" in lowered or "salto" in lowered)
+        )
+        return mentions_injection or mentions_jump_synthesis
 
     def _open_freyja_trade_menu(self) -> None:
         self._pending_freyja_trade_menu = True

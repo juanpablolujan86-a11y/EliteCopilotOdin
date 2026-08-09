@@ -151,6 +151,17 @@ MÍMIR ni a otros oficiales.
 - Comparar tiempo, distancia, seguridad y desgaste.
 - Guiar la secuencia de sobrecarga y siguiente waypoint.
 
+#### Inyecciones FSD
+
+HEIMDALL mantiene un inventario persistente de las materias primas necesarias
+para las inyecciones FSD básica (+25%), estándar (+50%) y premium (+100%). Se
+reconstruye desde `Materials` y se actualiza con recolecciones, descartes,
+intercambios, recompensas de misión y eventos de síntesis. Ante una consulta por
+voz informa cuántas inyecciones de cada grado pueden fabricarse.
+
+El inventario es informativo: HEIMDALL no fabrica ni consume una inyección y no
+la agrega a una ruta sin autorización explícita del comandante.
+
 #### Fuente comunitaria de rutas
 
 HEIMDALL utiliza Spansh como proveedor externo de rutas rápidas. No mantiene
