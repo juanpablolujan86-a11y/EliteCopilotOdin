@@ -95,6 +95,7 @@ class CommandCenter:
     }
     BUBBLE_TRADE_CENTER = (-43.25, -64.34375, -77.6875)
     FREYJA_MARKET_MAX_AGE_HOURS = 168.0
+    FREYJA_CACHE_FALLBACK_MAX_AGE_HOURS = 720.0
 
     def __init__(self) -> None:
         self.config = Config()
@@ -1341,7 +1342,18 @@ class CommandCenter:
         if profile_blocker is not None:
             self._start_fixed_voice_response(profile_blocker, officer="FREYJA")
             return
-        planning_profile = self._freyja_planning_profile(selection)
+        planning_notice = ""
+        calculation_profile = self.trade_profile
+        if self.trade_profile.cargo_free <= 0:
+            calculation_profile = replace(self.trade_profile, cargo_used=0)
+            planning_notice = (
+                "Planificación anticipada: antes de comprar deberá liberar "
+                f"{self.trade_profile.cargo_used} toneladas de carga. "
+            )
+        planning_profile = self._freyja_planning_profile(
+            selection, calculation_profile
+        )
+        self._freyja_used_stale_cache = False
         opportunities = (
             [] if selection == "powerplay"
             else market_cache.opportunities(planning_profile)
@@ -1433,7 +1445,15 @@ class CommandCenter:
             answer = self._quick_trade_voice_summary(plan)
         else:
             answer = plan.summary()
-        self._start_fixed_voice_response(answer, officer="FREYJA")
+        if self._freyja_used_stale_cache:
+            answer = (
+                "El mercado comunitario no respondió; calculé con la última "
+                "caché disponible. Confirme los precios antes de comprar. "
+                + answer
+            )
+        self._start_fixed_voice_response(
+            planning_notice + answer, officer="FREYJA"
+        )
 
     @staticmethod
     def _freyja_trade_profile_blocker(profile) -> str | None:
@@ -1441,12 +1461,6 @@ class CommandCenter:
             return (
                 "No puedo iniciar una operación comercial porque la nave no "
                 "tiene capacidad de carga disponible."
-            )
-        if profile.cargo_free <= 0:
-            return (
-                "No puedo iniciar esta modalidad porque la bodega está llena, "
-                f"con {profile.cargo_used} de {profile.cargo_capacity} toneladas "
-                "ocupadas. Libere espacio de carga y vuelva a solicitar el cálculo."
             )
         if profile.available_capital <= 0:
             return (
@@ -1460,9 +1474,9 @@ class CommandCenter:
             )
         return None
 
-    def _freyja_planning_profile(self, selection: str):
+    def _freyja_planning_profile(self, selection: str, profile=None):
         """Separa el viaje a la Burbuja del presupuesto de la expedici\u00f3n."""
-        profile = self.trade_profile
+        profile = profile or self.trade_profile
         if profile.position is None:
             return profile
         distance_to_bubble = math.dist(profile.position, self.BUBBLE_TRADE_CENTER)
@@ -1484,21 +1498,24 @@ class CommandCenter:
                 pages=3 if selection == "three_station" else 1,
             )
         except MarketSourceError:
-            return None
+            self._freyja_used_stale_cache = True
+            max_age_hours = self.FREYJA_CACHE_FALLBACK_MAX_AGE_HOURS
+        else:
+            max_age_hours = self.FREYJA_MARKET_MAX_AGE_HOURS
         opportunities = market_cache.opportunities(profile)
         if selection == "quick":
             return QuickRouteOptimizer().choose(
                 profile, opportunities,
-                max_age_hours=self.FREYJA_MARKET_MAX_AGE_HOURS,
+                max_age_hours=max_age_hours,
             )
         if selection == "three_station":
             return ThreeStationOptimizer().choose(
                 profile, opportunities,
-                max_age_hours=self.FREYJA_MARKET_MAX_AGE_HOURS,
+                max_age_hours=max_age_hours,
             )
         return TradeExpeditionOptimizer().choose(
             profile, opportunities, max_jumps=30,
-            max_age_hours=self.FREYJA_MARKET_MAX_AGE_HOURS,
+            max_age_hours=max_age_hours,
         )
 
     @staticmethod

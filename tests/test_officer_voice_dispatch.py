@@ -1,10 +1,12 @@
+from dataclasses import replace
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 import threading
 import unittest
 
 from core.command_center import CommandCenter
-from freyja.planner import TradeProfile
+from freyja.market_source import MarketSourceError
+from freyja.planner import MarketOpportunity, TradeProfile
 
 class OfficerVoiceDispatchTests(unittest.TestCase):
     def test_all_trade_modes_use_bubble_market_anchor_when_commander_is_far(self):
@@ -17,17 +19,21 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
             self.assertEqual(planned.system,"Lembava")
             self.assertEqual(planned.position,center.BUBBLE_TRADE_CENTER)
 
-    def test_freyja_explains_full_cargo_before_querying_markets(self):
+    def test_freyja_allows_anticipatory_planning_with_full_cargo(self):
         profile=TradeProfile(
             "Wredgu MR-N d6-39",3_357_092_535,167_854_627,
             24,24,66.12,(-9491.0,-9.3,-451.2),
         )
 
-        blocker=CommandCenter._freyja_trade_profile_blocker(profile)
+        center=CommandCenter.__new__(CommandCenter)
+        center.trade_profile=profile
+        planned=center._freyja_planning_profile(
+            "quick", replace(profile,cargo_used=0)
+        )
 
-        self.assertIn("bodega está llena",blocker)
-        self.assertIn("24 de 24 toneladas",blocker)
-        self.assertIn("Libere espacio",blocker)
+        self.assertIsNone(CommandCenter._freyja_trade_profile_blocker(profile))
+        self.assertEqual(planned.cargo_used,0)
+        self.assertEqual(planned.cargo_free,24)
 
     def test_freyja_accepts_current_ship_when_cargo_is_free(self):
         profile=TradeProfile(
@@ -36,6 +42,27 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
         )
 
         self.assertIsNone(CommandCenter._freyja_trade_profile_blocker(profile))
+
+    def test_freyja_uses_cached_market_when_refresh_fails(self):
+        center=CommandCenter.__new__(CommandCenter)
+        center._freyja_used_stale_cache=False
+        profile=TradeProfile(
+            "Lembava",10_000_000,500_000,24,0,30,
+            CommandCenter.BUBBLE_TRADE_CENTER,
+        )
+        cached=MarketOpportunity(
+            "silver","A","Compra","B","Venta",10_000,20_000,
+            100,100,1,100,"2099-01-01T00:00:00+00:00",
+        )
+        cache=Mock()
+        cache.refresh_region.side_effect=MarketSourceError("sin red")
+        cache.opportunities.return_value=[cached]
+
+        plan=center._refresh_and_recalculate_freyja("quick",profile,cache)
+
+        self.assertIsNotNone(plan)
+        self.assertTrue(center._freyja_used_stale_cache)
+        self.assertEqual(plan.opportunity.commodity,"silver")
 
     def test_fixed_response_uses_requested_officer(self):
         center=CommandCenter.__new__(CommandCenter)
