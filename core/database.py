@@ -165,6 +165,14 @@ class DatabaseManager:
         created_at TEXT NOT NULL, sent_at TEXT, last_error TEXT NOT NULL DEFAULT '')""")
         self.execute("""CREATE INDEX IF NOT EXISTS idx_eddn_outbox_due
         ON eddn_outbox(status,next_attempt_at)""")
+        self.execute("""CREATE TABLE IF NOT EXISTS edsm_outbox
+        (event_key TEXT PRIMARY KEY, event_type TEXT NOT NULL,
+        payload_json TEXT NOT NULL, game_version TEXT NOT NULL,
+        game_build TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending',
+        attempts INTEGER NOT NULL DEFAULT 0, next_attempt_at TEXT NOT NULL,
+        created_at TEXT NOT NULL, sent_at TEXT, last_error TEXT NOT NULL DEFAULT '')""")
+        self.execute("""CREATE INDEX IF NOT EXISTS idx_edsm_outbox_due
+        ON edsm_outbox(status,next_attempt_at)""")
 
         self.execute(
             """
