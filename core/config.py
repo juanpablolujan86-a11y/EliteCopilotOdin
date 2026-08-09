@@ -12,6 +12,7 @@ tener rutas o valores escritos directamente en el código.
 import json
 import os
 import sys
+import threading
 from pathlib import Path
 
 
@@ -37,6 +38,47 @@ class Config:
         if self.config_file.exists() and not getattr(sys, "frozen", False):
             with self.config_file.open("r", encoding="utf-8") as file:
                 self.data = json.load(file)
+        self.preferences_file = self.data_root / "preferences.json"
+        self._preferences_lock = threading.Lock()
+        if self.preferences_file.exists():
+            try:
+                preferences = json.loads(
+                    self.preferences_file.read_text(encoding="utf-8")
+                )
+                if isinstance(preferences, dict):
+                    self.data.update(preferences)
+            except (OSError, json.JSONDecodeError):
+                pass
+
+    def update_preferences(self, **values) -> None:
+        """Guarda preferencias públicas del usuario fuera de la instalación."""
+
+        allowed = {
+            "eddn_capture_enabled", "eddn_upload_enabled",
+            "edsm_capture_enabled", "edsm_upload_enabled",
+            "inara_capture_enabled", "inara_upload_enabled",
+        }
+        updates = {key: value for key, value in values.items() if key in allowed}
+        with self._preferences_lock:
+            preferences = {}
+            if self.preferences_file.exists():
+                try:
+                    loaded = json.loads(
+                        self.preferences_file.read_text(encoding="utf-8")
+                    )
+                    if isinstance(loaded, dict):
+                        preferences = loaded
+                except (OSError, json.JSONDecodeError):
+                    pass
+            preferences.update(updates)
+            self.preferences_file.parent.mkdir(parents=True, exist_ok=True)
+            temporary = self.preferences_file.with_suffix(".tmp")
+            temporary.write_text(
+                json.dumps(preferences, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            temporary.replace(self.preferences_file)
+            self.data.update(updates)
 
     @property
     def journal_path(self) -> Path:

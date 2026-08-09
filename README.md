@@ -89,6 +89,12 @@ El modo de consola anterior continúa disponible como respaldo:
 python main.py --console
 ```
 
+En la barra superior, `VOCES/SILENCIO` activa o silencia inmediatamente a
+todos los oficiales. `CONFIGURACIÓN` permite guardar las API keys personales
+en el Administrador de credenciales de Windows y autorizar por separado los
+envíos a EDDN, EDSM e Inara. Las claves nunca se escriben en `config.json`;
+los cambios de transmisión se aplican en el siguiente inicio de ODIN.
+
 Cerrar la ventana solicita primero el cierre ordenado del observador del
 Journal y de los servicios de voz y red.
 

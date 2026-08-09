@@ -965,9 +965,9 @@ class CommandCenter:
                 "premium": injections.premium,
             },
             "network": {
-                "eddn": self.config.eddn_upload_enabled,
-                "edsm": self.config.edsm_upload_enabled,
-                "inara": self.config.inara_upload_enabled,
+                "eddn": self.eddn_delivery_service is not None,
+                "edsm": self.edsm_delivery_service is not None,
+                "inara": self.inara_delivery_service is not None,
             },
         }
         if balance is not None:

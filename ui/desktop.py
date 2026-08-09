@@ -6,10 +6,14 @@ import queue
 import sys
 import threading
 import tkinter as tk
-from tkinter import ttk
+from tkinter import messagebox, ttk
 
 from core.diagnostics import log_fatal_error
 from heimdall.clipboard import write_text
+from services.edsm_credentials import EDSMCredentialStore
+from services.inara_credentials import InaraCredentialStore
+from voice.credentials import WindowsCredentialStore
+from voice.settings import VoiceSettingsRepository
 
 
 ELITE = {
@@ -65,6 +69,7 @@ class OdinDesktopApp:
         self.engine_thread: threading.Thread | None = None
         self._closing = False
         self.values: dict[str, tk.StringVar] = {}
+        self.voice_repository = VoiceSettingsRepository(self.odin.config.data_root)
         self._build_styles()
         self._build_window()
         self.root.protocol("WM_DELETE_WINDOW", self.close)
@@ -143,6 +148,19 @@ class OdinDesktopApp:
             header, textvariable=self.values["status"], bg=ELITE["surface"],
             fg=ELITE["green"], font=("Segoe UI", 10, "bold"),
         ).pack(side="right", padx=16)
+        self.mute_button = tk.Button(
+            header, command=self._toggle_mute, relief="flat", cursor="hand2",
+            bg=ELITE["surface_alt"], fg=ELITE["amber"], padx=10, pady=5,
+            font=("Segoe UI", 9, "bold"),
+        )
+        self.mute_button.pack(side="right", padx=(4, 0))
+        tk.Button(
+            header, text="CONFIGURACIÓN", command=self._open_settings,
+            relief="flat", cursor="hand2", bg=ELITE["orange_soft"],
+            fg=ELITE["background"], padx=10, pady=5,
+            font=("Segoe UI", 9, "bold"),
+        ).pack(side="right", padx=4)
+        self._refresh_mute_button()
 
         content = tk.PanedWindow(
             self.root, orient="horizontal", sashwidth=5, sashrelief="flat",
@@ -351,6 +369,138 @@ class OdinDesktopApp:
         system = self.values["next_system"].get().strip()
         if system and system != "Sin ruta activa":
             write_text(system)
+
+    def _toggle_mute(self) -> None:
+        settings = self.voice_repository.load()
+        settings.enabled = not settings.enabled
+        self.voice_repository.save(settings)
+        self._refresh_mute_button()
+        state = "activadas" if settings.enabled else "silenciadas"
+        print(f"Voces de los oficiales: {state}.")
+
+    def _refresh_mute_button(self) -> None:
+        enabled = self.voice_repository.load().enabled
+        self.mute_button.configure(
+            text="🔊 VOCES" if enabled else "🔇 SILENCIO",
+            fg=ELITE["amber"] if enabled else ELITE["red"],
+        )
+
+    def _open_settings(self) -> None:
+        window = tk.Toplevel(self.root)
+        window.title("ODIN — Configuración del comandante")
+        window.geometry("580x650")
+        window.resizable(False, False)
+        window.configure(bg=ELITE["background"])
+        window.transient(self.root)
+        window.grab_set()
+
+        container = tk.Frame(window, bg=ELITE["background"], padx=18, pady=14)
+        container.pack(fill="both", expand=True)
+        tk.Label(
+            container, text="CONFIGURACIÓN DEL COMANDANTE",
+            bg=ELITE["background"], fg=ELITE["orange"],
+            font=("Segoe UI", 14, "bold"), anchor="w",
+        ).pack(fill="x", pady=(0, 12))
+
+        network = self._settings_section(container, "TRANSMISIÓN DE DATOS")
+        network_vars = {}
+        for key, label, enabled in (
+            ("eddn", "Enviar mercados y Journal a EDDN", self.odin.config.eddn_upload_enabled),
+            ("edsm", "Enviar progreso y exploración a EDSM", self.odin.config.edsm_upload_enabled),
+            ("inara", "Enviar datos del comandante a Inara", self.odin.config.inara_upload_enabled),
+        ):
+            variable = tk.BooleanVar(value=enabled)
+            network_vars[key] = variable
+            tk.Checkbutton(
+                network, text=label, variable=variable, anchor="w",
+                bg=ELITE["surface"], fg=ELITE["text"], selectcolor=ELITE["surface_alt"],
+                activebackground=ELITE["surface"], activeforeground=ELITE["orange"],
+                font=("Segoe UI", 10),
+            ).pack(fill="x", pady=3)
+        tk.Label(
+            network, text="Los cambios de red se aplican al reiniciar ODIN.",
+            bg=ELITE["surface"], fg=ELITE["muted"], font=("Segoe UI", 8),
+            anchor="w",
+        ).pack(fill="x", pady=(5, 0))
+
+        credentials = self._settings_section(container, "API Y CREDENCIALES PERSONALES")
+        commander = tk.StringVar(value=self.values["commander"].get())
+        frontier_id = tk.StringVar()
+        eleven_key = tk.StringVar()
+        edsm_key = tk.StringVar()
+        inara_key = tk.StringVar()
+        for label, variable, secret in (
+            ("Comandante", commander, False),
+            ("Frontier ID (para Inara)", frontier_id, False),
+            ("ElevenLabs API key", eleven_key, True),
+            ("EDSM API key", edsm_key, True),
+            ("Inara API key", inara_key, True),
+        ):
+            tk.Label(
+                credentials, text=label, bg=ELITE["surface"], fg=ELITE["muted"],
+                anchor="w", font=("Segoe UI", 9),
+            ).pack(fill="x", pady=(6, 2))
+            tk.Entry(
+                credentials, textvariable=variable, show="●" if secret else "",
+                bg=ELITE["surface_alt"], fg=ELITE["text"], insertbackground=ELITE["orange"],
+                relief="flat", font=("Segoe UI", 10),
+            ).pack(fill="x", ipady=5)
+        tk.Label(
+            credentials,
+            text="Dejá una clave vacía para conservar la que ya está protegida en Windows.",
+            bg=ELITE["surface"], fg=ELITE["muted"], anchor="w",
+            font=("Segoe UI", 8), wraplength=510, justify="left",
+        ).pack(fill="x", pady=(8, 0))
+
+        def save() -> None:
+            name = commander.get().strip()
+            if (edsm_key.get().strip() or inara_key.get().strip()) and not name:
+                messagebox.showerror("ODIN", "Indicá el nombre del comandante.", parent=window)
+                return
+            try:
+                if eleven_key.get().strip():
+                    WindowsCredentialStore().set(eleven_key.get().strip())
+                if edsm_key.get().strip():
+                    EDSMCredentialStore().set(name, edsm_key.get().strip())
+                if inara_key.get().strip():
+                    InaraCredentialStore().set(
+                        name, inara_key.get().strip(), frontier_id.get().strip()
+                    )
+                self.odin.config.update_preferences(
+                    eddn_capture_enabled=network_vars["eddn"].get(),
+                    eddn_upload_enabled=network_vars["eddn"].get(),
+                    edsm_capture_enabled=network_vars["edsm"].get(),
+                    edsm_upload_enabled=network_vars["edsm"].get(),
+                    inara_capture_enabled=network_vars["inara"].get(),
+                    inara_upload_enabled=network_vars["inara"].get(),
+                )
+            except (OSError, ValueError) as error:
+                messagebox.showerror("ODIN", f"No se pudo guardar: {error}", parent=window)
+                return
+            print("Configuración personal guardada. Los cambios de red se aplicarán al reiniciar ODIN.")
+            messagebox.showinfo(
+                "ODIN", "Configuración guardada de forma segura.", parent=window
+            )
+            window.destroy()
+
+        tk.Button(
+            container, text="GUARDAR CONFIGURACIÓN", command=save,
+            bg=ELITE["orange_soft"], fg=ELITE["background"], relief="flat",
+            activebackground=ELITE["orange"], padx=12, pady=8,
+            font=("Segoe UI", 10, "bold"), cursor="hand2",
+        ).pack(fill="x", pady=(12, 0))
+
+    def _settings_section(self, parent, title: str):
+        panel = tk.Frame(
+            parent, bg=ELITE["surface"], padx=12, pady=10,
+            highlightthickness=1, highlightbackground=ELITE["border"],
+        )
+        panel.pack(fill="x", pady=5)
+        tk.Label(
+            panel, text=title, bg=ELITE["surface"], fg=ELITE["orange"],
+            anchor="w", font=("Segoe UI", 10, "bold"),
+        ).pack(fill="x", pady=(0, 4))
+        return panel
 
     @staticmethod
     def _credits(value, approximate: bool = False) -> str:
