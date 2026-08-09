@@ -144,11 +144,81 @@ class InaraEventMapper:
             ("shipCargoCapacity", "CargoCapacity", (int, float)),
         ):
             self._optional(data, target, event.get(source), expected)
-        return (self._event("setCommanderShip", timestamp, data),)
+        events = [self._event("setCommanderShip", timestamp, data)]
+        if event.get("event") == "Loadout":
+            modules = self._ship_modules(event.get("Modules"))
+            if modules:
+                events.append(self._event(
+                    "setCommanderShipLoadout", timestamp,
+                    {
+                        "shipType": str(ship_type),
+                        "shipGameID": ship_id,
+                        "shipLoadout": modules,
+                    },
+                ))
+        return tuple(events)
+
+    def _ship_modules(self, modules) -> list[dict]:
+        if not isinstance(modules, list):
+            return []
+        translated = []
+        for module in modules:
+            if not isinstance(module, dict) or not module.get("Slot") or not module.get("Item"):
+                continue
+            data = {
+                "slotName": str(module["Slot"]),
+                "itemName": str(module["Item"]),
+            }
+            for target, source, expected in (
+                ("itemValue", "Value", (int, float)),
+                ("itemHealth", "Health", (int, float)),
+                ("isOn", "On", bool),
+                ("isHot", "Hot", bool),
+                ("itemPriority", "Priority", int),
+                ("itemAmmoClip", "AmmoInClip", int),
+                ("itemAmmoHopper", "AmmoInHopper", int),
+            ):
+                self._optional(data, target, module.get(source), expected)
+            engineering = self._engineering(module.get("Engineering"))
+            if engineering:
+                data["engineering"] = engineering
+            translated.append(data)
+        return translated
+
+    def _engineering(self, engineering) -> dict:
+        if not isinstance(engineering, dict):
+            return {}
+        data = {}
+        for target, source, expected in (
+            ("blueprintName", "BlueprintName", str),
+            ("blueprintLevel", "Level", int),
+            ("blueprintQuality", "Quality", (int, float)),
+            ("experimentalEffect", "ExperimentalEffect", str),
+        ):
+            self._optional(data, target, engineering.get(source), expected)
+        modifiers = []
+        raw_modifiers = engineering.get("Modifiers", [])
+        if not isinstance(raw_modifiers, list):
+            raw_modifiers = []
+        for modifier in raw_modifiers:
+            if not isinstance(modifier, dict) or not modifier.get("Label"):
+                continue
+            translated = {"name": str(modifier["Label"])}
+            for target, source, expected in (
+                ("value", "Value", (int, float)),
+                ("originalValue", "OriginalValue", (int, float)),
+                ("lessIsGood", "LessIsGood", bool),
+            ):
+                self._optional(translated, target, modifier.get(source), expected)
+            modifiers.append(translated)
+        if modifiers:
+            data["modifiers"] = modifiers
+        return data
 
     @staticmethod
     def _optional(data: dict, key: str, value, expected) -> None:
-        if isinstance(value, expected) and not isinstance(value, bool):
+        boolean_expected = expected is bool
+        if isinstance(value, expected) and (boolean_expected or not isinstance(value, bool)):
             data[key] = list(value) if isinstance(value, tuple) else value
 
     @staticmethod

@@ -68,9 +68,11 @@ class InaraEventMapperTests(unittest.TestCase):
         self.assertEqual(mapped["eventData"]["starsystemBodyCoords"],[10.5,-20.25])
 
     def test_loadout_and_ship_name_update_current_ship(self):
-        loadout=self.mapper.map({"timestamp":self.timestamp,"event":"Loadout",
+        loadout_events=self.mapper.map({"timestamp":self.timestamp,"event":"Loadout",
                                  "Ship":"anaconda","ShipID":7,"ShipName":"ODIN",
-                                 "ShipIdent":"NOR-1","Rebuy":123,"CargoCapacity":64})[0]
+                                 "ShipIdent":"NOR-1","Rebuy":123,"CargoCapacity":64,
+                                 "Modules":[]})
+        loadout=loadout_events[0]
         self.assertEqual(loadout["eventName"],"setCommanderShip")
         self.assertEqual(loadout["eventData"]["shipGameID"],7)
         self.assertEqual(loadout["eventData"]["shipRebuyCost"],123)
@@ -80,6 +82,39 @@ class InaraEventMapperTests(unittest.TestCase):
                                  "UserShipId":"TREE"})[0]
         self.assertEqual(renamed["eventData"]["shipName"],"Yggdrasil")
         self.assertEqual(renamed["eventData"]["shipIdent"],"TREE")
+
+    def test_loadout_maps_modules_ammunition_and_engineering(self):
+        mapped=self.mapper.map({
+            "timestamp":self.timestamp,"event":"Loadout",
+            "Ship":"anaconda","ShipID":7,
+            "Modules":[{
+                "Slot":"HugeHardpoint1","Item":"hpt_multicannon_gimbal_huge",
+                "Health":0.98,"On":True,"Priority":2,
+                "AmmoInClip":69,"AmmoInHopper":2100,
+                "Engineering":{
+                    "BlueprintName":"Weapon_Overcharged","Level":5,"Quality":1.0,
+                    "ExperimentalEffect":"special_incendiary_rounds",
+                    "Modifiers":[{"Label":"Damage","Value":4.95,
+                                  "OriginalValue":3.46,"LessIsGood":False}],
+                },
+            }],
+        })
+        self.assertEqual(len(mapped),2)
+        loadout=mapped[1]
+        self.assertEqual(loadout["eventName"],"setCommanderShipLoadout")
+        module=loadout["eventData"]["shipLoadout"][0]
+        self.assertEqual(module["slotName"],"HugeHardpoint1")
+        self.assertTrue(module["isOn"])
+        self.assertEqual(module["itemAmmoHopper"],2100)
+        self.assertEqual(module["engineering"]["blueprintLevel"],5)
+        self.assertFalse(module["engineering"]["modifiers"][0]["lessIsGood"])
+
+    def test_loadout_skips_malformed_modules_without_dropping_ship(self):
+        mapped=self.mapper.map({"timestamp":self.timestamp,"event":"Loadout",
+                                "Ship":"sidewinder","ShipID":1,
+                                "Modules":[{"Slot":"PowerPlant"}]})
+        self.assertEqual(len(mapped),1)
+        self.assertEqual(mapped[0]["eventName"],"setCommanderShip")
 
 
 if __name__=="__main__": unittest.main()
