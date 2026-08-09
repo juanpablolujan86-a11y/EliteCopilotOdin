@@ -62,6 +62,10 @@ class InaraEventMapper:
             return self._mission_accepted(journal_event, timestamp)
         if kind in {"MissionCompleted", "MissionAbandoned", "MissionFailed"}:
             return self._mission_status(journal_event, timestamp)
+        if kind == "StoredModules":
+            return self._stored_modules(journal_event, timestamp)
+        if kind == "StoredShips":
+            return self._stored_ships(journal_event, timestamp)
         return ()
 
     def remember_location(self, event: dict) -> None:
@@ -442,6 +446,77 @@ class InaraEventMapper:
             if commodities:
                 data["rewardCommodities"] = commodities
         return (self._event(names[kind], timestamp, data),)
+
+    def _stored_modules(self, event: dict, timestamp: str) -> tuple[dict, ...]:
+        items = event.get("Items")
+        if not isinstance(items, list):
+            return ()
+        translated = []
+        for item in items:
+            if not isinstance(item, dict) or not item.get("Name"):
+                continue
+            data = {"itemName": str(item["Name"])}
+            self._optional(data, "itemValue", item.get("BuyPrice"), int)
+            self._optional(data, "isHot", item.get("Hot"), bool)
+            if item.get("InTransit") is not True:
+                self._optional(data, "starsystemName", item.get("StarSystem"), str)
+                self._optional(data, "marketID", item.get("MarketID"), int)
+                if not data.get("starsystemName"):
+                    self._optional(data, "starsystemName", event.get("StarSystem"), str)
+                    self._optional(data, "stationName", event.get("StationName"), str)
+                    self._optional(data, "marketID", event.get("MarketID"), int)
+            engineering = {}
+            for target, source, expected in (
+                ("blueprintName", "EngineerModifications", str),
+                ("blueprintLevel", "Level", int),
+                ("blueprintQuality", "Quality", (int, float)),
+            ):
+                self._optional(engineering, target, item.get(source), expected)
+            if engineering:
+                data["engineering"] = engineering
+            translated.append(data)
+        return (self._event("setCommanderStorageModules", timestamp, translated),)
+
+    def _stored_ships(self, event: dict, timestamp: str) -> tuple[dict, ...]:
+        here, remote = event.get("ShipsHere"), event.get("ShipsRemote")
+        if not isinstance(here, list) or not isinstance(remote, list):
+            return ()
+        events = []
+        for ship in here:
+            data = self._stored_ship_identity(ship)
+            if not data:
+                continue
+            self._optional(data, "starsystemName", event.get("StarSystem"), str)
+            self._optional(data, "stationName", event.get("StationName"), str)
+            self._optional(data, "marketID", event.get("MarketID"), int)
+            events.append(self._event("setCommanderShip", timestamp, data))
+        for ship in remote:
+            identity = self._stored_ship_identity(ship)
+            if not identity:
+                continue
+            events.append(self._event("setCommanderShip", timestamp, identity))
+            transfer = {
+                "shipType": identity["shipType"],
+                "shipGameID": identity["shipGameID"],
+            }
+            self._optional(transfer, "starsystemName", ship.get("StarSystem"), str)
+            self._optional(transfer, "marketID", ship.get("ShipMarketID"), int)
+            if ship.get("InTransit") is True:
+                self._optional(transfer, "transferTime", ship.get("TransferTime"), int)
+            if len(transfer) > 2:
+                events.append(self._event("setCommanderShipTransfer", timestamp, transfer))
+        return tuple(events)
+
+    def _stored_ship_identity(self, ship) -> dict:
+        if not isinstance(ship, dict) or not ship.get("ShipType"):
+            return {}
+        ship_id = ship.get("ShipID")
+        if not isinstance(ship_id, int) or isinstance(ship_id, bool):
+            return {}
+        data = {"shipType": str(ship["ShipType"]), "shipGameID": ship_id}
+        self._optional(data, "shipName", ship.get("Name"), str)
+        self._optional(data, "isHot", ship.get("Hot"), bool)
+        return data
 
     @staticmethod
     def _reward_items(items) -> list[dict]:

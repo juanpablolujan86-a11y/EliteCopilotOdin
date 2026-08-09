@@ -260,5 +260,48 @@ class InaraEventMapperTests(unittest.TestCase):
         self.assertEqual(self.mapper.map({"timestamp":self.timestamp,
                                           "event":"MissionAccepted","Name":"x"}),())
 
+    def test_stored_modules_map_location_and_engineering_snapshot(self):
+        mapped=self.mapper.map({
+            "timestamp":self.timestamp,"event":"StoredModules",
+            "StarSystem":"Sol","StationName":"Galileo","MarketID":128,
+            "Items":[{
+                "Name":"hpt_pulselaser_gimbal_large","BuyPrice":350640,
+                "Hot":False,"EngineerModifications":"Weapon_Overcharged",
+                "Level":4,"Quality":0.8,
+            }],
+        })[0]
+        self.assertEqual(mapped["eventName"],"setCommanderStorageModules")
+        module=mapped["eventData"][0]
+        self.assertEqual(module["starsystemName"],"Sol")
+        self.assertEqual(module["marketID"],128)
+        self.assertEqual(module["engineering"]["blueprintLevel"],4)
+
+    def test_in_transit_module_has_no_false_location(self):
+        module=self.mapper.map({
+            "timestamp":self.timestamp,"event":"StoredModules",
+            "StarSystem":"Sol","StationName":"Galileo","MarketID":128,
+            "Items":[{"Name":"module","InTransit":True}],
+        })[0]["eventData"][0]
+        self.assertNotIn("starsystemName",module)
+        self.assertNotIn("marketID",module)
+
+    def test_stored_ships_update_local_and_remote_fleet(self):
+        mapped=self.mapper.map({
+            "timestamp":self.timestamp,"event":"StoredShips",
+            "StarSystem":"Sol","StationName":"Galileo","MarketID":128,
+            "ShipsHere":[{"ShipType":"sidewinder","ShipID":1,"Name":"Uno","Hot":False}],
+            "ShipsRemote":[{"ShipType":"anaconda","ShipID":2,"Name":"Dos",
+                             "Hot":False,"StarSystem":"Colonia","ShipMarketID":456}],
+        })
+        self.assertEqual([item["eventName"] for item in mapped],[
+            "setCommanderShip","setCommanderShip","setCommanderShipTransfer"
+        ])
+        self.assertEqual(mapped[0]["eventData"]["stationName"],"Galileo")
+        self.assertEqual(mapped[2]["eventData"]["starsystemName"],"Colonia")
+
+    def test_incomplete_stored_ship_snapshot_is_ignored(self):
+        self.assertEqual(self.mapper.map({"timestamp":self.timestamp,
+                                          "event":"StoredShips","ShipsHere":[]}),())
+
 
 if __name__=="__main__": unittest.main()
