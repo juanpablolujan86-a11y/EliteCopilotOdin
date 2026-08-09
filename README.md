@@ -58,6 +58,9 @@ ODIN conserva por sistema los nombres de las especies probables informadas por
 MÍMIR. Ante una consulta hablada puede enumerarlas agrupadas por planeta sin
 decir precios ni recompensas. Si un planeta con señal biológica resulta compatible
 con Stratum Tectonicas, MÍMIR lo anuncia automáticamente una sola vez.
+La interfaz combina esas predicciones con las señales reales persistidas del
+Journal y lista todos los planetas biológicos del sistema, incluyendo cantidad
+de señales, géneros confirmados y especies identificadas cuando están disponibles.
 
 ## Flujo científico
 

@@ -316,7 +316,7 @@ class OdinDesktopApp:
         notebook = ttk.Notebook(panel, style="Odin.TNotebook")
         notebook.pack(fill="both", expand=True)
         for title, fields in (
-            ("MÍMIR", (("biology", "Predicciones"), ("body", "Cuerpo actual"),
+            ("MÍMIR", (("biology", "Resumen"), ("biology_details", "Planetas"), ("body", "Cuerpo actual"),
                         ("samples", "Muestras completadas"))),
             ("RUTA", (("destination", "Destino final"), ("fuel", "Combustible"),
                        ("injections", "Inyecciones B/E/P"))),
@@ -404,6 +404,19 @@ class OdinDesktopApp:
         biology = snapshot.get("biology", {})
         self.values["biology"].set(
             f"{biology.get('species', 0)} especies · {biology.get('bodies', 0)} planetas"
+        )
+        detail_lines = []
+        for item in biology.get("details", ()):
+            contents = []
+            if item.get("confirmed"):
+                contents.append("confirmadas: " + ", ".join(item["confirmed"]))
+            if item.get("probable"):
+                contents.append("probables: " + ", ".join(item["probable"]))
+            if not contents:
+                contents.append(f"{item.get('signals', 0)} señales; especies por identificar")
+            detail_lines.append(f"{item.get('body')}: " + " · ".join(contents))
+        self.values["biology_details"].set(
+            "\n".join(detail_lines) if detail_lines else "Sin señales biológicas"
         )
         self.values["body"].set(snapshot.get("body") or "—")
         self.values["samples"].set(str(expedition.get("species", 0)))

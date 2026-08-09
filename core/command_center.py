@@ -950,6 +950,7 @@ class CommandCenter:
         predictions = self.scientific_context.system_predictions(
             self.commander_state.current_system
         )
+        biology = self._dashboard_biology(predictions)
         try:
             route = self.heimdall_route_planner.active_route_snapshot()
         except (RuntimeError, ValueError, TypeError):
@@ -985,11 +986,7 @@ class CommandCenter:
                 self._route_calculation_busy.is_set()
                 or not self._manual_route_requests.empty()
             ),
-            "biology": {
-                "bodies": len(predictions),
-                "species": sum(len(items) for items in predictions.values()),
-                "predictions": predictions,
-            },
+            "biology": biology,
             "injections": {
                 "basic": injections.basic,
                 "standard": injections.standard,
@@ -1013,6 +1010,72 @@ class CommandCenter:
                 "species": balance.species_completed,
             }
         self.dashboard_snapshot = snapshot
+
+    def _dashboard_biology(
+        self, predictions: dict[str, tuple[str, ...]]
+    ) -> dict:
+        """Combina señales reales persistidas con predicciones de MÍMIR."""
+
+        bodies: dict[tuple[int | None, str], dict] = {}
+        if self.commander_state.system_address:
+            rows = self.database.query(
+                """
+                SELECT body_id, body_name, source_event, signal_type,
+                       signal_count, genus, species
+                FROM biological_signals
+                WHERE system_address = ?
+                ORDER BY body_id, id
+                """,
+                (self.commander_state.system_address,),
+            )
+            known_names = {
+                row["body_id"]: row["body_name"]
+                for row in self.database.query(
+                    "SELECT body_id, body_name FROM stellar_bodies WHERE system_address = ?",
+                    (self.commander_state.system_address,),
+                )
+            }
+            for row in rows:
+                body_id = row["body_id"]
+                body_name = row["body_name"] or known_names.get(body_id) or f"Cuerpo {body_id}"
+                key = (body_id, body_name)
+                item = bodies.setdefault(key, {
+                    "body": body_name, "signals": 0,
+                    "confirmed": set(), "probable": set(),
+                })
+                if (
+                    row["source_event"] in {"FSSBodySignals", "SAASignalsFound"}
+                    and row["signal_type"] == "Biological"
+                ):
+                    item["signals"] = max(item["signals"], int(row["signal_count"] or 0))
+                for value in (row["genus"], row["species"]):
+                    if value:
+                        item["confirmed"].update(
+                            part.strip() for part in str(value).split(",") if part.strip()
+                        )
+        by_name = {item["body"].casefold(): item for item in bodies.values()}
+        for body_name, species in predictions.items():
+            item = by_name.get(body_name.casefold())
+            if item is None:
+                item = {
+                    "body": body_name, "signals": 0,
+                    "confirmed": set(), "probable": set(),
+                }
+                bodies[(None, body_name)] = item
+                by_name[body_name.casefold()] = item
+            item["probable"].update(species)
+        details = tuple({
+            "body": item["body"],
+            "signals": item["signals"],
+            "confirmed": tuple(sorted(item["confirmed"])),
+            "probable": tuple(sorted(item["probable"])),
+        } for item in bodies.values() if item["signals"] or item["confirmed"] or item["probable"])
+        return {
+            "bodies": len(details),
+            "species": sum(max(item["signals"], len(item["confirmed"]), len(item["probable"])) for item in details),
+            "predictions": predictions,
+            "details": details,
+        }
 
     def _start_wake_acknowledgement(self) -> None:
         self._voice_busy.set()
