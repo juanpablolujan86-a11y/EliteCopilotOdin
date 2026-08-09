@@ -1103,6 +1103,20 @@ class CommandCenter:
                 officer="HEIMDALL",
             )
             return
+        if self._is_route_injection_status_request(question):
+            context = (
+                self.navigation_manager.context
+                if self.navigation_manager is not None else None
+            )
+            if context is None:
+                answer = "Todavía no tengo disponible el contexto de navegación."
+            else:
+                progress = context.route_progress()
+                answer = self.fsd_injections.route_voice_summary(
+                    context.route, progress.current_index, context.max_jump_range
+                )
+            self._start_fixed_voice_response(answer, officer="HEIMDALL")
+            return
         if self._is_fsd_injection_status_request(lowered_question):
             self._start_fixed_voice_response(
                 self.fsd_injections.voice_summary(), officer="HEIMDALL"
@@ -1239,6 +1253,15 @@ class CommandCenter:
         if match is None:
             return None
         return float(match.group(1).replace(",", "."))
+
+    @staticmethod
+    def _is_route_injection_status_request(text: str) -> bool:
+        lowered = text.casefold()
+        return "ruta" in lowered and (
+            "inyeccion" in lowered
+            or "inyección" in lowered
+            or ("sintesis" in lowered or "síntesis" in lowered)
+        )
 
     def _open_freyja_trade_menu(self) -> None:
         self._pending_freyja_trade_menu = True

@@ -123,6 +123,8 @@
   - [x] Calcular inyecciones básicas, estándar y premium disponibles
   - [x] Responder consultas por voz sin consumir materiales
   - [x] Proponer el grado mínimo sólo cuando resuelva un salto inaccesible
+  - [x] Revisar los tramos futuros de `NavRoute.json`
+  - [x] Excluir de la síntesis los segmentos potenciados por cono
   - [ ] Exigir autorización antes de cualquier uso
 - [ ] Replanificación por desvío
 - [ ] Luces y visión nocturna opcionales

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from math import dist
 from pathlib import Path
 
 
@@ -46,6 +47,13 @@ class FSDInjectionRecommendation:
     available: bool
     already_reachable: bool
     reachable_with_injection: bool
+
+
+@dataclass(frozen=True, slots=True)
+class RouteInjectionRequirement:
+    source_system: str
+    destination_system: str
+    recommendation: FSDInjectionRecommendation
 
 
 class FSDInjectionInventory:
@@ -176,6 +184,66 @@ class FSDInjectionInventory:
             f"El salto requiere como mínimo una inyección {label}. Elevaría el "
             f"alcance a {recommendation.boosted_range_ly:.1f} años luz. No la "
             "utilizaré sin su autorización, comandante."
+        )
+
+    def route_requirements(
+        self, route, current_index: int | None, base_range_ly: float
+    ) -> tuple[RouteInjectionRequirement, ...]:
+        """Evalúa tramos convencionales futuros de una ruta del juego."""
+
+        waypoints = tuple(route or ())
+        if current_index is None or not 0 <= current_index < len(waypoints):
+            return ()
+        requirements = []
+        for source, destination in zip(
+            waypoints[current_index:], waypoints[current_index + 1:]
+        ):
+            source_class = str(getattr(source, "star_class", "") or "")
+            if source_class == "N" or source_class.startswith("D"):
+                continue
+            source_position = getattr(source, "position", None)
+            destination_position = getattr(destination, "position", None)
+            if source_position is None or destination_position is None:
+                continue
+            distance_ly = dist(source_position, destination_position)
+            recommendation = self.recommend(distance_ly, base_range_ly)
+            if recommendation.already_reachable:
+                continue
+            requirements.append(RouteInjectionRequirement(
+                str(getattr(source, "system", "")),
+                str(getattr(destination, "system", "")),
+                recommendation,
+            ))
+        return tuple(requirements)
+
+    def route_voice_summary(
+        self, route, current_index: int | None, base_range_ly: float
+    ) -> str:
+        if base_range_ly <= 0:
+            return "Todavía no conozco el alcance real de la nave, comandante."
+        requirements = self.route_requirements(route, current_index, base_range_ly)
+        if current_index is None:
+            return "El sistema actual no coincide con la ruta cargada, comandante."
+        if not requirements:
+            return (
+                "Los tramos convencionales restantes están dentro del alcance "
+                "normal de la nave; no hace falta una inyección FSD."
+            )
+        first = requirements[0]
+        recommendation = first.recommendation
+        if not recommendation.reachable_with_injection:
+            detail = "no puede resolverse ni siquiera con una inyección premium"
+        else:
+            label = FSD_INJECTION_LABELS[recommendation.grade]
+            detail = f"requiere como mínimo una inyección {label}"
+            if not recommendation.available:
+                detail += ", pero faltan materiales"
+        count_text = "1 tramo" if len(requirements) == 1 else f"{len(requirements)} tramos"
+        return (
+            f"Encontré {count_text} fuera del alcance normal. El "
+            f"primero va de {first.source_system} a {first.destination_system}, "
+            f"son {recommendation.distance_ly:.1f} años luz y {detail}. No "
+            "utilizaré materiales sin su autorización."
         )
 
     def _save(self) -> None:

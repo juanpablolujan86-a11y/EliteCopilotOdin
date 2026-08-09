@@ -1,4 +1,5 @@
 from pathlib import Path
+from types import SimpleNamespace
 import tempfile
 import unittest
 
@@ -6,6 +7,11 @@ from heimdall.synthesis import FSDInjectionInventory
 
 
 class FSDInjectionInventoryTests(unittest.TestCase):
+    @staticmethod
+    def waypoint(system, x, star_class="G"):
+        return SimpleNamespace(
+            system=system, position=(float(x), 0.0, 0.0), star_class=star_class
+        )
     def test_builds_all_three_grades_from_materials_snapshot(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             inventory = FSDInjectionInventory(Path(directory) / "materials.json")
@@ -109,6 +115,45 @@ class FSDInjectionInventoryTests(unittest.TestCase):
             self.assertIn("no hay materiales", unavailable)
             self.assertIn("supera incluso", impossible)
             self.assertIn("132.2", impossible)
+
+    def test_route_finds_only_future_conventional_segments_over_range(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            inventory = FSDInjectionInventory(Path(directory) / "materials.json")
+            inventory.handle({
+                "event": "Materials",
+                "Raw": [
+                    {"Name": "carbon", "Count": 3},
+                    {"Name": "vanadium", "Count": 3},
+                    {"Name": "germanium", "Count": 3},
+                ],
+            })
+            route = (
+                self.waypoint("Anterior", 0),
+                self.waypoint("Actual", 60),
+                self.waypoint("Cercano", 120),
+                self.waypoint("Lejano", 200),
+            )
+
+            requirements = inventory.route_requirements(route, 1, 66.12)
+
+            self.assertEqual(len(requirements), 1)
+            self.assertEqual(requirements[0].source_system, "Cercano")
+            self.assertEqual(requirements[0].destination_system, "Lejano")
+            self.assertEqual(requirements[0].recommendation.grade, "basic")
+            self.assertIn("Encontré 1 tramo", inventory.route_voice_summary(route, 1, 66.12))
+
+    def test_route_does_not_treat_jet_cone_segment_as_synthesis_need(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            inventory = FSDInjectionInventory(Path(directory) / "materials.json")
+            route = (
+                self.waypoint("Neutrón", 0, "N"),
+                self.waypoint("Destino", 250),
+            )
+
+            self.assertEqual(inventory.route_requirements(route, 0, 66.12), ())
+            self.assertIn(
+                "no hace falta", inventory.route_voice_summary(route, 0, 66.12)
+            )
 
 
 if __name__ == "__main__":

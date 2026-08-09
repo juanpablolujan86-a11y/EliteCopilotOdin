@@ -37,6 +37,17 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
             "tengo 120 toneladas de combustible"
         ))
 
+    def test_heimdall_recognizes_route_injection_review(self):
+        self.assertTrue(CommandCenter._is_route_injection_status_request(
+            "¿necesito alguna inyección en esta ruta?"
+        ))
+        self.assertTrue(CommandCenter._is_route_injection_status_request(
+            "revisá la síntesis necesaria para la ruta"
+        ))
+        self.assertFalse(CommandCenter._is_route_injection_status_request(
+            "¿cuántos saltos quedan en la ruta?"
+        ))
+
     def test_all_trade_modes_use_bubble_market_anchor_when_commander_is_far(self):
         center=CommandCenter.__new__(CommandCenter)
         center.trade_profile=TradeProfile(

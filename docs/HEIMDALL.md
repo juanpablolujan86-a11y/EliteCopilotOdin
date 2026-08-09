@@ -168,6 +168,13 @@ el grado mínimo suficiente, comprueba la disponibilidad de materiales y avisa
 si el salto excede incluso el alcance premium. La evaluación no consume los
 materiales ni activa la síntesis.
 
+Cuando existe una ruta en `NavRoute.json`, HEIMDALL puede revisar todos los
+tramos futuros desde el sistema actual. Omite los segmentos que parten de una
+estrella de neutrones o enana blanca, porque pertenecen a la supercarga por
+cono, y sólo marca los saltos convencionales que exceden el alcance normal. La
+consulta «¿necesito alguna inyección en esta ruta?» informa el primer tramo
+problemático, su distancia, el grado mínimo y si existen materiales.
+
 #### Fuente comunitaria de rutas
 
 HEIMDALL utiliza Spansh como proveedor externo de rutas rápidas. No mantiene
