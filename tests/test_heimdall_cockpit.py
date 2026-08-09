@@ -5,9 +5,12 @@ from heimdall.bindings import BindingAction, BindingAudit, BindingInput, Binding
 from heimdall.cockpit import (
     CockpitAdvisor,
     CockpitState,
+    DOCKED,
     IN_MAIN_SHIP,
+    LANDED,
     LIGHTS_ON,
     NIGHT_VISION_ON,
+    SUPERCRUISE,
     parse_cockpit_intent,
 )
 
@@ -21,6 +24,9 @@ def audit() -> BindingAudit:
         "NightVisionToggle",
         BindingInput("Keyboard", "Key_N", (("Keyboard", "Key_LeftShift"),)),
         BindingInput("", ""),
+    )
+    profile.actions["OrderRequestDock"] = BindingAction(
+        "OrderRequestDock", BindingInput("Keyboard", "Key_O"), BindingInput("", "")
     )
     return BindingAudit((profile,), ("Custom",), (), None)
 
@@ -53,6 +59,31 @@ class CockpitAdvisorTests(unittest.TestCase):
         advisor.update_status({"Flags": 0})
         answer = advisor.describe(parse_cockpit_intent("prendé las luces"))
         self.assertIn("No confirmo", answer)
+
+    def test_recognizes_docking_request_and_keeps_it_in_information_mode(self) -> None:
+        advisor = CockpitAdvisor(audit())
+        advisor.update_status({"Flags": IN_MAIN_SHIP})
+
+        intent = parse_cockpit_intent("solicitá permiso de aterrizaje")
+        answer = advisor.describe(intent)
+
+        self.assertEqual(intent.feature, "docking_request")
+        self.assertIn("Modo informativo", answer)
+        self.assertIn("O", answer)
+        self.assertIn("no enviaré ninguna pulsación", answer)
+
+    def test_docking_request_is_blocked_in_incompatible_states(self) -> None:
+        advisor = CockpitAdvisor(audit())
+        intent = parse_cockpit_intent("pedí permiso para atracar")
+        cases = (
+            (IN_MAIN_SHIP | DOCKED, "ya está atracada"),
+            (IN_MAIN_SHIP | LANDED, "en superficie"),
+            (IN_MAIN_SHIP | SUPERCRUISE, "supercrucero"),
+        )
+        for flags, expected in cases:
+            with self.subTest(flags=flags):
+                advisor.update_status({"Flags": flags})
+                self.assertIn(expected, advisor.describe(intent))
 
 
 if __name__ == "__main__":

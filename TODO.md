@@ -121,7 +121,7 @@
 - [ ] Replanificación por desvío
 - [ ] Luces y visión nocturna opcionales
 - [ ] Solicitud contextual de aterrizaje
-- [ ] Modo informativo sin pulsaciones
+- [x] Modo informativo sin pulsaciones
 - [x] Registro persistente `heimdall.log`
 # FREYJA / Powerplay
 

@@ -36,6 +36,15 @@ interactuar con el panel de contactos. HEIMDALL deberá comprobar el contexto,
 ejecutar una secuencia configurable y verificar el resultado mediante los
 eventos posteriores del juego.
 
+La primera etapa segura ya está operativa en modo informativo. HEIMDALL
+reconoce solicitudes naturales de aterrizaje o atraque, consulta `Status.json`,
+comprueba que el comandante esté en la nave principal y bloquea la orden si la
+nave ya está atracada, está en superficie o continúa en supercrucero. También
+resuelve `OrderRequestDock` desde el perfil de controles activo. Esta etapa no
+envía pulsaciones; la ejecución real seguirá desactivada hasta incorporar
+confirmación posterior, intervalo contra repeticiones y una prueba dentro del
+juego.
+
 ## Custodia de configuraciones de controles
 
 HEIMDALL será responsable de conocer y preservar los perfiles de controles
@@ -177,7 +186,7 @@ marca como completada y el portapapeles no se modifica nuevamente.
 - Descubrir y respetar los bindings del comandante.
 - Controlar luces y visión nocturna con estado verificable.
 - Implementar solicitud de aterrizaje como macro contextual y opcional.
-- Incorporar modo simulación que informa sin pulsar teclas.
+- Incorporar modo simulación que informa sin pulsar teclas. **Completado.**
 
 ### Fase 6 — Pruebas reales
 
