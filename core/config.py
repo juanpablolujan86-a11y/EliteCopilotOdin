@@ -11,6 +11,7 @@ tener rutas o valores escritos directamente en el código.
 
 import json
 import os
+import re
 import sys
 import threading
 from pathlib import Path
@@ -57,6 +58,8 @@ class Config:
             "eddn_capture_enabled", "eddn_upload_enabled",
             "edsm_capture_enabled", "edsm_upload_enabled",
             "inara_capture_enabled", "inara_upload_enabled",
+            "push_to_talk_enabled", "wake_word_enabled",
+            "desktop_geometry",
         }
         updates = {key: value for key, value in values.items() if key in allowed}
         with self._preferences_lock:
@@ -187,3 +190,18 @@ class Config:
         """Recalcula una ruta activa sólo después de confirmar un desvío."""
 
         return self._enabled(self.data.get("heimdall_auto_replan_enabled"))
+
+    @property
+    def push_to_talk_enabled(self) -> bool:
+        return self._enabled(self.data.get("push_to_talk_enabled"), True)
+
+    @property
+    def wake_word_enabled(self) -> bool:
+        return self._enabled(self.data.get("wake_word_enabled"), True)
+
+    @property
+    def desktop_geometry(self) -> str:
+        value = str(self.data.get("desktop_geometry", "")).strip()
+        if re.fullmatch(r"\d+x\d+[+-]\d+[+-]\d+", value):
+            return value
+        return ""

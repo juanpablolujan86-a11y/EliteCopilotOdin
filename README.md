@@ -99,6 +99,10 @@ incluye un volumen general para los oficiales y botones `ACEPTAR`/`CANCELAR`;
 cancelar cierra la ventana sin guardar ninguna modificación.
 Cada proveedor indica `CONFIGURADA` o `NO CONFIGURADA` sin mostrar el valor de
 la API key protegida.
+El modo de conversación también es configurable: sólo `Push to Talk (F8)`,
+sólo activación por la palabra `ODIN`, o ambos mecanismos simultáneamente.
+Al cerrar la interfaz se conserva su tamaño y posición para volver a abrirla
+en el mismo monitor, incluso en escritorios con coordenadas negativas.
 
 Cerrar la ventana solicita primero el cierre ordenado del observador del
 Journal y de los servicios de voz y red.

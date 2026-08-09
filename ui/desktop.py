@@ -59,7 +59,7 @@ class OdinDesktopApp:
         self.odin = odin
         self.root = tk.Tk()
         self.root.title("ODIN — Centro de Mando")
-        self.root.geometry("1180x720")
+        self.root.geometry(self.odin.config.desktop_geometry or "1180x720")
         self.root.minsize(900, 580)
         self.root.configure(bg=ELITE["background"])
         self.log_messages: queue.Queue[str] = queue.Queue()
@@ -102,6 +102,12 @@ class OdinDesktopApp:
         if self._closing:
             return
         self._closing = True
+        try:
+            self.odin.config.update_preferences(
+                desktop_geometry=self.root.geometry()
+            )
+        except OSError:
+            pass
         self.odin.request_stop()
         self.root.after(150, self._finish_close)
 
@@ -183,7 +189,7 @@ class OdinDesktopApp:
         self.console.pack(fill="both", expand=True)
         footer = tk.Label(
             console_panel,
-            text="F8: HABLAR    ·    ACTIVACIÓN: ODIN    ·    REGISTRO DEL JOURNAL EN TIEMPO REAL",
+            text=self._voice_mode_footer(),
             anchor="w", bg=ELITE["surface"], fg=ELITE["muted"], padx=12, pady=8,
             font=("Segoe UI", 9),
         )
@@ -499,6 +505,28 @@ class OdinDesktopApp:
             bg=ELITE["surface"], fg=ELITE["amber"],
             font=("Segoe UI", 10, "bold"),
         ).pack(side="right")
+        current_mode = (
+            "both" if self.odin.config.push_to_talk_enabled and self.odin.config.wake_word_enabled
+            else "ptt" if self.odin.config.push_to_talk_enabled else "wake"
+        )
+        voice_mode = tk.StringVar(value=current_mode)
+        tk.Label(
+            sound, text="MODO DE ACTIVACIÓN", bg=ELITE["surface"],
+            fg=ELITE["muted"], anchor="w", font=("Segoe UI", 8, "bold"),
+        ).pack(fill="x", pady=(8, 2))
+        modes = tk.Frame(sound, bg=ELITE["surface"])
+        modes.pack(fill="x")
+        for value, label in (
+            ("ptt", "Push to Talk (F8)"),
+            ("wake", 'Activación por voz ("ODIN")'),
+            ("both", "Ambos"),
+        ):
+            tk.Radiobutton(
+                modes, text=label, variable=voice_mode, value=value,
+                bg=ELITE["surface"], fg=ELITE["text"],
+                selectcolor=ELITE["surface_alt"], activebackground=ELITE["surface"],
+                activeforeground=ELITE["orange"], font=("Segoe UI", 9),
+            ).pack(side="left", padx=(0, 10))
 
         def save() -> None:
             name = commander.get().strip()
@@ -521,6 +549,8 @@ class OdinDesktopApp:
                     edsm_upload_enabled=network_vars["edsm"].get(),
                     inara_capture_enabled=network_vars["inara"].get(),
                     inara_upload_enabled=network_vars["inara"].get(),
+                    push_to_talk_enabled=voice_mode.get() in {"ptt", "both"},
+                    wake_word_enabled=voice_mode.get() in {"wake", "both"},
                 )
                 voice_settings = self.voice_repository.load()
                 for assignment in voice_settings.officers.values():
@@ -561,6 +591,15 @@ class OdinDesktopApp:
             anchor="w", font=("Segoe UI", 10, "bold"),
         ).pack(fill="x", pady=(0, 4))
         return panel
+
+    def _voice_mode_footer(self) -> str:
+        modes = []
+        if self.odin.config.push_to_talk_enabled:
+            modes.append("F8: HABLAR")
+        if self.odin.config.wake_word_enabled:
+            modes.append("ACTIVACIÓN: ODIN")
+        modes.append("JOURNAL EN TIEMPO REAL")
+        return "    ·    ".join(modes)
 
     @staticmethod
     def _credits(value, approximate: bool = False) -> str:

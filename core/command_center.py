@@ -259,8 +259,11 @@ class CommandCenter:
         print(f"\nJournal: {journal.name}")
         print("\nODIN está observando Elite Dangerous...")
         print("Esperando eventos.\n")
-        print("Conversación          : presioná F8 para hablar con ODIN\n")
-        print("Activación por voz     : decí ODIN y formulá tu consulta\n")
+        if self.config.push_to_talk_enabled:
+            print("Conversación          : presioná F8 para hablar con ODIN\n")
+        if self.config.wake_word_enabled:
+            print("Activación por voz     : decí ODIN y formulá tu consulta\n")
+        self.wake_listener.enable_passive_listening(self.config.wake_word_enabled)
         threading.Thread(
             target=self._prepare_wake_acknowledgement,
             name="odin-prepare-wake-acknowledgement",
@@ -837,7 +840,11 @@ class CommandCenter:
             if self.navigation_manager is not None:
                 self.navigation_manager.poll_route()
 
-            if self.voice_hotkey.pressed() and not self._voice_busy.is_set():
+            if (
+                self.config.push_to_talk_enabled
+                and self.voice_hotkey.pressed()
+                and not self._voice_busy.is_set()
+            ):
                 print("\nODIN escucha. Hablá y terminá con un segundo de silencio...")
                 self.wake_listener.arm()
 

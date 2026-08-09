@@ -69,18 +69,35 @@ class WakeWordListener:
         self.stop_event = threading.Event()
         self.armed = threading.Event()
         self.paused = threading.Event()
+        self.passive_enabled = threading.Event()
+        self.passive_enabled.set()
         self._pause_condition = threading.Condition()
 
     def arm(self) -> None:
         """F8 hace que la siguiente frase sea una consulta sin exigir 'ODIN'."""
 
         self.armed.set()
+        with self._pause_condition:
+            self._pause_condition.notify_all()
+
+    def enable_passive_listening(self, enabled: bool) -> None:
+        if enabled:
+            self.passive_enabled.set()
+        else:
+            self.passive_enabled.clear()
+        with self._pause_condition:
+            self._pause_condition.notify_all()
 
     def run(self) -> None:
         waiting_for_question = False
         while not self.stop_event.is_set():
             with self._pause_condition:
-                while self.paused.is_set() and not self.stop_event.is_set():
+                while (
+                    (self.paused.is_set() or (
+                        not self.passive_enabled.is_set() and not self.armed.is_set()
+                    ))
+                    and not self.stop_event.is_set()
+                ):
                     self._pause_condition.wait()
             if self.stop_event.is_set():
                 break

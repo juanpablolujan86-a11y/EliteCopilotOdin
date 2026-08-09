@@ -25,6 +25,18 @@ class EDDNConfigTests(unittest.TestCase):
         self.assertFalse(self.config({"eddn_test_mode":"false"}).eddn_test_mode)
         self.assertTrue(self.config({"eddn_test_mode":"true"}).eddn_test_mode)
 
+    def test_both_voice_activation_modes_are_enabled_by_default(self):
+        config = self.config({})
+        self.assertTrue(config.push_to_talk_enabled)
+        self.assertTrue(config.wake_word_enabled)
+
+    def test_desktop_geometry_accepts_secondary_monitor_coordinates(self):
+        self.assertEqual(
+            self.config({"desktop_geometry": "1180x720-1920+120"}).desktop_geometry,
+            "1180x720-1920+120",
+        )
+        self.assertEqual(self.config({"desktop_geometry": "invalid"}).desktop_geometry, "")
+
     def test_network_preferences_are_persisted_outside_project_config(self):
         with tempfile.TemporaryDirectory() as directory:
             config = self.config({})
