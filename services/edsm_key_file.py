@@ -52,7 +52,10 @@ def _read_values(path: Path) -> dict[str, str]:
     values = {}
     for raw_line in path.read_text(encoding="utf-8-sig").splitlines():
         line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            values.setdefault("API_KEY", line)
             continue
         key, value = line.split("=", 1)
         if key.strip().upper() in {"COMMANDER", "API_KEY"}:

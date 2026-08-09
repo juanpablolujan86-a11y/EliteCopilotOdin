@@ -45,6 +45,16 @@ class EDSMCredentialTests(unittest.TestCase):
             credentials.set.assert_not_called()
             self.assertEqual(path.read_text(encoding="utf-8"),original)
 
+    def test_import_accepts_api_key_pasted_on_its_own_line(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory); path=root/"EDSM_API_KEY.txt"
+            path.write_text("COMMANDER=CMDR Test\nsecret-key\n",encoding="utf-8")
+            credentials=Mock()
+            result=import_edsm_key_file(root,credentials)
+            self.assertTrue(result.imported)
+            credentials.set.assert_called_once_with("CMDR Test","secret-key")
+            self.assertNotIn("secret-key",path.read_text(encoding="utf-8"))
+
     def test_plain_file_is_ignored_by_git(self):
         ignore=(Path(__file__).parents[1]/".gitignore").read_text(encoding="utf-8")
         self.assertIn("EDSM_API_KEY.txt",ignore)
