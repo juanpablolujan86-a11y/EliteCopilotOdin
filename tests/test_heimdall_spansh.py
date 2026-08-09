@@ -206,6 +206,7 @@ class SpanshRoutePlannerTestCase(unittest.TestCase):
 
         self.assertIsNotNone(update)
         self.assertTrue(update.route_abandoned)
+        self.assertEqual(update.destination_system, "Destino")
         self.assertFalse(update.route_complete)
         self.assertIsNone(update.copied_system)
         rows = self.database.query(

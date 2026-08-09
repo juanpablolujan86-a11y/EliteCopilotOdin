@@ -111,6 +111,7 @@ class RouteClipboardUpdate:
     jumps_completed: int = 0
     jumps_remaining: int = 0
     total_jumps: int = 0
+    destination_system: str = ""
 
 
 class SpanshClient:
@@ -341,6 +342,7 @@ class HeimdallRoutePlanner:
                     jumps_completed=completed,
                     jumps_remaining=max(0, total - completed),
                     total_jumps=total,
+                    destination_system=plan.destination_system,
                 )
             completed = min(total, completed + 1)
             self.database.execute(
@@ -355,6 +357,7 @@ class HeimdallRoutePlanner:
                 jumps_completed=completed,
                 jumps_remaining=max(0, total - completed),
                 total_jumps=total,
+                destination_system=plan.destination_system,
             )
 
         completed = min(total, completed + 1)
@@ -374,6 +377,7 @@ class HeimdallRoutePlanner:
                 jumps_completed=completed,
                 jumps_remaining=0,
                 total_jumps=total,
+                destination_system=plan.destination_system,
             )
 
         next_system = plan.waypoints[next_index].system
@@ -391,6 +395,7 @@ class HeimdallRoutePlanner:
             jumps_completed=completed,
             jumps_remaining=max(0, total - completed),
             total_jumps=total,
+            destination_system=plan.destination_system,
         )
 
     def copy_pending_waypoint(self) -> str | None:

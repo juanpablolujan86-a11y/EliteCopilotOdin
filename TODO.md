@@ -127,7 +127,7 @@
   - [x] Excluir de la síntesis los segmentos potenciados por cono
   - [x] Exigir una autorización temporal, explícita y de un solo uso
   - [ ] Ejecutar síntesis desde la interfaz sólo tras validación real en juego
-- [ ] Replanificación por desvío
+- [x] Replanificación opcional por desvío sin bloquear el Journal
 - [ ] Luces y visión nocturna opcionales
 - [ ] Solicitud contextual de aterrizaje
 - [x] Modo informativo sin pulsaciones

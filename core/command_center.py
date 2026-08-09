@@ -164,6 +164,10 @@ class CommandCenter:
         self._route_acknowledgement_done = threading.Event()
         self._route_acknowledgement_done.set()
         self._route_results: queue.Queue[tuple[object | None, str | None]] = queue.Queue()
+        self._automatic_route_results: queue.Queue[
+            tuple[object | None, str | None, str]
+        ] = queue.Queue()
+        self._route_replan_busy = threading.Event()
         self._officer_voice_messages: queue.Queue[VoiceMessageReady] = queue.Queue()
         self._surface_ready_announced: set[tuple[int, int]] = set()
         self.scientific_context = ScientificContextRegistry()
@@ -867,6 +871,17 @@ class CommandCenter:
                 route_plan, route_error = None, None
             if route_plan is not None or route_error is not None:
                 self._finish_voice_route(route_plan, route_error)
+
+            try:
+                auto_plan, auto_error, auto_destination = (
+                    self._automatic_route_results.get_nowait()
+                )
+            except queue.Empty:
+                auto_plan, auto_error, auto_destination = None, None, ""
+            if auto_plan is not None or auto_error is not None:
+                self._finish_automatic_replan(
+                    auto_plan, auto_error, auto_destination
+                )
 
             if not self._voice_busy.is_set():
                 try:
@@ -1973,6 +1988,12 @@ class CommandCenter:
                     route_update
                 )
                 self.console_presenter.show_route_progress(route_update)
+                if (
+                    route_update.route_abandoned
+                    and route_update.destination_system
+                    and self.config.heimdall_auto_replan_enabled
+                ):
+                    self._start_automatic_replan(route_update.destination_system)
         if event.get("event") in {"FSDJump", "FSDTarget", "JetConeBoost"}:
             self.heimdall_diagnostics.record_navigation_context(
                 self.navigation_manager.context,
@@ -1991,6 +2012,68 @@ class CommandCenter:
         )
         self.heimdall_diagnostics.record_planned_route(plan)
         return plan
+
+    def _start_automatic_replan(self, destination: str) -> None:
+        if self.navigation_manager is None or self._route_replan_busy.is_set():
+            return
+        context = self.navigation_manager.context
+        snapshot = NavigationContext(
+            current_system=context.current_system,
+            max_jump_range=context.max_jump_range,
+        )
+        self._route_replan_busy.set()
+        threading.Thread(
+            target=self._calculate_automatic_replan,
+            args=(snapshot, destination),
+            name="heimdall-automatic-replan",
+            daemon=True,
+        ).start()
+
+    def _calculate_automatic_replan(
+        self, context: NavigationContext, destination: str
+    ) -> None:
+        try:
+            plan = self.heimdall_route_planner.calculate_fastest(
+                context, destination
+            )
+            self._automatic_route_results.put((plan, None, destination))
+        except (SpanshRouteError, ValueError) as error:
+            self.heimdall_diagnostics.record_route_error(destination, error)
+            self._automatic_route_results.put((None, "route_error", destination))
+
+    def _finish_automatic_replan(
+        self, plan, error: str | None, destination: str
+    ) -> None:
+        self._route_replan_busy.clear()
+        if error is not None:
+            message = (
+                "Detecté el desvío, pero no pude recalcular la ruta en este "
+                "momento. El detalle quedó registrado."
+            )
+        else:
+            try:
+                self.heimdall_route_planner.activate(plan)
+                self.heimdall_diagnostics.record_planned_route(plan)
+                next_system = (
+                    plan.next_waypoint.system if plan.next_waypoint else None
+                )
+                message = (
+                    f"Ruta recalculada hacia {plan.destination_system}: "
+                    f"{plan.actual_total_jumps} saltos."
+                )
+                if next_system:
+                    message += f" Copié {next_system} al portapapeles."
+            except (OSError, RuntimeError, ValueError) as route_error:
+                self.heimdall_diagnostics.record_route_error(
+                    destination, route_error
+                )
+                message = (
+                    "Calculé la nueva ruta, pero no pude activarla. El detalle "
+                    "quedó registrado."
+                )
+        self._officer_voice_messages.put(
+            VoiceMessageReady("HEIMDALL", message, "replanificación de ruta")
+        )
 
     @staticmethod
     def _show_header() -> None:

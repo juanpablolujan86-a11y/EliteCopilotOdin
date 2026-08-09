@@ -2,6 +2,7 @@ from dataclasses import replace
 from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
+import queue
 import threading
 import unittest
 
@@ -11,6 +12,41 @@ from freyja.market_source import MarketSourceError
 from freyja.planner import MarketOpportunity, TradeProfile
 
 class OfficerVoiceDispatchTests(unittest.TestCase):
+    def test_heimdall_finishes_automatic_replan_on_main_loop(self):
+        center = CommandCenter.__new__(CommandCenter)
+        center._route_replan_busy = threading.Event()
+        center._route_replan_busy.set()
+        center.heimdall_route_planner = Mock()
+        center.heimdall_diagnostics = Mock()
+        center._officer_voice_messages = queue.Queue()
+        plan = SimpleNamespace(
+            destination_system="Destino",
+            actual_total_jumps=12,
+            next_waypoint=SimpleNamespace(system="Siguiente"),
+        )
+
+        center._finish_automatic_replan(plan, None, "Destino")
+
+        center.heimdall_route_planner.activate.assert_called_once_with(plan)
+        center.heimdall_diagnostics.record_planned_route.assert_called_once_with(plan)
+        self.assertFalse(center._route_replan_busy.is_set())
+        message = center._officer_voice_messages.get_nowait()
+        self.assertEqual(message.officer, "HEIMDALL")
+        self.assertIn("Ruta recalculada", message.message)
+        self.assertIn("Siguiente", message.message)
+
+    def test_heimdall_automatic_replan_failure_is_brief_and_nonblocking(self):
+        center = CommandCenter.__new__(CommandCenter)
+        center._route_replan_busy = threading.Event()
+        center._route_replan_busy.set()
+        center._officer_voice_messages = queue.Queue()
+
+        center._finish_automatic_replan(None, "route_error", "Destino")
+
+        self.assertFalse(center._route_replan_busy.is_set())
+        message = center._officer_voice_messages.get_nowait()
+        self.assertIn("no pude recalcular", message.message)
+        self.assertNotIn("route_error", message.message)
     def test_heimdall_recognizes_fsd_injection_inventory_questions(self):
         self.assertTrue(CommandCenter._is_fsd_injection_status_request(
             "cuántas inyecciones FSD puedo fabricar"

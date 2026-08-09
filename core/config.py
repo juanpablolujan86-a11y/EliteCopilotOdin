@@ -139,3 +139,9 @@ class Config:
     @property
     def inara_upload_enabled(self) -> bool:
         return self._enabled(self.data.get("inara_upload_enabled"))
+
+    @property
+    def heimdall_auto_replan_enabled(self) -> bool:
+        """Recalcula una ruta activa sólo después de confirmar un desvío."""
+
+        return self._enabled(self.data.get("heimdall_auto_replan_enabled"))

@@ -221,6 +221,16 @@ incrementa el índice persistente y copia el siguiente sistema. Un evento
 repetido no puede saltar dos waypoints. Al llegar al destino final, la ruta se
 marca como completada y el portapapeles no se modifica nuevamente.
 
+#### Replanificación por desvío
+
+Cuando la ruta trazada por el juego ya no contiene el siguiente punto de
+control de Spansh, HEIMDALL archiva el plan anterior y conserva su destino
+final. Si `heimdall_auto_replan_enabled` está activo, calcula en segundo plano
+una nueva ruta desde el sistema real de llegada. El Journal continúa
+procesándose durante la consulta; la activación y la copia del nuevo waypoint
+se realizan después en el hilo principal. Un fallo produce sólo un aviso breve
+y conserva el detalle técnico en `heimdall.log`.
+
 ### Fase 5 — Asistencia de cabina
 
 - Descubrir y respetar los bindings del comandante.
