@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import time
 from dataclasses import asdict, dataclass
+from math import ceil
 from typing import Callable
 
 import requests
@@ -52,6 +53,26 @@ class SpanshRoutePlan:
 
         calculated = sum(max(0, waypoint.jumps) for waypoint in self.waypoints[1:])
         return calculated or self.total_jumps
+
+    @property
+    def conventional_minimum_jumps(self) -> int | None:
+        """Límite inferior teórico; no sustituye una ruta trazada por el juego."""
+
+        if self.jump_range <= 0 or self.distance <= 0:
+            return None
+        return max(1, ceil(self.distance / self.jump_range))
+
+    @property
+    def estimated_jumps_saved(self) -> int | None:
+        conventional = self.conventional_minimum_jumps
+        if conventional is None:
+            return None
+        return conventional - self.actual_total_jumps
+
+    @property
+    def neutron_route_is_advantageous(self) -> bool | None:
+        saved = self.estimated_jumps_saved
+        return None if saved is None else saved > 0
 
     @classmethod
     def from_dict(cls, payload: dict) -> "SpanshRoutePlan":

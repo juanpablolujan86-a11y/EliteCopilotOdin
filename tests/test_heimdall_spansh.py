@@ -252,6 +252,31 @@ class SpanshRoutePlannerTestCase(unittest.TestCase):
         self.assertEqual(plan.total_jumps, 7)
         self.assertEqual(plan.actual_total_jumps, 7)
 
+    def test_compares_neutron_route_with_conservative_conventional_reference(self) -> None:
+        plan = SpanshClient(
+            FakeSession([{"status": "ok", "result": RESULT}]),
+            sleeper=lambda _: None,
+        ).plan_neutron_route("Origen", "Destino", 66.12)
+
+        self.assertEqual(plan.conventional_minimum_jumps, 7)
+        self.assertEqual(plan.estimated_jumps_saved, 5)
+        self.assertTrue(plan.neutron_route_is_advantageous)
+
+    def test_comparison_does_not_claim_savings_when_neutron_route_is_longer(self) -> None:
+        result = dict(RESULT)
+        result["distance"] = 100.0
+        result["system_jumps"] = [dict(item) for item in RESULT["system_jumps"]]
+        result["system_jumps"][1]["jumps"] = 2
+        result["system_jumps"][2]["jumps"] = 2
+        plan = SpanshClient(
+            FakeSession([{"status": "ok", "result": result}]),
+            sleeper=lambda _: None,
+        ).plan_neutron_route("Origen", "Destino", 66.12)
+
+        self.assertEqual(plan.conventional_minimum_jumps, 2)
+        self.assertEqual(plan.estimated_jumps_saved, -2)
+        self.assertFalse(plan.neutron_route_is_advantageous)
+
     def test_pending_waypoint_can_be_restored_without_advancing(self) -> None:
         copied = []
         planner = HeimdallRoutePlanner(

@@ -1345,6 +1345,19 @@ class CommandCenter:
                 f"{plan.destination_system}: {plan.actual_total_jumps} saltos y "
                 f"{plan.distance:.0f} años luz. "
             )
+            conventional = plan.conventional_minimum_jumps
+            saved = plan.estimated_jumps_saved
+            if conventional is not None and saved is not None:
+                if saved > 0:
+                    answer += (
+                        f"La referencia convencional mínima sería de {conventional} "
+                        f"saltos; esta ruta ahorra al menos {saved}. "
+                    )
+                else:
+                    answer += (
+                        "Esta autopista no mejora la referencia convencional mínima; "
+                        "conviene comparar también la ruta trazada por el juego. "
+                    )
             if next_system:
                 answer += f"Copié {next_system} al portapapeles como primer destino."
             else:

@@ -165,6 +165,14 @@ del comandante, usando el alcance actual de la nave y el destino indicado.
   necesarios para alcanzarlo; un waypoint lejano no se interpreta como salto
   directo.
 
+Al recibir una ruta, HEIMDALL también calcula una referencia convencional
+mínima mediante `ceil(distancia / alcance_actual)`. La presenta expresamente
+como límite inferior teórico, porque no considera densidad estelar, permisos ni
+la ruta concreta del mapa galáctico. Si la autopista no mejora siquiera esa
+referencia, HEIMDALL lo advierte en lugar de afirmar que la ruta de neutrones es
+más rápida. Galaxy Plotter seguirá siendo necesario para una comparación
+convencional exacta.
+
 La segunda etapa integrará Galaxy Plotter (`generic/route`) cuando ODIN pueda
 extraer de forma fiable masa, constantes completas del FSD, depósitos y
 bonificaciones. No se enviarán parámetros estimados a ese calculador.

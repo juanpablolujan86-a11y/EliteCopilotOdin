@@ -109,6 +109,7 @@
   - [ ] Comparar ruta convencional y ruta de neutrones
     - [x] Integrar planificador comunitario Spansh y persistir resultados
     - [x] Usar automáticamente sistema actual y alcance real de la nave
+    - [x] Comparar contra un límite inferior convencional conservador
     - [ ] Incorporar parámetros físicos completos para Galaxy Plotter exacto
   - [ ] Guiar la secuencia segura de sobrecarga
     - [x] Copiar el primer waypoint al crear la ruta
