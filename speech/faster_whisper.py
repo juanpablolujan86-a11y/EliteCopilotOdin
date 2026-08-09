@@ -19,6 +19,7 @@ PROMPT = (
     "estado de la ruta comercial, qué tengo que comprar, qué tengo que vender, "
     "cancela la ruta comercial, recalculá la ruta comercial, "
     "repetí la instrucción comercial, cuánto beneficio tiene la ruta"
+    ", cuánto beneficio llevo comerciando, cuánto invertí en comercio"
 )
 
 

@@ -46,7 +46,7 @@ from state.commander_state import CommanderState
 from ui.console_presenter import ConsolePresenter
 from core.version import CAPABILITY, VERSION
 from core.diagnostics import FreyjaDiagnostics, HeimdallDiagnostics, MimirDiagnostics, OdinDiagnostics
-from freyja.ledger import TradeLedger
+from freyja.ledger import TradeLedger, TradeSummary
 from freyja.route_tracker import ActiveTradeRoute
 from freyja.planner import (
     PowerplayTradeOptimizer,
@@ -409,6 +409,7 @@ class CommandCenter:
         freyja_ledger = TradeLedger(
             self.database, FreyjaDiagnostics(self.config.data_root)
         )
+        self.freyja_ledger = freyja_ledger
         self.active_trade_route = ActiveTradeRoute(
             self.config.data_root / "freyja" / "active_route.json",
             self.event_bus,
@@ -913,6 +914,13 @@ class CommandCenter:
             )
             return
 
+        if self._is_freyja_trade_ledger_request(question):
+            self._start_fixed_voice_response(
+                self._freyja_ledger_voice_summary(self.freyja_ledger.summary()),
+                officer="FREYJA",
+            )
+            return
+
         if self._is_freyja_trade_recalculate_request(question):
             strategy = self.active_trade_route.active_strategy()
             if strategy is None:
@@ -1309,7 +1317,31 @@ class CommandCenter:
             or re.search(r"\bqu[eé]\s+(?:tengo\s+que\s+)?(?:comprar|vender)\b", lowered)
             or "siguiente tramo" in lowered
             or bool(re.search(r"\brepet(?:i|í|ir)\b.*\b(?:instrucci[oó]n|tramo)\b", lowered))
-            or bool(re.search(r"\b(?:beneficio|ganancia|tramos\s+quedan)\b", lowered))
+            or bool(re.search(
+                r"\b(?:beneficio|ganancia)\b.*\bruta\b|\bruta\b.*\b(?:beneficio|ganancia)\b",
+                lowered,
+            ))
+            or "tramos quedan" in lowered
+        )
+
+    @staticmethod
+    def _is_freyja_trade_ledger_request(text: str) -> bool:
+        lowered = text.casefold()
+        return bool(
+            re.search(
+                r"\b(?:beneficio|ganancia|invert[ií]|ventas?|vendido)\b",
+                lowered,
+            )
+            and re.search(r"\b(?:comercio|comercial|comerciando|llevo)\b", lowered)
+        )
+
+    @staticmethod
+    def _freyja_ledger_voice_summary(summary: TradeSummary) -> str:
+        return (
+            f"Balance comercial confirmado: invertimos {summary.invested} créditos, "
+            f"vendimos por {summary.revenue} créditos y la ganancia realizada es "
+            f"de {summary.realized_profit} créditos. Hay {summary.cargo_units} "
+            "toneladas registradas en el inventario comercial."
         )
 
     @staticmethod

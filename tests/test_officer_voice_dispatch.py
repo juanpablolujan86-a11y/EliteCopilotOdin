@@ -5,6 +5,7 @@ import threading
 import unittest
 
 from core.command_center import CommandCenter
+from freyja.ledger import TradeSummary
 from freyja.market_source import MarketSourceError
 from freyja.planner import MarketOpportunity, TradeProfile
 
@@ -198,6 +199,20 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
         self.assertFalse(CommandCenter._is_freyja_trade_recalculate_request(
             "recalculá la ruta de neutrones"
         ))
+
+    def test_freyja_reports_confirmed_trade_ledger_without_number_separators(self):
+        self.assertTrue(CommandCenter._is_freyja_trade_ledger_request(
+            "cuánto beneficio llevo comerciando"
+        ))
+        self.assertTrue(CommandCenter._is_freyja_trade_ledger_request(
+            "cuánto invertí en comercio"
+        ))
+        answer=CommandCenter._freyja_ledger_voice_summary(
+            TradeSummary(48,24,801984,1161504,359520,24)
+        )
+        self.assertIn("359520 créditos",answer)
+        self.assertIn("801984 créditos",answer)
+        self.assertNotIn("359,520",answer)
 
     def test_freyja_pending_menu_starts_selected_calculation_without_wake_word(self):
         center=CommandCenter.__new__(CommandCenter)
