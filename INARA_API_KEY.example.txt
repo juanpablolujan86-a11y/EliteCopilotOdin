@@ -1,0 +1,7 @@
+# Copia este archivo como INARA_API_KEY.txt.
+# Usa una API key personal diferente para cada comandante.
+# FRONTIER_ID es opcional; ODIN tambien puede obtenerlo del Journal.
+
+COMMANDER=
+FRONTIER_ID=
+API_KEY=PEGAR_API_KEY_AQUI

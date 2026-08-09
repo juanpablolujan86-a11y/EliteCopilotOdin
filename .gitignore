@@ -19,6 +19,7 @@ database/*.db
 *.tmp
 ELEVENLABS_API_KEY.txt
 EDSM_API_KEY.txt
+INARA_API_KEY.txt
 
 # Compilación distribuible
 build/
