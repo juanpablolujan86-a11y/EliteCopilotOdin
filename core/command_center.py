@@ -47,6 +47,7 @@ from ui.console_presenter import ConsolePresenter
 from core.version import CAPABILITY, VERSION
 from core.diagnostics import FreyjaDiagnostics, HeimdallDiagnostics, MimirDiagnostics, OdinDiagnostics
 from freyja.ledger import TradeLedger
+from freyja.route_tracker import ActiveTradeRoute
 from freyja.planner import (
     PowerplayTradeOptimizer,
     QuickRouteOptimizer,
@@ -408,8 +409,15 @@ class CommandCenter:
         freyja_ledger = TradeLedger(
             self.database, FreyjaDiagnostics(self.config.data_root)
         )
+        self.active_trade_route = ActiveTradeRoute(
+            self.config.data_root / "freyja" / "active_route.json",
+            self.event_bus,
+        )
         for event_name in TradeLedger.EVENTS:
             self.event_bus.subscribe(event_name, freyja_ledger.handle)
+        self.event_bus.subscribe(
+            "MarketSell", self.active_trade_route.handle_market_sell
+        )
         market_cache = MarketCache(self.database)
         self.market_cache = market_cache
         self.event_bus.subscribe(
@@ -1445,6 +1453,7 @@ class CommandCenter:
             answer = self._quick_trade_voice_summary(plan)
         else:
             answer = plan.summary()
+        self.active_trade_route.activate(plan)
         if self._freyja_used_stale_cache:
             answer = (
                 "El mercado comunitario no respondió; calculé con la última "
