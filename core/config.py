@@ -106,3 +106,12 @@ class Config:
         if isinstance(value, str):
             return value.strip().casefold() in {"1", "true", "yes", "si", "sí"}
         return bool(value)
+
+    @property
+    def eddn_test_mode(self) -> bool:
+        """Durante desarrollo EDDN exige utilizar el sufijo de esquema /test."""
+
+        value = self.data.get("eddn_test_mode", True)
+        if isinstance(value, str):
+            return value.strip().casefold() not in {"0", "false", "no"}
+        return bool(value)

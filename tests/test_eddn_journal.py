@@ -21,13 +21,22 @@ class EDDNJournalMessageBuilderTests(unittest.TestCase):
         envelope=self.builder.prepare(self.location())
 
         self.assertEqual(
-            envelope["$schemaRef"],"https://eddn.edcd.io/schemas/journal/1"
+            envelope["$schemaRef"],"https://eddn.edcd.io/schemas/journal/1/test"
         )
         self.assertEqual(envelope["header"]["uploaderID"],"anonymous-test")
         self.assertEqual(envelope["header"]["softwareName"],"ODIN")
         self.assertEqual(envelope["header"]["gameversion"],"4.1.3.0")
         self.assertEqual(envelope["header"]["gamebuild"],"r312345")
         self.assertEqual(envelope["message"]["StarSystem"],"Sol")
+
+    def test_live_schema_requires_explicit_test_mode_opt_out(self):
+        builder=EDDNJournalMessageBuilder(
+            "anonymous-test","0.9.0",test_mode=False
+        )
+        envelope=builder.prepare(self.location())
+        self.assertEqual(
+            envelope["$schemaRef"],"https://eddn.edcd.io/schemas/journal/1"
+        )
 
     def test_enriches_scan_from_last_valid_system_context(self):
         self.builder.prepare(self.location())

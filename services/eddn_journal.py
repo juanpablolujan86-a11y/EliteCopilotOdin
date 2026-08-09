@@ -21,11 +21,13 @@ class EDDNJournalMessageBuilder:
     })
 
     def __init__(
-        self, uploader_id: str, software_version: str, software_name: str = "ODIN"
+        self, uploader_id: str, software_version: str, software_name: str = "ODIN",
+        *, test_mode: bool = True,
     ) -> None:
         self.uploader_id = str(uploader_id).strip()
         self.software_version = str(software_version).strip()
         self.software_name = str(software_name).strip() or "ODIN"
+        self.test_mode = bool(test_mode)
         self.gameversion = ""
         self.gamebuild = ""
         self.horizons: bool | None = None
@@ -68,7 +70,8 @@ class EDDNJournalMessageBuilder:
             "gameversion": self.gameversion,
             "gamebuild": self.gamebuild,
         }
-        return {"$schemaRef": self.SCHEMA_REF, "header": header, "message": message}
+        schema_ref = self.SCHEMA_REF + ("/test" if self.test_mode else "")
+        return {"$schemaRef": schema_ref, "header": header, "message": message}
 
     def _remember_game_version(self, event: dict) -> None:
         self.gameversion = str(

@@ -31,6 +31,9 @@ class EDDNJournalPipelineTests(unittest.TestCase):
             "timestamp":"2026-08-09T12:01:00Z","event":"Scan","BodyID":1,
         }))
         self.assertEqual(pipeline.outbox.pending_count(),2)
+        self.assertTrue(
+            pipeline.outbox.due()[0].envelope["$schemaRef"].endswith("/test")
+        )
 
     def test_anonymous_identity_is_stable_and_contains_no_commander_data(self):
         first=EDDNJournalPipeline.create(self.root,self.database,"0.9.0")

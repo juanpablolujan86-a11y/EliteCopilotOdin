@@ -25,11 +25,14 @@ class EDDNJournalPipeline:
 
     @classmethod
     def create(
-        cls, data_root: Path, database: DatabaseManager, software_version: str
+        cls, data_root: Path, database: DatabaseManager, software_version: str,
+        *, test_mode: bool = True,
     ) -> "EDDNJournalPipeline":
         uploader_id = cls._anonymous_uploader_id(data_root)
         return cls(
-            EDDNJournalMessageBuilder(uploader_id, software_version),
+            EDDNJournalMessageBuilder(
+                uploader_id, software_version, test_mode=test_mode
+            ),
             EDDNOutbox(database),
         )
 

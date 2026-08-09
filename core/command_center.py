@@ -180,7 +180,8 @@ class CommandCenter:
 
         if self.config.eddn_capture_enabled:
             self.eddn_pipeline = EDDNJournalPipeline.create(
-                self.config.data_root, self.database, VERSION
+                self.config.data_root, self.database, VERSION,
+                test_mode=self.config.eddn_test_mode,
             )
             self.eddn_pipeline.bootstrap_journal(journal)
             if self.config.eddn_upload_enabled:
