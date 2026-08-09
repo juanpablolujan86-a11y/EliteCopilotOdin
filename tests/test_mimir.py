@@ -225,6 +225,30 @@ class MimirTestCase(unittest.TestCase):
             "Descenso científico recomendado",
         )
 
+    def test_g_star_eliminates_tectonicas_when_no_color_variant_exists(self) -> None:
+        event = {
+            "event": "Scan",
+            "BodyName": "Wredgaea AS-S c17-7 3",
+            "PlanetClass": "High metal content body",
+            "AtmosphereType": "SulphurDioxide",
+            "SurfaceGravity": 4.817110,
+            "SurfaceTemperature": 393.816742,
+            "SurfacePressure": 251.818787,
+            "Volcanism": "",
+        }
+        planet = PlanetEventAdapter().from_scan_event(
+            event,
+            scientific_context={"stars": [{"type": "G", "luminosity": "Vb"}]},
+        )
+
+        names = {
+            prediction.species.name
+            for prediction in self.officer.predict_species(planet)
+        }
+
+        self.assertNotIn("Stratum Tectonicas", names)
+        self.assertTrue(any(name.startswith("Bacterium ") for name in names))
+
     def test_recommendation_lists_all_probable_samples(self) -> None:
         planet = PlanetEventAdapter().from_scan_event(
             tectonicas_scan()

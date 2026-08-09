@@ -61,6 +61,8 @@ con Stratum Tectonicas, MÍMIR lo anuncia automáticamente una sola vez.
 La interfaz combina esas predicciones con las señales reales persistidas del
 Journal y lista todos los planetas biológicos del sistema, incluyendo cantidad
 de señales, géneros confirmados y especies identificadas cuando están disponibles.
+Las especies que requieren una variante de color se descartan cuando ninguna
+estrella o material disponible puede producirla, replicando el filtro de BioScan.
 
 ## Flujo científico
 

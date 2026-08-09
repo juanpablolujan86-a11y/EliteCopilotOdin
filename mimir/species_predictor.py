@@ -150,6 +150,14 @@ class SpeciesPredictor:
             ):
                 continue
 
+            variants = self._predict_variants(species, planet)
+            if (
+                self._requires_variant(species)
+                and self._variant_context_available(species, planet)
+                and not variants
+            ):
+                continue
+
             prediction = Prediction(
                 species=species,
                 score=score,
@@ -157,7 +165,7 @@ class SpeciesPredictor:
                     "rule_id"
                 ],
                 matches=matches,
-                variants=self._predict_variants(species, planet),
+                variants=variants,
             )
 
             current = best_results.get(
@@ -218,3 +226,24 @@ class SpeciesPredictor:
                 variants.add(str(color))
 
         return tuple(sorted(variants))
+
+    @staticmethod
+    def _requires_variant(species: Species) -> bool:
+        """BioScan descarta el género si ninguna regla de color coincide."""
+
+        genus = genus_data.get(species.genus_codex_id, {})
+        colors = genus.get("colors", {})
+        species_colors = colors.get("species", {}).get(species.codex_id, {})
+        color_rules = species_colors or colors
+        return bool(color_rules.get("star") or color_rules.get("element"))
+
+    @staticmethod
+    def _variant_context_available(species: Species, planet: dict[str, Any]) -> bool:
+        genus = genus_data.get(species.genus_codex_id, {})
+        colors = genus.get("colors", {})
+        species_colors = colors.get("species", {}).get(species.codex_id, {})
+        color_rules = species_colors or colors
+        return bool(
+            (color_rules.get("star") and planet.get("stars"))
+            or (color_rules.get("element") and planet.get("materials"))
+        )
