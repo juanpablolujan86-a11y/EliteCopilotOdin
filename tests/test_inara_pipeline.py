@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 import tempfile
 import unittest
 
@@ -25,6 +26,24 @@ class InaraJournalPipelineTests(unittest.TestCase):
         self.assertEqual(self.pipeline.capture({
             "timestamp":"2026-08-09T12:00:00Z","event":"Music"
         }),0)
+        self.assertEqual(self.outbox.counts(),{})
+
+    def test_cargo_event_uses_complete_external_snapshot(self):
+        cargo=self.root/"Cargo.json"
+        cargo.write_text(json.dumps({
+            "Inventory":[{"Name":"gold","Count":2,"Stolen":0}]
+        }),encoding="utf-8")
+        self.assertEqual(self.pipeline.capture({
+            "timestamp":"2026-08-09T12:00:00Z","event":"Cargo","Count":2
+        },cargo_file=cargo),1)
+        queued=self.outbox.due()[0].event
+        self.assertEqual(queued["eventData"],[{"itemName":"gold","itemCount":2}])
+
+    def test_missing_cargo_snapshot_does_not_clear_remote_inventory(self):
+        with self.assertLogs("odin.inara",level="ERROR"):
+            self.assertEqual(self.pipeline.capture({
+                "timestamp":"2026-08-09T12:00:00Z","event":"Cargo","Count":0
+            },cargo_file=self.root/"missing.json"),0)
         self.assertEqual(self.outbox.counts(),{})
 
 

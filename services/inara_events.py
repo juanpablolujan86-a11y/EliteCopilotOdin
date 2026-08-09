@@ -38,6 +38,10 @@ class InaraEventMapper:
             return self._location(journal_event, timestamp)
         if kind in {"Loadout", "SetUserShipName"}:
             return self._ship(journal_event, timestamp)
+        if kind == "Cargo":
+            return self._cargo(journal_event, timestamp)
+        if kind == "Materials":
+            return self._materials(journal_event, timestamp)
         return ()
 
     @staticmethod
@@ -214,6 +218,51 @@ class InaraEventMapper:
         if modifiers:
             data["modifiers"] = modifiers
         return data
+
+    def _cargo(self, event: dict, timestamp: str) -> tuple[dict, ...]:
+        inventory = event.get("Inventory")
+        if not isinstance(inventory, list):
+            return ()
+        translated = []
+        for item in inventory:
+            if not isinstance(item, dict) or not item.get("Name"):
+                continue
+            count = item.get("Count")
+            if not isinstance(count, int) or isinstance(count, bool) or count < 0:
+                continue
+            stolen = item.get("Stolen", 0)
+            stolen = stolen if isinstance(stolen, int) and not isinstance(stolen, bool) else 0
+            stolen = max(0, min(stolen, count))
+            mission_id = item.get("MissionID")
+            common = {}
+            if isinstance(mission_id, int) and not isinstance(mission_id, bool):
+                common["missionGameID"] = mission_id
+            legal_count = count - stolen
+            if legal_count:
+                translated.append({
+                    "itemName": str(item["Name"]), "itemCount": legal_count, **common
+                })
+            if stolen:
+                translated.append({
+                    "itemName": str(item["Name"]), "itemCount": stolen,
+                    "isStolen": True, **common,
+                })
+        return (self._event("setCommanderInventoryCargo", timestamp, translated),)
+
+    def _materials(self, event: dict, timestamp: str) -> tuple[dict, ...]:
+        categories = [event.get(name) for name in ("Raw", "Manufactured", "Encoded")]
+        if not all(isinstance(category, list) for category in categories):
+            return ()
+        translated = []
+        for category in categories:
+            for item in category:
+                if not isinstance(item, dict) or not item.get("Name"):
+                    continue
+                count = item.get("Count")
+                if not isinstance(count, int) or isinstance(count, bool) or count < 0:
+                    continue
+                translated.append({"itemName": str(item["Name"]), "itemCount": count})
+        return (self._event("setCommanderInventoryMaterials", timestamp, translated),)
 
     @staticmethod
     def _optional(data: dict, key: str, value, expected) -> None:

@@ -116,5 +116,39 @@ class InaraEventMapperTests(unittest.TestCase):
         self.assertEqual(len(mapped),1)
         self.assertEqual(mapped[0]["eventName"],"setCommanderShip")
 
+    def test_cargo_snapshot_splits_legal_stolen_and_mission_items(self):
+        mapped=self.mapper.map({
+            "timestamp":self.timestamp,"event":"Cargo","Inventory":[
+                {"Name":"gold","Count":5,"Stolen":2},
+                {"Name":"cobalt","Count":3,"Stolen":0,"MissionID":123},
+            ],
+        })[0]
+        self.assertEqual(mapped["eventName"],"setCommanderInventoryCargo")
+        self.assertEqual(mapped["eventData"],[
+            {"itemName":"gold","itemCount":3},
+            {"itemName":"gold","itemCount":2,"isStolen":True},
+            {"itemName":"cobalt","itemCount":3,"missionGameID":123},
+        ])
+
+    def test_empty_cargo_snapshot_is_an_explicit_inventory_reset(self):
+        mapped=self.mapper.map({"timestamp":self.timestamp,"event":"Cargo",
+                                "Inventory":[]})[0]
+        self.assertEqual(mapped["eventData"],[])
+
+    def test_materials_merge_all_complete_journal_categories(self):
+        mapped=self.mapper.map({
+            "timestamp":self.timestamp,"event":"Materials",
+            "Raw":[{"Name":"iron","Count":10}],
+            "Manufactured":[{"Name":"chemicalprocessors","Count":4}],
+            "Encoded":[{"Name":"wakeexceptions","Count":2}],
+        })[0]
+        self.assertEqual(mapped["eventName"],"setCommanderInventoryMaterials")
+        self.assertEqual(len(mapped["eventData"]),3)
+
+    def test_incomplete_inventory_snapshots_are_ignored(self):
+        self.assertEqual(self.mapper.map({"timestamp":self.timestamp,"event":"Cargo"}),())
+        self.assertEqual(self.mapper.map({"timestamp":self.timestamp,"event":"Materials",
+                                          "Raw":[],"Manufactured":[]}),())
+
 
 if __name__=="__main__": unittest.main()

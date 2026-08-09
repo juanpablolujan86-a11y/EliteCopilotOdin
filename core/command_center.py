@@ -863,7 +863,9 @@ class CommandCenter:
                 if self.edsm_pipeline is not None:
                     self.edsm_pipeline.capture(event)
                 if self.inara_pipeline is not None:
-                    self.inara_pipeline.capture(event)
+                    self.inara_pipeline.capture(
+                        event, cargo_file=self.config.cargo_file
+                    )
                 self.event_bus.publish(event)
 
             time.sleep(0.1)
