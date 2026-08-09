@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from pathlib import Path
 
 from services.inara_credentials import InaraCredentialStore
@@ -19,7 +20,8 @@ class InaraKeyImportResult:
 
 
 def import_inara_key_file(
-    directory: Path, credentials: InaraCredentialStore | None = None
+    directory: Path, credentials: InaraCredentialStore | None = None,
+    *, journal_path: Path | None = None,
 ) -> InaraKeyImportResult:
     path = directory / KEY_FILENAME
     if not path.exists():
@@ -31,6 +33,10 @@ def import_inara_key_file(
     commander = values.get("COMMANDER", "")
     frontier_id = values.get("FRONTIER_ID", "")
     api_key = values.get("API_KEY", "")
+    if journal_path is not None and (not commander or not frontier_id):
+        journal_commander, journal_frontier_id = _journal_identity(journal_path)
+        commander = commander or journal_commander
+        frontier_id = frontier_id or journal_frontier_id
     if not commander or not api_key or api_key == PLACEHOLDER:
         return InaraKeyImportResult()
     credentials = credentials or InaraCredentialStore()
@@ -63,3 +69,33 @@ def _read_values(path: Path) -> dict[str, str]:
         if key in {"COMMANDER", "FRONTIER_ID", "API_KEY"}:
             values[key] = value.strip()
     return values
+
+
+def _journal_identity(journal_path: Path) -> tuple[str, str]:
+    try:
+        journals = sorted(
+            Path(journal_path).glob("Journal*.log"),
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        )
+    except OSError:
+        return "", ""
+    for journal in journals:
+        commander = ""
+        frontier_id = ""
+        try:
+            with journal.open("r", encoding="utf-8", errors="ignore") as stream:
+                for line in stream:
+                    try:
+                        event = json.loads(line)
+                    except (json.JSONDecodeError, TypeError):
+                        continue
+                    if event.get("event") != "LoadGame":
+                        continue
+                    commander = str(event.get("Commander", "")).strip()
+                    frontier_id = str(event.get("FID", "")).strip()
+        except OSError:
+            continue
+        if commander:
+            return commander, frontier_id
+    return "", ""

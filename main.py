@@ -25,7 +25,9 @@ def main() -> None:
     credential_directory = application_directory()
     for personal_import in (
         import_edsm_key_file(credential_directory),
-        import_inara_key_file(credential_directory),
+        import_inara_key_file(
+            credential_directory, journal_path=config.journal_path
+        ),
     ):
         if personal_import.message:
             print(personal_import.message)

@@ -62,5 +62,44 @@ class InaraCredentialTests(unittest.TestCase):
             credentials.set.assert_called_once_with("CMDR Test","secret-key","F123456")
             self.assertNotIn("secret-key",path.read_text(encoding="utf-8"))
 
+    def test_import_discovers_missing_identity_from_latest_journal(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory); path=root/"INARA_API_KEY.txt"
+            path.write_text(
+                "COMMANDER=\nFRONTIER_ID=\nsecret-key\n",encoding="utf-8"
+            )
+            journals=root/"journals"; journals.mkdir()
+            (journals/"Journal.01.log").write_text(
+                '{"timestamp":"2026-08-09T12:00:00Z","event":"LoadGame",'
+                '"Commander":"CMDR Journal","FID":"F987654"}\n',
+                encoding="utf-8",
+            )
+            credentials=Mock()
+            result=import_inara_key_file(
+                root,credentials,journal_path=journals
+            )
+            self.assertTrue(result.imported)
+            credentials.set.assert_called_once_with(
+                "CMDR Journal","secret-key","F987654"
+            )
+
+    def test_explicit_identity_takes_priority_over_journal(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory); path=root/"INARA_API_KEY.txt"
+            path.write_text(
+                "COMMANDER=CMDR Explicit\nFRONTIER_ID=F111\nsecret-key\n",
+                encoding="utf-8",
+            )
+            journals=root/"journals"; journals.mkdir()
+            (journals/"Journal.01.log").write_text(
+                '{"event":"LoadGame","Commander":"CMDR Journal","FID":"F999"}\n',
+                encoding="utf-8",
+            )
+            credentials=Mock()
+            import_inara_key_file(root,credentials,journal_path=journals)
+            credentials.set.assert_called_once_with(
+                "CMDR Explicit","secret-key","F111"
+            )
+
 
 if __name__=="__main__": unittest.main()
