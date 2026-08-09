@@ -17,6 +17,13 @@ class ActiveTradeRoute:
         self.clipboard_writer = clipboard_writer
         self.diagnostics = diagnostics
         self.state = self._load()
+        if self.state:
+            self._record(
+                "recuperada",
+                tramo=int(self.state.get("index", 0)) + 1,
+                fase=self.state.get("phase", "to_buy"),
+                total=len(self.state.get("legs", [])),
+            )
 
     def activate(self, plan, strategy: str = "quick") -> None:
         trades = tuple(getattr(plan, "legs", ()) or ())
@@ -269,17 +276,25 @@ class ActiveTradeRoute:
 
     def _save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(
+        temporary_path = self.path.with_suffix(f"{self.path.suffix}.tmp")
+        temporary_path.write_text(
             json.dumps(self.state, ensure_ascii=False, indent=2), encoding="utf-8"
         )
+        temporary_path.replace(self.path)
 
     def _load(self):
         try:
             payload = json.loads(self.path.read_text(encoding="utf-8"))
             if isinstance(payload, dict) and isinstance(payload.get("legs"), list):
                 return payload
-        except (OSError, ValueError, TypeError):
+        except FileNotFoundError:
             pass
+        except (OSError, ValueError, TypeError) as error:
+            self._record(
+                "recuperacion_fallida",
+                tipo=type(error).__name__,
+                detalle=str(error),
+            )
         return None
 
     def _current_leg(self):

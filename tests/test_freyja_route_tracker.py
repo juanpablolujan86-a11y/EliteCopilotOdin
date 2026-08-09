@@ -111,6 +111,31 @@ class ActiveTradeRouteTests(unittest.TestCase):
             tracker=ActiveTradeRoute(path,Mock(),Mock())
             self.assertFalse(tracker.cancel())
 
+    def test_atomic_save_leaves_no_temporary_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/"active.json"
+            tracker=ActiveTradeRoute(path,Mock(),Mock())
+
+            tracker.activate(self.trade("silver","A","B"))
+
+            self.assertTrue(path.exists())
+            self.assertFalse(path.with_suffix(".json.tmp").exists())
+
+    def test_corrupt_state_is_ignored_and_reported(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/"active.json"
+            path.write_text("{estado incompleto",encoding="utf-8")
+            diagnostics=Mock()
+
+            tracker=ActiveTradeRoute(path,Mock(),Mock(),diagnostics)
+
+            self.assertIsNone(tracker.state)
+            diagnostics.record_route_event.assert_called_once()
+            self.assertEqual(
+                diagnostics.record_route_event.call_args.args[0],
+                "recuperacion_fallida",
+            )
+
     def test_strategy_is_persisted_for_recalculation(self):
         with tempfile.TemporaryDirectory() as directory:
             path=Path(directory)/"active.json"
