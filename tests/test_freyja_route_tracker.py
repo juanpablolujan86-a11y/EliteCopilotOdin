@@ -29,6 +29,8 @@ class ActiveTradeRouteTests(unittest.TestCase):
             self.assertEqual(copied,["A"])
             restored=ActiveTradeRoute(path,bus,copied.append)
             self.assertEqual(restored.state["index"],0)
+            self.assertIn("Tramo 1 de 2",restored.status_message())
+            self.assertIn("compre 24 toneladas de silver",restored.status_message())
 
             restored.handle_fsd_jump({"StarSystem":"A"})
             self.assertIn("Llegamos al sistema de compra",bus.publish_internal.call_args.args[1].message)
@@ -40,6 +42,7 @@ class ActiveTradeRouteTests(unittest.TestCase):
             self.assertIn("Compre 24 toneladas",bus.publish_internal.call_args.args[1].message)
             restored.handle_market_buy({"Type":"silver"})
             self.assertEqual(copied[-1],"B")
+            self.assertIn("venda 24 toneladas de silver",restored.status_message())
             self.assertIn(
                 "Compra confirmada",bus.publish_internal.call_args.args[1].message
             )
@@ -58,6 +61,7 @@ class ActiveTradeRouteTests(unittest.TestCase):
             restored.handle_market_sell({"Type":"gold"})
             self.assertIsNone(restored.state)
             self.assertFalse(path.exists())
+            self.assertIn("No hay una ruta comercial activa",restored.status_message())
             self.assertIn(
                 "Ruta comercial completada",
                 bus.publish_internal.call_args.args[1].message,

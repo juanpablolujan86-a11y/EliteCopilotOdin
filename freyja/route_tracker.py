@@ -143,6 +143,24 @@ class ActiveTradeRoute:
             VoiceMessageReady("FREYJA", message, "atraque comercial"),
         )
 
+    def status_message(self) -> str:
+        leg = self._current_leg()
+        if leg is None:
+            return "No hay una ruta comercial activa, comandante."
+        index = int(self.state.get("index", 0))
+        total = len(self.state.get("legs", []))
+        if self.state.get("phase", "to_buy") == "to_buy":
+            action = (
+                f"compre {leg['units']} toneladas de {leg['commodity']} en "
+                f"{leg['buy_station']}, sistema {leg['buy_system']}"
+            )
+        else:
+            action = (
+                f"venda {leg['units']} toneladas de {leg['commodity']} en "
+                f"{leg['sell_station']}, sistema {leg['sell_system']}"
+            )
+        return f"Tramo {index + 1} de {total}: {action}."
+
     def _save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(

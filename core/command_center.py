@@ -907,6 +907,12 @@ class CommandCenter:
             self._open_freyja_trade_menu()
             return
 
+        if self._is_freyja_trade_status_request(question):
+            self._start_fixed_voice_response(
+                self.active_trade_route.status_message(), officer="FREYJA"
+            )
+            return
+
         cockpit_intent = parse_cockpit_intent(question)
         if cockpit_intent is not None:
             answer = self.cockpit_advisor.describe(cockpit_intent)
@@ -1269,6 +1275,15 @@ class CommandCenter:
             or normalized in {"vale bien", "y vale bien"}
         )
         return bool(explicit_trade or buy_and_sell or observed_whisper_alias)
+
+    @staticmethod
+    def _is_freyja_trade_status_request(text: str) -> bool:
+        lowered = text.casefold()
+        return bool(
+            re.search(r"\b(?:estado|progreso)\b.*\bruta\s+comercial\b", lowered)
+            or re.search(r"\bqu[eé]\s+(?:tengo\s+que\s+)?(?:comprar|vender)\b", lowered)
+            or "siguiente tramo" in lowered
+        )
 
     @staticmethod
     def _freyja_trade_selection(text: str) -> str | None:

@@ -173,6 +173,17 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
         learned=CommandCenter._command_from_text("quiero comerciar")
         self.assertEqual(learned.intent,"freyja_trade_menu")
 
+    def test_freyja_recognizes_trade_progress_questions(self):
+        self.assertTrue(CommandCenter._is_freyja_trade_status_request(
+            "estado de la ruta comercial"
+        ))
+        self.assertTrue(CommandCenter._is_freyja_trade_status_request(
+            "qué tengo que comprar"
+        ))
+        self.assertTrue(CommandCenter._is_freyja_trade_status_request(
+            "cuál es el siguiente tramo"
+        ))
+
     def test_freyja_pending_menu_starts_selected_calculation_without_wake_word(self):
         center=CommandCenter.__new__(CommandCenter)
         center._pending_freyja_trade_menu=True
