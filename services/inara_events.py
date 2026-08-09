@@ -46,6 +46,13 @@ class InaraEventMapper:
             return self._land(journal_event, timestamp)
         if kind == "CarrierJump":
             return self._carrier_jump(journal_event, timestamp)
+        if kind in {
+            "Powerplay", "PowerplayRank", "PowerplayMerits",
+            "PowerplayJoin", "PowerplayLeave", "PowerplayDefect",
+        }:
+            return self._powerplay(journal_event, timestamp)
+        if kind == "Reputation":
+            return self._major_reputation(journal_event, timestamp)
         return ()
 
     @staticmethod
@@ -101,7 +108,9 @@ class InaraEventMapper:
         self._optional(data, "starsystemCoords", event.get("StarPos"), (list, tuple))
         self._optional(data, "jumpDistance", event.get("JumpDist"), (int, float))
         self._travel_mode(data, event)
-        return (self._event("addCommanderTravelFSDJump", timestamp, data),)
+        events = [self._event("addCommanderTravelFSDJump", timestamp, data)]
+        events.extend(self._minor_reputation(event, timestamp))
+        return tuple(events)
 
     def _docked(self, event: dict, timestamp: str) -> tuple[dict, ...]:
         system, station = event.get("StarSystem"), event.get("StationName")
@@ -128,7 +137,9 @@ class InaraEventMapper:
             data["starsystemBodyCoords"] = [
                 float(event["Latitude"]), float(event["Longitude"])
             ]
-        return (self._event("setCommanderTravelLocation", timestamp, data),)
+        events = [self._event("setCommanderTravelLocation", timestamp, data)]
+        events.extend(self._minor_reputation(event, timestamp))
+        return tuple(events)
 
     def _ship(self, event: dict, timestamp: str) -> tuple[dict, ...]:
         ship_type, ship_id = event.get("Ship"), event.get("ShipID")
@@ -298,6 +309,69 @@ class InaraEventMapper:
         self._optional(data, "stationName", event.get("StationName"), str)
         self._optional(data, "marketID", event.get("MarketID"), int)
         return (self._event("addCommanderTravelCarrierJump", timestamp, data),)
+
+    def _powerplay(self, event: dict, timestamp: str) -> tuple[dict, ...]:
+        power = event.get("Power")
+        if not power:
+            return ()
+        data = {"powerName": str(power)}
+        kind = event.get("event")
+        rank = event.get("Rank")
+        merits = event.get("Merits")
+        if kind == "PowerplayMerits":
+            merits = event.get("TotalMerits")
+        if kind == "PowerplayLeave":
+            rank = -1
+        elif kind in {"PowerplayJoin", "PowerplayDefect"} and not isinstance(rank, int):
+            rank = 0
+        if isinstance(rank, int) and not isinstance(rank, bool):
+            data["rankValue"] = rank
+        if isinstance(merits, int) and not isinstance(merits, bool):
+            data["meritsValue"] = max(0, merits)
+        if len(data) == 1:
+            return ()
+        return (self._event("setCommanderRankPower", timestamp, data),)
+
+    def _major_reputation(self, event: dict, timestamp: str) -> tuple[dict, ...]:
+        reputations = []
+        for journal_name in ("Alliance", "Empire", "Federation", "Independent"):
+            value = event.get(journal_name)
+            if not isinstance(value, (int, float)) or isinstance(value, bool):
+                continue
+            reputations.append({
+                "majorfactionName": journal_name.casefold(),
+                "majorfactionReputation": self._reputation(value),
+            })
+        if not reputations:
+            return ()
+        return (self._event(
+            "setCommanderReputationMajorFaction", timestamp, reputations
+        ),)
+
+    def _minor_reputation(self, event: dict, timestamp: str) -> tuple[dict, ...]:
+        factions = event.get("Factions")
+        if not isinstance(factions, list):
+            return ()
+        reputations = []
+        for faction in factions:
+            if not isinstance(faction, dict) or not faction.get("Name"):
+                continue
+            value = faction.get("MyReputation")
+            if not isinstance(value, (int, float)) or isinstance(value, bool):
+                continue
+            reputations.append({
+                "minorfactionName": str(faction["Name"]),
+                "minorfactionReputation": self._reputation(value),
+            })
+        if not reputations:
+            return ()
+        return (self._event(
+            "setCommanderReputationMinorFaction", timestamp, reputations
+        ),)
+
+    @staticmethod
+    def _reputation(value: int | float) -> float:
+        return max(-1.0, min(float(value) / 100.0, 1.0))
 
     @staticmethod
     def _optional(data: dict, key: str, value, expected) -> None:

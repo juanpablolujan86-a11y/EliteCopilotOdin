@@ -178,5 +178,47 @@ class InaraEventMapperTests(unittest.TestCase):
         self.assertNotIn("jumpDistance",mapped["eventData"])
         self.assertEqual(mapped["eventData"]["stationName"],"ABC-123")
 
+    def test_powerplay_snapshot_rank_and_merits_are_mapped(self):
+        mapped=self.mapper.map({
+            "timestamp":self.timestamp,"event":"Powerplay",
+            "Power":"Felicia Winters","Rank":2,"Merits":1452,
+        })[0]
+        self.assertEqual(mapped["eventName"],"setCommanderRankPower")
+        self.assertEqual(mapped["eventData"],{
+            "powerName":"Felicia Winters","rankValue":2,"meritsValue":1452,
+        })
+
+    def test_powerplay_merits_and_leave_use_documented_values(self):
+        merits=self.mapper.map({
+            "timestamp":self.timestamp,"event":"PowerplayMerits",
+            "Power":"Aisling Duval","MeritsGained":10,"TotalMerits":500,
+        })[0]
+        self.assertEqual(merits["eventData"]["meritsValue"],500)
+        leave=self.mapper.map({
+            "timestamp":self.timestamp,"event":"PowerplayLeave","Power":"Aisling Duval"
+        })[0]
+        self.assertEqual(leave["eventData"]["rankValue"],-1)
+
+    def test_major_reputation_is_normalized_from_percent(self):
+        mapped=self.mapper.map({
+            "timestamp":self.timestamp,"event":"Reputation",
+            "Alliance":65.0,"Empire":86.0,"Federation":99.0,"Independent":0.0,
+        })[0]
+        self.assertEqual(mapped["eventName"],"setCommanderReputationMajorFaction")
+        self.assertEqual(mapped["eventData"][0],{
+            "majorfactionName":"alliance","majorfactionReputation":0.65,
+        })
+
+    def test_fsd_jump_appends_minor_faction_reputations(self):
+        mapped=self.mapper.map({
+            "timestamp":self.timestamp,"event":"FSDJump","StarSystem":"Sol",
+            "Factions":[{"Name":"Mother Gaia","MyReputation":75.0}],
+        })
+        self.assertEqual(len(mapped),2)
+        self.assertEqual(mapped[1]["eventName"],"setCommanderReputationMinorFaction")
+        self.assertEqual(mapped[1]["eventData"],[{
+            "minorfactionName":"Mother Gaia","minorfactionReputation":0.75,
+        }])
+
 
 if __name__=="__main__": unittest.main()
