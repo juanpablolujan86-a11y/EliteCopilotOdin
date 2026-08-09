@@ -920,6 +920,8 @@ class CommandCenter:
                     "No hay una ruta comercial activa para recalcular.",
                     officer="FREYJA",
                 )
+            elif blocker := self.active_trade_route.recalculation_blocker():
+                self._start_fixed_voice_response(blocker, officer="FREYJA")
             else:
                 self._start_freyja_trade_calculation(strategy)
             return
@@ -1307,6 +1309,7 @@ class CommandCenter:
             or re.search(r"\bqu[eé]\s+(?:tengo\s+que\s+)?(?:comprar|vender)\b", lowered)
             or "siguiente tramo" in lowered
             or bool(re.search(r"\brepet(?:i|í|ir)\b.*\b(?:instrucci[oó]n|tramo)\b", lowered))
+            or bool(re.search(r"\b(?:beneficio|ganancia|tramos\s+quedan)\b", lowered))
         )
 
     @staticmethod

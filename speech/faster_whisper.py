@@ -18,7 +18,7 @@ PROMPT = (
     "comercio Powerplay, ruta de neutrones, exobiología, Stratum Tectonicas, "
     "estado de la ruta comercial, qué tengo que comprar, qué tengo que vender, "
     "cancela la ruta comercial, recalculá la ruta comercial, "
-    "repetí la instrucción comercial"
+    "repetí la instrucción comercial, cuánto beneficio tiene la ruta"
 )
 
 

@@ -17,20 +17,25 @@ class ActiveTradeRouteTests(unittest.TestCase):
             ),
         )
 
+    def plan(self, *trades, profit=500000):
+        return SimpleNamespace(legs=trades,estimated_profit=profit)
+
     def test_persists_advances_and_completes_from_confirmed_sales(self):
         with tempfile.TemporaryDirectory() as directory:
             path=Path(directory)/"active.json"
             bus=Mock()
             copied=[]
             tracker=ActiveTradeRoute(path,bus,copied.append)
-            tracker.activate(SimpleNamespace(legs=(
+            tracker.activate(self.plan(
                 self.trade("silver","A","B"),self.trade("gold","B","C"),
-            )))
+                profit=606984,
+            ))
             self.assertEqual(copied,["A"])
             restored=ActiveTradeRoute(path,bus,copied.append)
             self.assertEqual(restored.state["index"],0)
             self.assertIn("Tramo 1 de 2",restored.status_message())
             self.assertIn("compre 24 toneladas de silver",restored.status_message())
+            self.assertIn("606984 créditos",restored.status_message())
 
             restored.handle_fsd_jump({"StarSystem":"A"})
             self.assertIn("Llegamos al sistema de compra",bus.publish_internal.call_args.args[1].message)
@@ -43,6 +48,7 @@ class ActiveTradeRouteTests(unittest.TestCase):
             restored.handle_market_buy({"Type":"silver"})
             self.assertEqual(copied[-1],"B")
             self.assertIn("venda 24 toneladas de silver",restored.status_message())
+            self.assertIn("No recalcularé",restored.recalculation_blocker())
             self.assertIn(
                 "Compra confirmada",bus.publish_internal.call_args.args[1].message
             )

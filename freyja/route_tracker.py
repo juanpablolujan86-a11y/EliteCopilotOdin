@@ -33,7 +33,10 @@ class ActiveTradeRoute:
             })
         self.state = {
             "index": 0, "phase": "to_buy", "last_arrival": "",
-            "strategy": strategy, "legs": legs,
+            "strategy": strategy,
+            "estimated_profit": int(getattr(plan, "estimated_profit",
+                getattr(getattr(plan, "trade", None), "estimated_profit", 0)) or 0),
+            "legs": legs,
         }
         self._save()
         if legs:
@@ -192,7 +195,12 @@ class ActiveTradeRoute:
                 f"venda {remaining} toneladas de {leg['commodity']} en "
                 f"{leg['sell_station']}, sistema {leg['sell_system']}"
             )
-        return f"Tramo {index + 1} de {total}: {action}."
+        remaining_legs = max(0, total - index)
+        estimated_profit = int(self.state.get("estimated_profit", 0) or 0)
+        return (
+            f"Tramo {index + 1} de {total}: {action}. Quedan {remaining_legs} "
+            f"tramos y el beneficio total estimado es de {estimated_profit} créditos."
+        )
 
     def cancel(self) -> bool:
         if not self.state:
@@ -208,6 +216,23 @@ class ActiveTradeRoute:
         return strategy if strategy in {
             "quick", "three_station", "expedition", "powerplay"
         } else None
+
+    def recalculation_blocker(self) -> str | None:
+        if not self.state:
+            return None
+        if self.state.get("phase", "to_buy") == "to_sell":
+            leg = self._current_leg()
+            remaining = max(
+                0,
+                int(self.state.get("bought_units", leg["units"]))
+                - int(self.state.get("sold_units", 0)),
+            )
+            return (
+                f"No recalcularé la ruta mientras queden {remaining} toneladas "
+                f"de {leg['commodity']} por vender. Complete la venta o cancele "
+                "la ruta comercial."
+            )
+        return None
 
     def _save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
