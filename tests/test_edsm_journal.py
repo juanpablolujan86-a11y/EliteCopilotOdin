@@ -1,3 +1,4 @@
+import json
 from unittest.mock import Mock
 import unittest
 
@@ -27,11 +28,14 @@ class EDSMJournalClientTests(unittest.TestCase):
         self.assertTrue(result.accepted)
         call=session.post.call_args
         self.assertEqual(call.args[0],"https://www.edsm.net/api-journal-v1")
-        payload=call.kwargs["json"]
+        payload=call.kwargs["data"]
         self.assertEqual(payload["commanderName"],"CMDR Test")
         self.assertEqual(payload["apiKey"],"secret-key")
-        self.assertEqual(payload["message"],[self.event])
-        self.assertEqual(payload["message"][0]["FuelLevel"],12.5)
+        messages=json.loads(payload["message"])
+        self.assertEqual(messages,[self.event])
+        self.assertEqual(messages[0]["FuelLevel"],12.5)
+        self.assertEqual(call.kwargs["headers"]["Accept"],"application/json")
+        self.assertTrue(call.kwargs["headers"]["User-Agent"].startswith("ODIN/"))
 
     def test_duplicate_and_old_codes_are_treated_as_processed(self):
         for code in (101,102,103,104):
@@ -74,6 +78,17 @@ class EDSMJournalClientTests(unittest.TestCase):
             client.submit(self.credentials,[self.event],game_version="3.8.0",game_build="r1")
         with self.assertRaises(ValueError):
             client.submit(self.credentials,[self.event],game_version="4.1",game_build="")
+
+    def test_non_json_http_response_keeps_events_for_retry(self):
+        response=self.response(403)
+        response.json.side_effect=ValueError("HTML")
+        session=Mock(); session.post.return_value=response
+        result=EDSMJournalClient(session).submit(
+            self.credentials,[self.event],game_version="4.1",game_build="r1"
+        )
+        self.assertFalse(result.accepted)
+        self.assertTrue(result.retryable)
+        self.assertEqual(result.code,403)
 
 
 if __name__=="__main__": unittest.main()

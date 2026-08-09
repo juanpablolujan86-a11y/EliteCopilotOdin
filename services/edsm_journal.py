@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 
 import requests
 
@@ -49,11 +50,19 @@ class EDSMJournalClient:
             "fromSoftwareVersion": VERSION,
             "fromGameVersion": version,
             "fromGameBuild": build,
-            "message": events,
+            "message": json.dumps(
+                events, ensure_ascii=False, separators=(",", ":")
+            ),
         }
         try:
             response = self.session.post(
-                self.ENDPOINT, json=payload, timeout=(5, 20)
+                self.ENDPOINT,
+                data=payload,
+                headers={
+                    "Accept": "application/json",
+                    "User-Agent": f"ODIN/{VERSION}",
+                },
+                timeout=(5, 20),
             )
         except requests.RequestException as error:
             return EDSMSubmissionResult(False, True, None, str(error))
@@ -65,7 +74,7 @@ class EDSMJournalClient:
             result = response.json()
         except (ValueError, TypeError):
             return EDSMSubmissionResult(
-                False, response.status_code >= 500,
+                False, True,
                 int(response.status_code), "Respuesta JSON inválida",
             )
         return self._classify(result)
