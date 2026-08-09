@@ -48,6 +48,7 @@ from services.eddn_outbox import EDDNOutboxSummary
 from services.edsm_pipeline import EDSMJournalPipeline
 from services.edsm_outbox import EDSMOutbox
 from services.edsm_delivery import EDSMDeliveryService
+from services.edsm_discard import EDSMDiscardRegistry
 from state.commander_state import CommanderState
 from ui.console_presenter import ConsolePresenter
 from core.version import CAPABILITY, VERSION
@@ -200,12 +201,18 @@ class CommandCenter:
             self.config.eddn_upload_enabled,
             self.config.eddn_test_mode,
         ))
+        edsm_discard_registry = None
+        if self.config.edsm_capture_enabled or self.config.edsm_upload_enabled:
+            edsm_discard_registry = EDSMDiscardRegistry(self.config.data_root)
         if self.config.edsm_capture_enabled:
-            self.edsm_pipeline = EDSMJournalPipeline(EDSMOutbox(self.database))
+            self.edsm_pipeline = EDSMJournalPipeline(
+                EDSMOutbox(self.database), edsm_discard_registry
+            )
             self.edsm_pipeline.bootstrap_journal(journal)
         if self.config.edsm_upload_enabled:
             self.edsm_delivery_service = EDSMDeliveryService(
-                self.config.data_root
+                self.config.data_root,
+                discard_registry=edsm_discard_registry,
             )
             self.edsm_delivery_service.start()
 

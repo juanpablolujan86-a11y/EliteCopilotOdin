@@ -40,5 +40,13 @@ class EDSMJournalPipelineTests(unittest.TestCase):
             "timestamp":"2026-08-09T12:00:00Z","event":"FSDJump"
         }))
 
+    def test_discarded_event_is_not_queued(self):
+        pipeline=EDSMJournalPipeline(self.pipeline.outbox,{"Music"})
+        pipeline.capture({"event":"Fileheader","gameversion":"4.1","build":"r1"})
+        self.assertFalse(pipeline.capture({
+            "timestamp":"2026-08-09T12:00:00Z","event":"Music"
+        }))
+        self.assertEqual(pipeline.outbox.counts(),{})
+
 
 if __name__=="__main__": unittest.main()

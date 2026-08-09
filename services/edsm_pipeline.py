@@ -11,8 +11,9 @@ from services.edsm_outbox import EDSMOutbox
 
 
 class EDSMJournalPipeline:
-    def __init__(self, outbox: EDSMOutbox) -> None:
+    def __init__(self, outbox: EDSMOutbox, discarded=None) -> None:
         self.outbox = outbox
+        self.discarded = discarded or frozenset()
         self.game_version = ""
         self.game_build = ""
         self.logger = logging.getLogger("odin.edsm")
@@ -43,6 +44,8 @@ class EDSMJournalPipeline:
             return False
         if kind == "LoadGame":
             self._remember_version(event)
+        if kind in self.discarded:
+            return False
         if not self.game_version or not self.game_build:
             return False
         try:

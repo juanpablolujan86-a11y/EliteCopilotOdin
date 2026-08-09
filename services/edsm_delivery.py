@@ -7,6 +7,7 @@ import threading
 
 from core.database import DatabaseManager
 from services.edsm_credentials import EDSMCredentialStore
+from services.edsm_discard import EDSMDiscardRegistry
 from services.edsm_journal import EDSMJournalClient
 from services.edsm_outbox import EDSMOutbox
 
@@ -14,11 +15,13 @@ from services.edsm_outbox import EDSMOutbox
 class EDSMDeliveryService:
     def __init__(
         self, data_root, *, credentials_factory=EDSMCredentialStore,
-        client_factory=EDSMJournalClient, poll_seconds: float = 10.0,
+        client_factory=EDSMJournalClient, discard_registry=None,
+        poll_seconds: float = 10.0,
     ) -> None:
         self.data_root = data_root
         self.credentials_factory = credentials_factory
         self.client_factory = client_factory
+        self.discard_registry = discard_registry or EDSMDiscardRegistry(data_root)
         self.poll_seconds = max(5.0, float(poll_seconds))
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
@@ -74,6 +77,7 @@ class EDSMDeliveryService:
             database.disconnect()
 
     def _run(self) -> None:
+        self.discard_registry.refresh()
         while not self._stop.is_set():
             try:
                 self.process_once()
