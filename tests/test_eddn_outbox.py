@@ -79,6 +79,22 @@ class EDDNOutboxTests(unittest.TestCase):
         self.assertEqual(self.outbox.due(limit=0,now=self.now),())
         self.assertEqual(len(self.outbox.due(limit=0,now=future)),1)
 
+    def test_summary_reports_counts_retries_and_last_event_type(self):
+        self.outbox.enqueue(self.envelope,now=self.now)
+        item=self.outbox.due(now=self.now)[0]
+        self.outbox.mark_failed(item.message_key,"sin red",now=self.now)
+        second=dict(self.envelope)
+        second["message"]=dict(self.envelope["message"],timestamp="2026-08-09T12:01:00Z")
+        self.outbox.enqueue(second,now=self.now)
+        sent=self.outbox.due(now=self.now)[0]
+        self.outbox.mark_sent(sent.message_key,now=self.now)
+
+        summary=self.outbox.summary()
+
+        self.assertEqual((summary.pending,summary.sent,summary.rejected),(1,1,0))
+        self.assertEqual(summary.retrying,1)
+        self.assertEqual(summary.last_sent_event,"FSDJump")
+
 
 if __name__=="__main__":
     unittest.main()

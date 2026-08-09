@@ -44,6 +44,7 @@ from core.processors.system_memory import SystemMemory
 from services.edsm_service import EDSMService
 from services.eddn_pipeline import EDDNJournalPipeline
 from services.eddn_transport import EDDNDeliveryService
+from services.eddn_outbox import EDDNOutboxSummary
 from state.commander_state import CommanderState
 from ui.console_presenter import ConsolePresenter
 from core.version import CAPABILITY, VERSION
@@ -947,6 +948,21 @@ class CommandCenter:
             self._open_freyja_trade_menu()
             return
 
+        if self._is_eddn_status_request(question):
+            summary = (
+                self.eddn_pipeline.outbox.summary()
+                if self.eddn_pipeline is not None else
+                EDDNOutboxSummary(0, 0, 0, 0, "")
+            )
+            self._start_fixed_voice_response(
+                self._eddn_voice_summary(
+                    summary,
+                    self.config.eddn_capture_enabled,
+                    self.config.eddn_upload_enabled,
+                )
+            )
+            return
+
         if self._is_freyja_trade_status_request(question):
             self._start_fixed_voice_response(
                 self.active_trade_route.status_message(), officer="FREYJA"
@@ -1356,6 +1372,37 @@ class CommandCenter:
             or normalized in {"vale bien", "y vale bien"}
         )
         return bool(explicit_trade or buy_and_sell or observed_whisper_alias)
+
+    @staticmethod
+    def _is_eddn_status_request(text: str) -> bool:
+        lowered = text.casefold()
+        return "eddn" in lowered and bool(re.search(
+            r"\b(?:estado|funciona|activo|activa|transmisi[oó]n|env[ií]os?|datos)\b",
+            lowered,
+        ))
+
+    @staticmethod
+    def _eddn_voice_summary(
+        summary: EDDNOutboxSummary, capture_enabled: bool, upload_enabled: bool
+    ) -> str:
+        if not capture_enabled:
+            return "La captura de datos para EDDN está desactivada."
+        if not upload_enabled:
+            return (
+                "La captura de EDDN está activa, pero la transmisión está desactivada. "
+                f"Hay {summary.pending} mensajes pendientes."
+            )
+        last = (
+            f" El último tipo enviado fue {summary.last_sent_event}."
+            if summary.last_sent_event else
+            " Todavía no se enviaron eventos desde esta cola."
+        )
+        return (
+            "La transmisión a EDDN está activa. "
+            f"Hay {summary.sent} enviados, {summary.pending} pendientes, "
+            f"{summary.retrying} en reintento y {summary.rejected} rechazados."
+            + last
+        )
 
     @staticmethod
     def _is_freyja_trade_status_request(text: str) -> bool:

@@ -19,6 +19,15 @@ class EDDNOutboxItem:
     next_attempt_at: str
 
 
+@dataclass(frozen=True, slots=True)
+class EDDNOutboxSummary:
+    pending: int
+    sent: int
+    rejected: int
+    retrying: int
+    last_sent_event: str
+
+
 class EDDNOutbox:
     """Conserva mensajes, deduplica y calcula reintentos sin transmitirlos."""
 
@@ -39,6 +48,9 @@ class EDDNOutbox:
             return False
         stamp = self._stamp(now or datetime.now(timezone.utc))
         event_type = str(envelope.get("message", {}).get("event", "") or "")
+        if not event_type:
+            schema = str(envelope.get("$schemaRef", "") or "")
+            event_type = "commodity" if "/commodity/" in schema else "unknown"
         self.database.execute(
             """INSERT INTO eddn_outbox
             (message_key,event_type,payload_json,status,attempts,next_attempt_at,
@@ -118,6 +130,27 @@ class EDDNOutbox:
             "SELECT COUNT(*) quantity FROM eddn_outbox WHERE status='pending'"
         )[0]
         return int(row["quantity"])
+
+    def summary(self) -> EDDNOutboxSummary:
+        rows = self.database.query(
+            """SELECT status,COUNT(*) quantity,
+            SUM(CASE WHEN attempts>0 THEN 1 ELSE 0 END) retrying
+            FROM eddn_outbox GROUP BY status"""
+        )
+        counts = {row["status"]: int(row["quantity"]) for row in rows}
+        retrying = sum(
+            int(row["retrying"] or 0)
+            for row in rows if row["status"] == "pending"
+        )
+        last = self.database.query(
+            """SELECT event_type FROM eddn_outbox WHERE status='sent'
+            ORDER BY sent_at DESC,message_key DESC LIMIT 1"""
+        )
+        return EDDNOutboxSummary(
+            counts.get("pending", 0), counts.get("sent", 0),
+            counts.get("rejected", 0), retrying,
+            str(last[0]["event_type"] if last else ""),
+        )
 
     @staticmethod
     def _stamp(value: datetime) -> str:

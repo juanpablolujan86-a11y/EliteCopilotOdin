@@ -53,6 +53,7 @@ class EDDNDeliveryWorker:
     def __init__(self, outbox: EDDNOutbox, client: EDDNHTTPClient) -> None:
         self.outbox = outbox
         self.client = client
+        self.logger = logging.getLogger("odin.eddn")
 
     def run_once(self, *, limit: int = 25, now=None) -> int:
         processed = 0
@@ -60,10 +61,19 @@ class EDDNDeliveryWorker:
             result = self.client.send(item.envelope)
             if result.accepted:
                 self.outbox.mark_sent(item.message_key, now=now)
+                self.logger.info("EDDN_ACCEPTED | tipo=%s", item.event_type)
             elif result.retryable:
                 self.outbox.mark_failed(item.message_key, result.detail, now=now)
+                self.logger.warning(
+                    "EDDN_RETRY | tipo=%s | estado=%s | intento=%s",
+                    item.event_type, result.status_code, item.attempts + 1,
+                )
             else:
                 self.outbox.mark_rejected(item.message_key, result.detail, now=now)
+                self.logger.error(
+                    "EDDN_REJECTED | tipo=%s | estado=%s",
+                    item.event_type, result.status_code,
+                )
             processed += 1
         return processed
 

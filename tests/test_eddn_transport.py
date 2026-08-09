@@ -59,7 +59,8 @@ class EDDNTransportTests(unittest.TestCase):
             EDDNDeliveryResult(True,False,200,"OK"),
         )
         worker=EDDNDeliveryWorker(self.outbox,client)
-        self.assertEqual(worker.run_once(now=self.now),2)
+        with self.assertLogs("odin.eddn",level="INFO"):
+            self.assertEqual(worker.run_once(now=self.now),2)
         self.assertEqual(self.outbox.pending_count(),0)
 
     def test_background_service_uses_independent_database_connection(self):
