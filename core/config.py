@@ -88,3 +88,12 @@ class Config:
             if runtime.exists():
                 return runtime
         return self.data_root / "speech" / "models"
+
+    @property
+    def eddn_capture_enabled(self) -> bool:
+        """Captura local optativa; no implica habilitar transmisiones."""
+
+        value = self.data.get("eddn_capture_enabled", False)
+        if isinstance(value, str):
+            return value.strip().casefold() in {"1", "true", "yes", "si", "sí"}
+        return bool(value)

@@ -42,6 +42,7 @@ from core.processors.jump_processor import JumpProcessor
 from core.processors.jump_store import JumpStore
 from core.processors.system_memory import SystemMemory
 from services.edsm_service import EDSMService
+from services.eddn_pipeline import EDDNJournalPipeline
 from state.commander_state import CommanderState
 from ui.console_presenter import ConsolePresenter
 from core.version import CAPABILITY, VERSION
@@ -113,6 +114,7 @@ class CommandCenter:
         self.console_presenter = ConsolePresenter()
 
         self.watcher: JournalWatcher | None = None
+        self.eddn_pipeline: EDDNJournalPipeline | None = None
         self.status_watcher = StatusWatcher(self.config.status_file)
         self.surface_navigation = SurfaceNavigationTracker()
         self.binding_custodian = BindingCustodian(
@@ -173,6 +175,11 @@ class CommandCenter:
 
         self.database.connect()
         self.database.create_tables()
+
+        if self.config.eddn_capture_enabled:
+            self.eddn_pipeline = EDDNJournalPipeline.create(
+                self.config.data_root, self.database, VERSION
+            )
 
         self._initialize_heimdall()
 
@@ -798,6 +805,8 @@ class CommandCenter:
             events = self.watcher.poll()
 
             for event in events:
+                if self.eddn_pipeline is not None:
+                    self.eddn_pipeline.capture(event)
                 self.event_bus.publish(event)
 
             time.sleep(0.1)
