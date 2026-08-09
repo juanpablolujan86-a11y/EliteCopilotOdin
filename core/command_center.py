@@ -913,6 +913,18 @@ class CommandCenter:
             )
             return
 
+        if self._is_freyja_trade_cancel_request(question):
+            cancelled = self.active_trade_route.cancel()
+            self._start_fixed_voice_response(
+                (
+                    "Ruta comercial cancelada, comandante."
+                    if cancelled else
+                    "No hay una ruta comercial activa para cancelar."
+                ),
+                officer="FREYJA",
+            )
+            return
+
         cockpit_intent = parse_cockpit_intent(question)
         if cockpit_intent is not None:
             answer = self.cockpit_advisor.describe(cockpit_intent)
@@ -1283,6 +1295,18 @@ class CommandCenter:
             re.search(r"\b(?:estado|progreso)\b.*\bruta\s+comercial\b", lowered)
             or re.search(r"\bqu[eé]\s+(?:tengo\s+que\s+)?(?:comprar|vender)\b", lowered)
             or "siguiente tramo" in lowered
+            or bool(re.search(r"\brepet(?:i|í|ir)\b.*\b(?:instrucci[oó]n|tramo)\b", lowered))
+        )
+
+    @staticmethod
+    def _is_freyja_trade_cancel_request(text: str) -> bool:
+        lowered = text.casefold()
+        return bool(
+            re.search(
+                r"\b(?:cancela|cancelá|cancelar|abandona|abandoná)\b"
+                r".*\bruta\s+comercial\b",
+                lowered,
+            )
         )
 
     @staticmethod

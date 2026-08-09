@@ -191,6 +191,13 @@ class ActiveTradeRoute:
             )
         return f"Tramo {index + 1} de {total}: {action}."
 
+    def cancel(self) -> bool:
+        if not self.state:
+            return False
+        self.state = None
+        self.path.unlink(missing_ok=True)
+        return True
+
     def _save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(

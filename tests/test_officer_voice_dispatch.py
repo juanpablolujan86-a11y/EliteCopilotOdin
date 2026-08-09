@@ -183,6 +183,15 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
         self.assertTrue(CommandCenter._is_freyja_trade_status_request(
             "cuál es el siguiente tramo"
         ))
+        self.assertTrue(CommandCenter._is_freyja_trade_status_request(
+            "repetí la instrucción"
+        ))
+        self.assertTrue(CommandCenter._is_freyja_trade_cancel_request(
+            "cancelá la ruta comercial"
+        ))
+        self.assertFalse(CommandCenter._is_freyja_trade_cancel_request(
+            "cancelá la ruta de neutrones"
+        ))
 
     def test_freyja_pending_menu_starts_selected_calculation_without_wake_word(self):
         center=CommandCenter.__new__(CommandCenter)

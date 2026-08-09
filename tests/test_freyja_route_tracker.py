@@ -97,6 +97,18 @@ class ActiveTradeRouteTests(unittest.TestCase):
                 bus.publish_internal.call_args.args[1].message,
             )
 
+    def test_cancel_removes_persisted_route(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/"active.json"
+            tracker=ActiveTradeRoute(path,Mock(),Mock())
+            self.assertFalse(tracker.cancel())
+            tracker.activate(self.trade("silver","A","B"))
+            self.assertTrue(path.exists())
+            self.assertTrue(tracker.cancel())
+            self.assertFalse(path.exists())
+            self.assertIsNone(tracker.state)
+            self.assertFalse(tracker.cancel())
+
 
 if __name__=="__main__":
     unittest.main()
