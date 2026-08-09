@@ -210,6 +210,9 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
         self.assertFalse(CommandCenter._is_freyja_trade_cancel_request(
             "cancelá la ruta de neutrones"
         ))
+        self.assertTrue(CommandCenter._is_freyja_trade_cancel_confirmation(
+            "confirmo la cancelación comercial"
+        ))
         self.assertTrue(CommandCenter._is_freyja_trade_recalculate_request(
             "recalculá la ruta comercial"
         ))

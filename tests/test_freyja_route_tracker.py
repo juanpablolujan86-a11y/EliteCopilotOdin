@@ -49,6 +49,8 @@ class ActiveTradeRouteTests(unittest.TestCase):
             self.assertEqual(copied[-1],"B")
             self.assertIn("venda 24 toneladas de silver",restored.status_message())
             self.assertIn("No recalcularé",restored.recalculation_blocker())
+            self.assertIn("Advertencia:",restored.cancellation_warning())
+            self.assertIn("dejará de guiar",restored.cancellation_warning())
             self.assertIn(
                 "Compra confirmada",bus.publish_internal.call_args.args[1].message
             )

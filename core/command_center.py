@@ -133,6 +133,7 @@ class CommandCenter:
         self.trade_profile = None
         self.market_cache: MarketCache | None = None
         self._pending_freyja_trade_menu = False
+        self._pending_freyja_cancel_confirmation = False
         self.voice_hotkey = WindowsHotkey()
         self._voice_busy = threading.Event()
         self._voice_questions: queue.Queue[str] = queue.Queue()
@@ -873,6 +874,22 @@ class CommandCenter:
 
     def _start_voice_response(self, question: str) -> None:
         """Responde en segundo plano sin detener el seguimiento del Journal."""
+        if getattr(self, "_pending_freyja_cancel_confirmation", False):
+            if self._is_freyja_trade_cancel_confirmation(question):
+                self._pending_freyja_cancel_confirmation = False
+                self.active_trade_route.cancel()
+                self._start_fixed_voice_response(
+                    "Cancelación comercial confirmada. Dejé de seguir la ruta.",
+                    officer="FREYJA",
+                )
+            else:
+                self._start_fixed_voice_response(
+                    "La ruta continúa activa. Para cancelarla diga: confirmo "
+                    "la cancelación comercial.",
+                    officer="FREYJA",
+                    arm_after=True,
+                )
+            return
         if self._pending_freyja_trade_menu:
             selection = self._freyja_trade_selection(question)
             if selection is not None:
@@ -935,6 +952,15 @@ class CommandCenter:
             return
 
         if self._is_freyja_trade_cancel_request(question):
+            blocker = self.active_trade_route.cancellation_warning()
+            if blocker is not None:
+                self._pending_freyja_cancel_confirmation = True
+                self._start_fixed_voice_response(
+                    blocker + " Diga: confirmo la cancelación comercial.",
+                    officer="FREYJA",
+                    arm_after=True,
+                )
+                return
             cancelled = self.active_trade_route.cancel()
             self._start_fixed_voice_response(
                 (
@@ -1351,6 +1377,16 @@ class CommandCenter:
             re.search(
                 r"\b(?:cancela|cancelá|cancelar|abandona|abandoná)\b"
                 r".*\bruta\s+comercial\b",
+                lowered,
+            )
+        )
+
+    @staticmethod
+    def _is_freyja_trade_cancel_confirmation(text: str) -> bool:
+        lowered = text.casefold()
+        return bool(
+            re.search(
+                r"\bconfirmo\b.*\bcancelaci[oó]n\s+comercial\b",
                 lowered,
             )
         )

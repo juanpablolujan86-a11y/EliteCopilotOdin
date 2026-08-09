@@ -209,6 +209,18 @@ class ActiveTradeRoute:
         self.path.unlink(missing_ok=True)
         return True
 
+    def cancellation_warning(self) -> str | None:
+        blocker = self.recalculation_blocker()
+        if blocker is None:
+            return None
+        return (
+            blocker.replace("No recalcularé la ruta mientras", "Advertencia:")
+            .replace(
+                "Complete la venta o cancele la ruta comercial.",
+                "Si cancela, Freyja dejará de guiar esa venta.",
+            )
+        )
+
     def active_strategy(self) -> str | None:
         if not self.state:
             return None
