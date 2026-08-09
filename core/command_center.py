@@ -1090,6 +1090,19 @@ class CommandCenter:
             return
 
         lowered_question = question.casefold()
+        injection_distance = self._fsd_injection_distance_request(question)
+        if injection_distance is not None:
+            jump_range = (
+                self.navigation_manager.context.max_jump_range
+                if self.navigation_manager is not None else 0.0
+            )
+            self._start_fixed_voice_response(
+                self.fsd_injections.recommendation_voice(
+                    injection_distance, jump_range
+                ),
+                officer="HEIMDALL",
+            )
+            return
         if self._is_fsd_injection_status_request(lowered_question):
             self._start_fixed_voice_response(
                 self.fsd_injections.voice_summary(), officer="HEIMDALL"
@@ -1211,6 +1224,21 @@ class CommandCenter:
             and ("fsd" in lowered or "salto" in lowered)
         )
         return mentions_injection or mentions_jump_synthesis
+
+    @staticmethod
+    def _fsd_injection_distance_request(text: str) -> float | None:
+        lowered = text.casefold()
+        if not any(term in lowered for term in (
+            "inyeccion", "inyección", "saltar", "salto", "alcanzar",
+        )):
+            return None
+        match = re.search(
+            r"(\d+(?:[\.,]\d+)?)\s*(?:años?\s+luz|anos?\s+luz|ly)\b",
+            lowered,
+        )
+        if match is None:
+            return None
+        return float(match.group(1).replace(",", "."))
 
     def _open_freyja_trade_menu(self) -> None:
         self._pending_freyja_trade_menu = True

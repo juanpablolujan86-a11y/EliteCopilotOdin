@@ -18,6 +18,16 @@ FSD_INJECTION_RECIPES = {
         "niobium": 1, "yttrium": 1, "polonium": 1,
     },
 }
+FSD_INJECTION_MULTIPLIERS = {
+    "basic": 1.25,
+    "standard": 1.50,
+    "premium": 2.00,
+}
+FSD_INJECTION_LABELS = {
+    "basic": "básica",
+    "standard": "estándar",
+    "premium": "premium",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,6 +35,17 @@ class FSDInjectionAvailability:
     basic: int
     standard: int
     premium: int
+
+
+@dataclass(frozen=True, slots=True)
+class FSDInjectionRecommendation:
+    distance_ly: float
+    base_range_ly: float
+    grade: str | None
+    boosted_range_ly: float
+    available: bool
+    already_reachable: bool
+    reachable_with_injection: bool
 
 
 class FSDInjectionInventory:
@@ -107,6 +128,54 @@ class FSDInjectionInventory:
             f"{available.basic} inyecciones básicas, {available.standard} estándar "
             f"y {available.premium} premium. No utilizaré materiales sin su "
             "autorización, comandante."
+        )
+
+    def recommend(
+        self, distance_ly: float, base_range_ly: float
+    ) -> FSDInjectionRecommendation:
+        distance = max(0.0, float(distance_ly))
+        base_range = max(0.0, float(base_range_ly))
+        if distance <= base_range and base_range > 0:
+            return FSDInjectionRecommendation(
+                distance, base_range, None, base_range, True, True, True
+            )
+        availability = self.availability()
+        for grade, multiplier in FSD_INJECTION_MULTIPLIERS.items():
+            boosted = base_range * multiplier
+            if distance <= boosted and base_range > 0:
+                count = int(getattr(availability, grade))
+                return FSDInjectionRecommendation(
+                    distance, base_range, grade, boosted, count > 0, False, True
+                )
+        return FSDInjectionRecommendation(
+            distance, base_range, None, base_range * 2.0,
+            False, False, False,
+        )
+
+    def recommendation_voice(self, distance_ly: float, base_range_ly: float) -> str:
+        recommendation = self.recommend(distance_ly, base_range_ly)
+        if recommendation.base_range_ly <= 0:
+            return "Todavía no conozco el alcance real de la nave, comandante."
+        if recommendation.already_reachable:
+            return (
+                f"El salto de {recommendation.distance_ly:.1f} años luz está dentro "
+                "del alcance normal. No hace falta consumir una inyección FSD."
+            )
+        if not recommendation.reachable_with_injection:
+            return (
+                f"El salto de {recommendation.distance_ly:.1f} años luz supera incluso "
+                f"el alcance premium de {recommendation.boosted_range_ly:.1f} años luz."
+            )
+        label = FSD_INJECTION_LABELS[recommendation.grade]
+        if not recommendation.available:
+            return (
+                f"El salto requiere como mínimo una inyección {label}, pero no hay "
+                "materiales suficientes para fabricarla."
+            )
+        return (
+            f"El salto requiere como mínimo una inyección {label}. Elevaría el "
+            f"alcance a {recommendation.boosted_range_ly:.1f} años luz. No la "
+            "utilizaré sin su autorización, comandante."
         )
 
     def _save(self) -> None:

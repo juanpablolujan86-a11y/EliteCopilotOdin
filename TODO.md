@@ -122,7 +122,7 @@
   - [x] Reconstruir y mantener el inventario de materias primas
   - [x] Calcular inyecciones básicas, estándar y premium disponibles
   - [x] Responder consultas por voz sin consumir materiales
-  - [ ] Proponer una inyección sólo cuando resuelva un salto inaccesible
+  - [x] Proponer el grado mínimo sólo cuando resuelva un salto inaccesible
   - [ ] Exigir autorización antes de cualquier uso
 - [ ] Replanificación por desvío
 - [ ] Luces y visión nocturna opcionales

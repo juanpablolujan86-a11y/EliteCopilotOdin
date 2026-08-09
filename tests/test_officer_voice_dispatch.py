@@ -22,6 +22,21 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
             "cuánto combustible tengo"
         ))
 
+    def test_heimdall_extracts_jump_distance_for_injection_advice(self):
+        self.assertEqual(
+            CommandCenter._fsd_injection_distance_request(
+                "¿puedo saltar 95,5 años luz con una inyección?"
+            ),
+            95.5,
+        )
+        self.assertEqual(
+            CommandCenter._fsd_injection_distance_request("alcanzar 120 ly"),
+            120.0,
+        )
+        self.assertIsNone(CommandCenter._fsd_injection_distance_request(
+            "tengo 120 toneladas de combustible"
+        ))
+
     def test_all_trade_modes_use_bubble_market_anchor_when_commander_is_far(self):
         center=CommandCenter.__new__(CommandCenter)
         center.trade_profile=TradeProfile(

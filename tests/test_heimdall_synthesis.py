@@ -74,6 +74,42 @@ class FSDInjectionInventoryTests(unittest.TestCase):
             self.assertEqual(inventory.materials["vanadium"], 2)
             self.assertEqual(inventory.availability().basic, 1)
 
+    def test_recommends_lowest_available_grade_without_consuming_it(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            inventory = FSDInjectionInventory(Path(directory) / "materials.json")
+            inventory.handle({
+                "event": "Materials",
+                "Raw": [
+                    {"Name": "carbon", "Count": 5},
+                    {"Name": "vanadium", "Count": 5},
+                    {"Name": "germanium", "Count": 5},
+                    {"Name": "cadmium", "Count": 5},
+                    {"Name": "niobium", "Count": 5},
+                ],
+            })
+
+            normal = inventory.recommend(60, 66.12)
+            basic = inventory.recommend(80, 66.12)
+            standard = inventory.recommend(95, 66.12)
+
+            self.assertTrue(normal.already_reachable)
+            self.assertEqual(basic.grade, "basic")
+            self.assertTrue(basic.available)
+            self.assertEqual(standard.grade, "standard")
+            self.assertTrue(standard.available)
+            self.assertEqual(inventory.materials["carbon"], 5)
+
+    def test_reports_unavailable_grade_and_jump_beyond_premium(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            inventory = FSDInjectionInventory(Path(directory) / "materials.json")
+            unavailable = inventory.recommendation_voice(90, 66.12)
+            impossible = inventory.recommendation_voice(140, 66.12)
+
+            self.assertIn("estándar", unavailable)
+            self.assertIn("no hay materiales", unavailable)
+            self.assertIn("supera incluso", impossible)
+            self.assertIn("132.2", impossible)
+
 
 if __name__ == "__main__":
     unittest.main()

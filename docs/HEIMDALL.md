@@ -162,6 +162,12 @@ voz informa cuántas inyecciones de cada grado pueden fabricarse.
 El inventario es informativo: HEIMDALL no fabrica ni consume una inyección y no
 la agrega a una ruta sin autorización explícita del comandante.
 
+También puede evaluar un salto indicado por voz, por ejemplo: «¿puedo saltar
+95 años luz con una inyección?». Utiliza el alcance real de la nave, selecciona
+el grado mínimo suficiente, comprueba la disponibilidad de materiales y avisa
+si el salto excede incluso el alcance premium. La evaluación no consume los
+materiales ni activa la síntesis.
+
 #### Fuente comunitaria de rutas
 
 HEIMDALL utiliza Spansh como proveedor externo de rutas rápidas. No mantiene
