@@ -63,8 +63,12 @@ class FasterWhisperTranscriber:
         segments, _info = model.transcribe(
             str(audio),
             language="es",
-            beam_size=5,
-            vad_filter=True,
+            # Las órdenes ya llegan recortadas por MicrophoneRecorder. Una
+            # segunda VAD descartaba voces de micrófono con volumen bajo.
+            # Greedy decoding reduce de forma importante la latencia para
+            # frases cortas sin cargar cinco hipótesis completas.
+            beam_size=1,
+            vad_filter=False,
             condition_on_previous_text=False,
             initial_prompt=PROMPT,
         )

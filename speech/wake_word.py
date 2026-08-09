@@ -101,7 +101,7 @@ class WakeWordListener:
                 )
                 if recognizer is self.transcriber:
                     text, confidence = recognizer.transcribe_with_confidence(audio)
-                    if confidence < 0.50:
+                    if confidence < 0.35:
                         self.pause()
                         self.on_unclear()
                         continue
@@ -112,6 +112,14 @@ class WakeWordListener:
                 MicrophoneError, TranscriptionError, WakeRecognitionError,
                 UnicodeError, OSError,
             ):
+                # Si ODIN ya había confirmado que estaba escuchando, nunca debe
+                # fallar en silencio: solicita repetir la orden y queda listo
+                # para un nuevo intento.
+                if waiting_for_question or self.armed.is_set():
+                    waiting_for_question = False
+                    self.armed.clear()
+                    self.pause()
+                    self.on_unclear()
                 continue
 
             forced = self.armed.is_set()

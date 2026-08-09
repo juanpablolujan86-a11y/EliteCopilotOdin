@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import Mock
 
 from speech.wake_word import WakeWordListener, interpret_wake_phrase
+from speech.whisper import TranscriptionError
 
 
 class WakeWordTests(unittest.TestCase):
@@ -54,7 +55,31 @@ class WakeWordTests(unittest.TestCase):
         recorder = Mock()
         recorder.record_utterance.return_value = Path("unclear.wav")
         transcriber = Mock()
-        transcriber.transcribe_with_confidence.return_value = ("Kans Simer", 0.42)
+        transcriber.transcribe_with_confidence.return_value = ("Kans Simer", 0.30)
+        unclear = Mock()
+        listener = WakeWordListener(
+            Path("."), Mock(), on_unclear=unclear,
+            recorder=recorder, transcriber=transcriber,
+        )
+
+        def stop_after_unclear() -> None:
+            unclear()
+            listener.stop()
+
+        listener.on_unclear = stop_after_unclear
+        listener.arm()
+        listener.run()
+
+        unclear.assert_called_once_with()
+        self.assertTrue(listener.paused.is_set())
+
+    def test_transcription_failure_after_activation_requests_retry(self) -> None:
+        recorder = Mock()
+        recorder.record_utterance.return_value = Path("quiet.wav")
+        transcriber = Mock()
+        transcriber.transcribe_with_confidence.side_effect = TranscriptionError(
+            "voz demasiado baja"
+        )
         unclear = Mock()
         listener = WakeWordListener(
             Path("."), Mock(), on_unclear=unclear,

@@ -25,6 +25,8 @@ class FasterWhisperTranscriberTests(unittest.TestCase):
             self.assertEqual(text,"quiero comerciar")
             self.assertAlmostEqual(confidence,0.8)
             self.assertEqual(model.transcribe.call_args.kwargs["language"],"es")
+            self.assertEqual(model.transcribe.call_args.kwargs["beam_size"],1)
+            self.assertFalse(model.transcribe.call_args.kwargs["vad_filter"])
 
     def test_gpu_failure_uses_whisper_cpp_fallback(self):
         fallback=Mock()
