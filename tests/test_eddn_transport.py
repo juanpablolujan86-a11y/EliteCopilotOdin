@@ -76,5 +76,18 @@ class EDDNTransportTests(unittest.TestCase):
 
         self.assertEqual(self.outbox.pending_count(),0)
 
+    def test_service_cleanup_never_changes_processed_count(self):
+        old=self.now.replace(year=2025)
+        self.outbox.enqueue(self.envelope,now=old)
+        item=self.outbox.due(now=old)[0]
+        self.outbox.mark_sent(item.message_key,now=old)
+        delivery_client=Mock()
+        service=EDDNDeliveryService(
+            Path(self.temp.name),client_factory=lambda: delivery_client
+        )
+        with self.assertLogs("odin.eddn",level="INFO"):
+            self.assertEqual(service.process_once(now=self.now),0)
+        self.assertEqual(self.outbox.summary().sent,0)
+
 
 if __name__=="__main__": unittest.main()

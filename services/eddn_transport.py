@@ -110,9 +110,14 @@ class EDDNDeliveryService:
         database.connect()
         try:
             database.create_tables()
-            return EDDNDeliveryWorker(
-                EDDNOutbox(database), self.client_factory()
+            outbox = EDDNOutbox(database)
+            processed = EDDNDeliveryWorker(
+                outbox, self.client_factory()
             ).run_once(now=now)
+            removed = outbox.purge_completed(now=now)
+            if removed:
+                self.logger.info("EDDN_CLEANUP | eliminados=%s", removed)
+            return processed
         finally:
             database.disconnect()
 

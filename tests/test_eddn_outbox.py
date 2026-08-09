@@ -95,6 +95,50 @@ class EDDNOutboxTests(unittest.TestCase):
         self.assertEqual(summary.retrying,1)
         self.assertEqual(summary.last_sent_event,"FSDJump")
 
+    def test_cleanup_removes_only_old_completed_messages(self):
+        old=self.now-timedelta(days=100)
+        self.outbox.enqueue(self.envelope,now=old)
+        old_item=self.outbox.due(now=old)[0]
+        self.outbox.mark_sent(old_item.message_key,now=old)
+
+        rejected=dict(self.envelope)
+        rejected["message"]=dict(
+            self.envelope["message"],timestamp="2026-05-01T12:00:00Z"
+        )
+        self.outbox.enqueue(rejected,now=old)
+        rejected_item=self.outbox.due(now=old)[0]
+        self.outbox.mark_rejected(rejected_item.message_key,"bad",now=old)
+
+        pending=dict(self.envelope)
+        pending["message"]=dict(
+            self.envelope["message"],timestamp="2026-04-01T12:00:00Z"
+        )
+        self.outbox.enqueue(pending,now=old)
+
+        recent=dict(self.envelope)
+        recent["message"]=dict(
+            self.envelope["message"],timestamp="2026-08-08T12:00:00Z"
+        )
+        self.outbox.enqueue(recent,now=self.now-timedelta(days=1))
+        recent_item=[item for item in self.outbox.due(now=self.now)
+                     if item.envelope["message"]["timestamp"].startswith("2026-08")][0]
+        self.outbox.mark_sent(recent_item.message_key,now=self.now-timedelta(days=1))
+
+        removed=self.outbox.purge_completed(now=self.now)
+
+        self.assertEqual(removed,2)
+        summary=self.outbox.summary()
+        self.assertEqual((summary.pending,summary.sent,summary.rejected),(1,1,0))
+
+    def test_cleanup_retention_has_minimum_one_day(self):
+        recent=self.now-timedelta(hours=12)
+        self.outbox.enqueue(self.envelope,now=recent)
+        item=self.outbox.due(now=recent)[0]
+        self.outbox.mark_sent(item.message_key,now=recent)
+        self.assertEqual(
+            self.outbox.purge_completed(sent_days=0,rejected_days=0,now=self.now),0
+        )
+
 
 if __name__=="__main__":
     unittest.main()

@@ -152,6 +152,35 @@ class EDDNOutbox:
             str(last[0]["event_type"] if last else ""),
         )
 
+    def purge_completed(
+        self, *, sent_days: int = 30, rejected_days: int = 90,
+        now: datetime | None = None,
+    ) -> int:
+        """Elimina sólo entregas finalizadas antiguas; nunca toca pendientes."""
+
+        current = now or datetime.now(timezone.utc)
+        sent_before = self._stamp(
+            current - timedelta(days=max(1, int(sent_days)))
+        )
+        rejected_before = self._stamp(
+            current - timedelta(days=max(1, int(rejected_days)))
+        )
+        row = self.database.query(
+            """SELECT COUNT(*) quantity FROM eddn_outbox
+            WHERE (status='sent' AND sent_at<?)
+               OR (status='rejected' AND sent_at<?)""",
+            (sent_before, rejected_before),
+        )[0]
+        quantity = int(row["quantity"])
+        if quantity:
+            self.database.execute(
+                """DELETE FROM eddn_outbox
+                WHERE (status='sent' AND sent_at<?)
+                   OR (status='rejected' AND sent_at<?)""",
+                (sent_before, rejected_before),
+            )
+        return quantity
+
     @staticmethod
     def _stamp(value: datetime) -> str:
         if value.tzinfo is None:
