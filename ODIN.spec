@@ -14,7 +14,7 @@ a = Analysis(
         (str(root / "knowledge" / "external" / "explodata" / "LICENSE.txt"), "knowledge/external/explodata"),
         (str(root / "ELEVENLABS_API_KEY.example.txt"), "."),
     ],
-    hiddenimports=[],
+    hiddenimports=["tkinter", "tkinter.ttk"],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -33,7 +33,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=True,
+    console=False,
     disable_windowed_traceback=False,
 )
 

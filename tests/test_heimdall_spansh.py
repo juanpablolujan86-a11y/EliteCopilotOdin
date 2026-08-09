@@ -295,6 +295,24 @@ class SpanshRoutePlannerTestCase(unittest.TestCase):
         self.assertEqual(pending, "Neutrón")
         self.assertEqual(copied, ["Neutrón", "Neutrón"])
 
+    def test_active_route_snapshot_exposes_copy_fallback_data(self) -> None:
+        planner = HeimdallRoutePlanner(
+            self.database,
+            SpanshClient(FakeSession([{"status": "ok", "result": RESULT}])),
+            clipboard_writer=lambda _: None,
+        )
+        planner.plan_fastest(
+            NavigationContext(current_system="Origen", max_jump_range=66.12),
+            "Destino",
+        )
+
+        snapshot = planner.active_route_snapshot()
+
+        self.assertEqual(snapshot["destination"], "Destino")
+        self.assertEqual(snapshot["next_system"], "Neutrón")
+        self.assertEqual(snapshot["remaining_jumps"], 2)
+        self.assertEqual(snapshot["total_jumps"], 2)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -418,3 +418,32 @@ class HeimdallRoutePlanner:
         system = plan.waypoints[index].system
         self.clipboard_writer(system)
         return system
+
+    def active_route_snapshot(self) -> dict:
+        """Resumen de sólo lectura para la interfaz, ejecutado por el hilo motor."""
+
+        rows = self.database.query(
+            """
+            SELECT json, current_waypoint_index, jumps_completed
+            FROM heimdall_planned_routes
+            WHERE status='active'
+            ORDER BY id DESC LIMIT 1
+            """
+        )
+        if not rows:
+            return {}
+        plan = SpanshRoutePlan.from_dict(json.loads(rows[0]["json"]))
+        index = int(rows[0]["current_waypoint_index"])
+        completed = int(rows[0]["jumps_completed"])
+        total = plan.actual_total_jumps
+        next_system = (
+            plan.waypoints[index].system if 0 <= index < len(plan.waypoints) else ""
+        )
+        return {
+            "destination": plan.destination_system,
+            "next_system": next_system,
+            "completed_jumps": completed,
+            "remaining_jumps": max(0, total - completed),
+            "total_jumps": total,
+            "distance_ly": plan.distance,
+        }

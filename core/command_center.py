@@ -175,6 +175,9 @@ class CommandCenter:
         self._last_voice_question = ""
         self._last_learned_command: LearnedCommand | None = None
         self._restoring_context = False
+        self._stop_requested = threading.Event()
+        self.dashboard_snapshot: dict = {"status": "Inicializando"}
+        self._last_dashboard_refresh = 0.0
         self.wake_listener = WakeWordListener(
             self.config.data_root,
             self._voice_questions.put,
@@ -795,7 +798,7 @@ class CommandCenter:
                 "JournalWatcher no fue inicializado."
             )
 
-        while True:
+        while not self._stop_requested.is_set():
             status = self.status_watcher.poll()
             if status is not None:
                 self.cockpit_advisor.update_status(status)
@@ -906,7 +909,79 @@ class CommandCenter:
                     )
                 self.event_bus.publish(event)
 
+            now = time.monotonic()
+            if now - self._last_dashboard_refresh >= 0.5:
+                self._refresh_dashboard_snapshot()
+                self._last_dashboard_refresh = now
+
             time.sleep(0.1)
+
+    def request_stop(self) -> None:
+        """Solicita un cierre ordenado desde la interfaz gráfica."""
+
+        self._stop_requested.set()
+
+    def _refresh_dashboard_snapshot(self) -> None:
+        navigation = (
+            self.navigation_manager.context
+            if self.navigation_manager is not None else NavigationContext()
+        )
+        balance = (
+            self.expedition_ledger.summary("interfaz")
+            if self.expedition_ledger is not None else None
+        )
+        predictions = self.scientific_context.system_predictions(
+            self.commander_state.current_system
+        )
+        try:
+            route = self.heimdall_route_planner.active_route_snapshot()
+        except (RuntimeError, ValueError, TypeError):
+            route = {}
+        injections = self.fsd_injections.availability()
+        snapshot = {
+            "status": "Operativo",
+            "commander": self.commander_state.commander_name or "Comandante",
+            "credits": int(self.commander_state.credits or 0),
+            "system": self.commander_state.current_system or "Sin sistema",
+            "body": self.commander_state.current_body or "",
+            "ship": (
+                navigation.ship_name or self.commander_state.ship_name
+                or navigation.ship_type or "Nave desconocida"
+            ),
+            "ship_ident": navigation.ship_ident or self.commander_state.ship_ident,
+            "fuel": float(navigation.fuel_main or 0),
+            "fuel_capacity": float(navigation.fuel_capacity or 0),
+            "jump_range": float(navigation.max_jump_range or 0),
+            "fsd_health": navigation.fsd_health,
+            "route": route,
+            "biology": {
+                "bodies": len(predictions),
+                "species": sum(len(items) for items in predictions.values()),
+                "predictions": predictions,
+            },
+            "injections": {
+                "basic": injections.basic,
+                "standard": injections.standard,
+                "premium": injections.premium,
+            },
+            "network": {
+                "eddn": self.config.eddn_upload_enabled,
+                "edsm": self.config.edsm_upload_enabled,
+                "inara": self.config.inara_upload_enabled,
+            },
+        }
+        if balance is not None:
+            snapshot["expedition"] = {
+                "cartography": balance.cartography_estimated,
+                "exobiology_base": balance.exobiology_base,
+                "exobiology_potential": balance.exobiology_potential,
+                "total_base": balance.total_base,
+                "total_potential": balance.total_potential,
+                "systems": balance.systems_visited,
+                "bodies": balance.bodies_scanned,
+                "species": balance.species_completed,
+            }
+        self.dashboard_snapshot = snapshot
 
     def _start_wake_acknowledgement(self) -> None:
         self._voice_busy.set()

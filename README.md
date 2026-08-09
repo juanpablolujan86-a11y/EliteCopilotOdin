@@ -76,6 +76,22 @@ Journal Scan
 python main.py
 ```
 
+El arranque normal abre el **Centro de Mando de ODIN**, una interfaz gráfica
+de escritorio con estética naranja inspirada en Elite Dangerous. La columna
+izquierda conserva el registro operativo completo; la derecha muestra
+comandante, nave, créditos, balance de expedición, biología, conexiones y la
+ruta activa de HEIMDALL. El siguiente sistema permanece visible y puede
+copiarse manualmente si falla la actualización automática del portapapeles.
+
+El modo de consola anterior continúa disponible como respaldo:
+
+```powershell
+python main.py --console
+```
+
+Cerrar la ventana solicita primero el cierre ordenado del observador del
+Journal y de los servicios de voz y red.
+
 ODIN impide que dos copias se ejecuten simultáneamente para evitar el
 procesamiento duplicado de eventos del Journal.
 

@@ -15,6 +15,7 @@ from voice.key_file import application_directory
 from services.edsm_key_file import import_edsm_key_file
 from services.inara_key_file import import_inara_key_file
 from voice.service import OfficerVoiceService, VoiceServiceError
+from ui.desktop import run_desktop
 
 
 def main() -> None:
@@ -89,14 +90,18 @@ def main() -> None:
     try:
         configure_diagnostics(config.data_root)
         odin = CommandCenter()
-        odin.start()
+        if "--console" in sys.argv:
+            odin.start()
+        else:
+            run_desktop(odin)
     except Exception:
         log_fatal_error()
         print(
             "\nODIN encontró un error inesperado. "
             f"Revisá el registro en: {config.data_root / 'logs' / 'odin.log'}"
         )
-        input("Presioná Enter para cerrar...")
+        if "--console" in sys.argv and sys.stdin and sys.stdin.isatty():
+            input("Presioná Enter para cerrar...")
     finally:
         instance.close()
 
