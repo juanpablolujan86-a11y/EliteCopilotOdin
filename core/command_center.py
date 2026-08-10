@@ -1570,9 +1570,9 @@ class CommandCenter:
             answer = conversation.answer(question, context)
             answer = self._sanitize_current_system_references(question, answer)
             acknowledgement_done.wait()
-            conversation.voice.speak("ODIN", answer)
             print(f"\nVos: {question}")
             print(f"ODIN: {answer}\n")
+            conversation.voice.speak("ODIN", answer)
         except (MicrophoneError, TranscriptionError, OllamaError, VoiceServiceError) as error:
             print(f"\nConversación por voz no disponible: {error}\n")
         finally:
@@ -2237,6 +2237,7 @@ class CommandCenter:
 
     def _run_officer_voice_message(self, message: VoiceMessageReady) -> None:
         try:
+            print(f"{message.officer}: {message.message}\n")
             OfficerVoiceService(self.config).speak(message.officer, message.message)
         except VoiceServiceError as error:
             print(f"Voz de {message.officer} no disponible: {error}\n")

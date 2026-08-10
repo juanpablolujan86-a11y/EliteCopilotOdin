@@ -92,6 +92,9 @@ y RED. Freyja muestra la modalidad, el tramo comercial, producto, toneladas,
 destino, beneficio estimado y ganancia realizada.
 Sus cuatro botones permiten iniciar desde la interfaz una ruta rápida, un
 circuito de tres estaciones, una expedición comercial o comercio Powerplay.
+Toda frase pronunciada por cualquier oficial también se conserva en el
+Registro Operativo antes de intentar reproducirla, por lo que permanece visible
+cuando las voces están silenciadas o el sintetizador no está disponible.
 
 El modo de consola anterior continúa disponible como respaldo:
 

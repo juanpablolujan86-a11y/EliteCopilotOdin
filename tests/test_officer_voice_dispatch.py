@@ -1,5 +1,7 @@
 from dataclasses import replace
 from datetime import datetime, timezone
+from contextlib import redirect_stdout
+from io import StringIO
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 import queue
@@ -10,8 +12,25 @@ from core.command_center import CommandCenter
 from freyja.ledger import TradeSummary
 from freyja.market_source import MarketSourceError
 from freyja.planner import MarketOpportunity, TradeProfile
+from models.events.voice_message_ready import VoiceMessageReady
+from voice.service import VoiceServiceError
 
 class OfficerVoiceDispatchTests(unittest.TestCase):
+    def test_officer_message_is_logged_even_when_voice_is_muted(self):
+        center = CommandCenter.__new__(CommandCenter)
+        center.config = SimpleNamespace()
+        center._voice_busy = threading.Event()
+        center.wake_listener = Mock()
+        message = VoiceMessageReady("MÍMIR", "Biología detectada.", "prueba")
+        output = StringIO()
+
+        with patch("core.command_center.OfficerVoiceService") as service:
+            service.return_value.speak.side_effect = VoiceServiceError("silenciada")
+            with redirect_stdout(output):
+                center._run_officer_voice_message(message)
+
+        self.assertIn("MÍMIR: Biología detectada.", output.getvalue())
+
     def test_heimdall_finishes_automatic_replan_on_main_loop(self):
         center = CommandCenter.__new__(CommandCenter)
         center._route_replan_busy = threading.Event()
