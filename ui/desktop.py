@@ -797,10 +797,19 @@ class OdinDesktopApp:
             for species in item.get("confirmed", ()):
                 lines.append(f"  ✓ {species}")
             probable_values = item.get("probable_values", {})
+            probable_rewards = item.get("probable_rewards", {})
             for species in item.get("probable", ()):
-                value = probable_values.get(species)
+                reward = probable_rewards.get(species, {})
+                base_value = reward.get("base", probable_values.get(species))
+                potential_value = reward.get("potential", base_value)
+                first_footfall = bool(
+                    base_value and potential_value == int(base_value) * 5
+                )
+                value = potential_value if first_footfall else base_value
+                reward_type = "PRIMERA PISADA ×5" if first_footfall else "NORMAL"
                 value_text = (
-                    f" — {OdinDesktopApp._credits(value, True)}" if value else ""
+                    f" — {reward_type}: {OdinDesktopApp._credits(value, True)}"
+                    if value else ""
                 )
                 lines.append(f"  ◇ {species}{value_text}")
             if not item.get("confirmed") and not item.get("probable"):

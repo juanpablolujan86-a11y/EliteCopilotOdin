@@ -22,6 +22,10 @@ class ScientificContextTests(unittest.TestCase):
             registry.system_prediction_values("Sol"),
             {"Sol A 1": {"Bacterium Informem": 1_000_000}},
         )
+        self.assertEqual(
+            registry.system_prediction_rewards("Sol"),
+            {"Sol A 1": {"Bacterium Informem": (1_000_000, 5_000_000)}},
+        )
 
     def test_remembers_species_names_without_values(self) -> None:
         registry = ScientificContextRegistry()

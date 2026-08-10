@@ -76,12 +76,20 @@ class DesktopTests(unittest.TestCase):
                 "Bacterium Informem": 8_418_000,
                 "Stratum Tectonicas": 19_010_800,
             },
+            "probable_rewards": {
+                "Bacterium Informem": {
+                    "base": 8_418_000, "potential": 42_090_000,
+                },
+                "Stratum Tectonicas": {
+                    "base": 19_010_800, "potential": 19_010_800,
+                },
+            },
         },)})
 
         self.assertEqual(text.splitlines(), [
             "◆ Prueba 4 a · 2 señales",
-            "  ◇ Bacterium Informem — ≈ 8.418.000 CR",
-            "  ◇ Stratum Tectonicas — ≈ 19.010.800 CR",
+            "  ◇ Bacterium Informem — PRIMERA PISADA ×5: ≈ 42.090.000 CR",
+            "  ◇ Stratum Tectonicas — NORMAL: ≈ 19.010.800 CR",
         ])
 
     def test_freyja_dashboard_exposes_active_trade_leg(self) -> None:

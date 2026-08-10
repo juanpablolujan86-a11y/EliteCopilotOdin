@@ -96,7 +96,8 @@ Toda frase pronunciada por cualquier oficial también se conserva en el
 Registro Operativo antes de intentar reproducirla, por lo que permanece visible
 cuando las voces están silenciadas o el sintetizador no está disponible.
 La pestaña MÍMIR agrupa las señales por planeta y muestra, junto a cada especie
-probable, su valor base aproximado de exobiología.
+probable, su recompensa aproximada e indica si corresponde al valor normal o al
+bonificador ×5 disponible por primera pisada.
 
 El modo de consola anterior continúa disponible como respaldo:
 

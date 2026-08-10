@@ -13,6 +13,7 @@ class ScientificContextRegistry:
     def __init__(self) -> None:
         self._systems: dict[str, dict[str, tuple[str, ...]]] = {}
         self._system_values: dict[str, dict[str, dict[str, int]]] = {}
+        self._system_rewards: dict[str, dict[str, dict[str, tuple[int, int]]]] = {}
         self._priority_announced: set[tuple[str, str, str]] = set()
 
     def record(
@@ -30,6 +31,10 @@ class ScientificContextRegistry:
         self._system_values.setdefault(system, {})[body] = {
             name: int(base_value)
             for name, base_value, _potential_value in report.probable_species_values
+        }
+        self._system_rewards.setdefault(system, {})[body] = {
+            name: (int(base_value), int(potential_value))
+            for name, base_value, potential_value in report.probable_species_values
         }
 
         probable_by_name = {
@@ -67,4 +72,12 @@ class ScientificContextRegistry:
         return {
             body: dict(values)
             for body, values in self._system_values.get(system_name, {}).items()
+        }
+
+    def system_prediction_rewards(
+        self, system_name: str
+    ) -> dict[str, dict[str, tuple[int, int]]]:
+        return {
+            body: dict(rewards)
+            for body, rewards in self._system_rewards.get(system_name, {}).items()
         }
