@@ -951,6 +951,7 @@ class CommandCenter:
             self.commander_state.current_system
         )
         biology = self._dashboard_biology(predictions)
+        trade = self._dashboard_trade()
         try:
             route = self.heimdall_route_planner.active_route_snapshot()
         except (RuntimeError, ValueError, TypeError):
@@ -987,6 +988,7 @@ class CommandCenter:
                 or not self._manual_route_requests.empty()
             ),
             "biology": biology,
+            "trade": trade,
             "injections": {
                 "basic": injections.basic,
                 "standard": injections.standard,
@@ -1010,6 +1012,56 @@ class CommandCenter:
                 "species": balance.species_completed,
             }
         self.dashboard_snapshot = snapshot
+
+    def _dashboard_trade(self) -> dict:
+        summary = (
+            self.freyja_ledger.summary()
+            if getattr(self, "freyja_ledger", None) is not None else None
+        )
+        state = getattr(getattr(self, "active_trade_route", None), "state", None)
+        result = {
+            "active": False,
+            "strategy": "Sin modalidad activa",
+            "commodity": "—", "target": "—", "units": 0,
+            "estimated_profit": 0,
+            "realized_profit": int(summary.realized_profit if summary else 0),
+            "cargo_units": int(summary.cargo_units if summary else 0),
+            "progress": "Sin ruta comercial activa",
+        }
+        if not state:
+            return result
+        legs = state.get("legs", [])
+        index = int(state.get("index", 0) or 0)
+        if not legs or index >= len(legs):
+            return result
+        leg = legs[index]
+        phase = state.get("phase", "to_buy")
+        to_buy = phase == "to_buy"
+        units = int(leg.get("units", 0) or 0)
+        if not to_buy:
+            units = max(
+                0,
+                int(state.get("bought_units", units) or 0)
+                - int(state.get("sold_units", 0) or 0),
+            )
+        strategy_names = {
+            "quick": "Ruta rápida", "three_station": "Tres estaciones",
+            "expedition": "Expedición comercial", "powerplay": "Powerplay",
+        }
+        result.update({
+            "active": True,
+            "strategy": strategy_names.get(state.get("strategy"), "Comercio"),
+            "commodity": leg.get("commodity", "—"),
+            "target": (
+                f"{leg.get('buy_station', '—')} · {leg.get('buy_system', '—')}"
+                if to_buy else
+                f"{leg.get('sell_station', '—')} · {leg.get('sell_system', '—')}"
+            ),
+            "units": units,
+            "estimated_profit": int(state.get("estimated_profit", 0) or 0),
+            "progress": f"Tramo {index + 1} de {len(legs)} · {'COMPRA' if to_buy else 'VENTA'}",
+        })
+        return result
 
     def _dashboard_biology(
         self, predictions: dict[str, tuple[str, ...]]

@@ -87,6 +87,9 @@ izquierda conserva el registro operativo completo; la derecha muestra
 comandante, nave, créditos, balance de expedición, biología, conexiones y la
 ruta activa de HEIMDALL. El siguiente sistema permanece visible y puede
 copiarse manualmente si falla la actualización automática del portapapeles.
+El lateral de oficiales utiliza pestañas amplias para MÍMIR, HEIMDALL, FREYJA
+y RED. Freyja muestra la modalidad, el tramo comercial, producto, toneladas,
+destino, beneficio estimado y ganancia realizada.
 
 El modo de consola anterior continúa disponible como respaldo:
 

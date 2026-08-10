@@ -53,6 +53,31 @@ class DesktopTests(unittest.TestCase):
         self.assertEqual(biology["details"][0]["body"], "Prueba 4 a")
         self.assertEqual(biology["details"][0]["signals"], 2)
 
+    def test_freyja_dashboard_exposes_active_trade_leg(self) -> None:
+        center = CommandCenter.__new__(CommandCenter)
+        center.freyja_ledger = Mock()
+        center.freyja_ledger.summary.return_value = SimpleNamespace(
+            realized_profit=250000, cargo_units=64
+        )
+        center.active_trade_route = SimpleNamespace(state={
+            "index": 0, "phase": "to_sell", "strategy": "quick",
+            "estimated_profit": 900000,
+            "bought_units": 64, "sold_units": 4,
+            "legs": [{
+                "commodity": "Oro", "units": 64,
+                "buy_system": "Sol", "buy_station": "Galileo",
+                "sell_system": "Achenar", "sell_station": "Dawes Hub",
+            }],
+        })
+
+        trade = center._dashboard_trade()
+
+        self.assertTrue(trade["active"])
+        self.assertEqual(trade["strategy"], "Ruta rápida")
+        self.assertEqual(trade["units"], 60)
+        self.assertIn("Dawes Hub", trade["target"])
+        self.assertEqual(trade["realized_profit"], 250000)
+
 
 if __name__ == "__main__":
     unittest.main()

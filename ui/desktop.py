@@ -175,9 +175,9 @@ class OdinDesktopApp:
         content.pack(fill="both", expand=True)
 
         console_panel = tk.Frame(content, bg=ELITE["background"])
-        side = tk.Frame(content, bg=ELITE["surface"], width=360)
+        side = tk.Frame(content, bg=ELITE["surface"], width=440)
         content.add(console_panel, stretch="always", minsize=520)
-        content.add(side, stretch="never", minsize=330)
+        content.add(side, stretch="never", minsize=390)
 
         self._section_title(console_panel, "REGISTRO OPERATIVO", "● EN VIVO")
         self.console = tk.Text(
@@ -196,7 +196,6 @@ class OdinDesktopApp:
         footer.pack(fill="x")
 
         self._build_commander_panel(side)
-        self._build_route_panel(side)
         self._build_details_panel(side)
 
     def _section_title(self, parent, title: str, extra: str = "") -> None:
@@ -264,12 +263,12 @@ class OdinDesktopApp:
                  font=("Segoe UI", 10, "bold")).pack(fill="x")
 
     def _build_route_panel(self, parent) -> None:
-        panel = tk.Frame(parent, bg=ELITE["surface"], highlightthickness=1,
-                         highlightbackground=ELITE["border"])
-        panel.pack(fill="x", padx=10, pady=5)
-        self._section_title(panel, "HEIMDALL · RUTA ACTIVA")
-        body = tk.Frame(panel, bg=ELITE["surface"], padx=12, pady=10)
-        body.pack(fill="x")
+        body = tk.Frame(parent, bg=ELITE["surface"], padx=12, pady=12)
+        body.pack(fill="both", expand=True)
+        tk.Label(
+            body, text="RUTA DE NEUTRONES", anchor="w", bg=ELITE["surface"],
+            fg=ELITE["orange"], font=("Segoe UI", 10, "bold"),
+        ).pack(fill="x", pady=(0, 7))
         self.values["route_destination_input"] = tk.StringVar()
         destination_row = tk.Frame(body, bg=ELITE["surface"])
         destination_row.pack(fill="x", pady=(0, 9))
@@ -315,18 +314,42 @@ class OdinDesktopApp:
         panel.pack(fill="both", expand=True, padx=10, pady=(5, 10))
         notebook = ttk.Notebook(panel, style="Odin.TNotebook")
         notebook.pack(fill="both", expand=True)
-        for title, fields in (
-            ("MÍMIR", (("biology", "Resumen"), ("biology_details", "Planetas"), ("body", "Cuerpo actual"),
-                        ("samples", "Muestras completadas"))),
-            ("RUTA", (("destination", "Destino final"), ("fuel", "Combustible"),
-                       ("injections", "Inyecciones B/E/P"))),
-            ("RED", (("eddn", "EDDN"), ("edsm", "EDSM"), ("inara", "Inara"))),
+        mimir = tk.Frame(notebook, bg=ELITE["surface"], padx=12, pady=8)
+        notebook.add(mimir, text="MÍMIR")
+        for key, label in (
+            ("biology", "Resumen"), ("biology_details", "Planetas"),
+            ("body", "Cuerpo actual"), ("samples", "Muestras completadas"),
         ):
-            tab = tk.Frame(notebook, bg=ELITE["surface"], padx=12, pady=8)
-            notebook.add(tab, text=title)
-            for key, label in fields:
-                self.values[key] = tk.StringVar(value="—")
-                self._detail_row(tab, label, self.values[key])
+            self.values[key] = tk.StringVar(value="—")
+            self._detail_row(mimir, label, self.values[key])
+
+        heimdall = tk.Frame(notebook, bg=ELITE["surface"])
+        notebook.add(heimdall, text="HEIMDALL")
+        self._build_route_panel(heimdall)
+        for key in ("destination", "fuel", "injections"):
+            self.values[key] = tk.StringVar(value="—")
+        for key, label in (
+            ("destination", "Destino final"), ("fuel", "Combustible"),
+            ("injections", "Inyecciones B/E/P"),
+        ):
+            self._detail_row(heimdall, label, self.values[key])
+
+        freyja = tk.Frame(notebook, bg=ELITE["surface"], padx=12, pady=8)
+        notebook.add(freyja, text="FREYJA")
+        for key, label in (
+            ("trade_status", "Estado"), ("trade_strategy", "Modalidad"),
+            ("trade_commodity", "Producto"), ("trade_target", "Próximo objetivo"),
+            ("trade_units", "Toneladas"), ("trade_profit", "Beneficio estimado"),
+            ("trade_balance", "Ganancia realizada"),
+        ):
+            self.values[key] = tk.StringVar(value="—")
+            self._detail_row(freyja, label, self.values[key])
+
+        network = tk.Frame(notebook, bg=ELITE["surface"], padx=12, pady=8)
+        notebook.add(network, text="RED")
+        for key, label in (("eddn", "EDDN"), ("edsm", "EDSM"), ("inara", "Inara")):
+            self.values[key] = tk.StringVar(value="—")
+            self._detail_row(network, label, self.values[key])
 
     def _detail_row(self, parent, label, variable) -> None:
         row = tk.Frame(parent, bg=ELITE["surface"], pady=6)
@@ -423,6 +446,18 @@ class OdinDesktopApp:
         injections = snapshot.get("injections", {})
         self.values["injections"].set(
             f"{injections.get('basic', 0)} / {injections.get('standard', 0)} / {injections.get('premium', 0)}"
+        )
+        trade = snapshot.get("trade", {})
+        self.values["trade_status"].set(trade.get("progress", "Sin ruta comercial activa"))
+        self.values["trade_strategy"].set(trade.get("strategy", "Sin modalidad activa"))
+        self.values["trade_commodity"].set(trade.get("commodity", "—"))
+        self.values["trade_target"].set(trade.get("target", "—"))
+        self.values["trade_units"].set(f"{int(trade.get('units', 0) or 0)} t")
+        self.values["trade_profit"].set(
+            self._credits(trade.get("estimated_profit", 0), True)
+        )
+        self.values["trade_balance"].set(
+            self._credits(trade.get("realized_profit", 0))
         )
         network = snapshot.get("network", {})
         self.values["eddn"].set("ACTIVO" if network.get("eddn") else "INACTIVO")
