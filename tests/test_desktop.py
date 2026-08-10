@@ -53,6 +53,21 @@ class DesktopTests(unittest.TestCase):
         self.assertEqual(biology["details"][0]["body"], "Prueba 4 a")
         self.assertEqual(biology["details"][0]["signals"], 2)
 
+    def test_mimir_dashboard_includes_approximate_probable_species_values(self) -> None:
+        center = CommandCenter.__new__(CommandCenter)
+        center.commander_state = SimpleNamespace(system_address=None)
+        center.database = Mock()
+
+        biology = center._dashboard_biology(
+            {"Prueba 4 a": ("Bacterium Informem",)},
+            {"Prueba 4 a": {"Bacterium Informem": 8_418_000}},
+        )
+
+        self.assertEqual(
+            biology["details"][0]["probable_values"],
+            {"Bacterium Informem": 8_418_000},
+        )
+
     def test_freyja_dashboard_exposes_active_trade_leg(self) -> None:
         center = CommandCenter.__new__(CommandCenter)
         center.freyja_ledger = Mock()

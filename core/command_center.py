@@ -961,7 +961,10 @@ class CommandCenter:
         predictions = self.scientific_context.system_predictions(
             self.commander_state.current_system
         )
-        biology = self._dashboard_biology(predictions)
+        prediction_values = self.scientific_context.system_prediction_values(
+            self.commander_state.current_system
+        )
+        biology = self._dashboard_biology(predictions, prediction_values)
         trade = self._dashboard_trade()
         try:
             route = self.heimdall_route_planner.active_route_snapshot()
@@ -1083,7 +1086,9 @@ class CommandCenter:
         return result
 
     def _dashboard_biology(
-        self, predictions: dict[str, tuple[str, ...]]
+        self,
+        predictions: dict[str, tuple[str, ...]],
+        prediction_values: dict[str, dict[str, int]] | None = None,
     ) -> dict:
         """Combina señales reales persistidas con predicciones de MÍMIR."""
 
@@ -1140,6 +1145,13 @@ class CommandCenter:
             "signals": item["signals"],
             "confirmed": tuple(sorted(item["confirmed"])),
             "probable": tuple(sorted(item["probable"])),
+            "probable_values": {
+                species: int(value)
+                for species, value in (prediction_values or {}).get(
+                    item["body"], {}
+                ).items()
+                if species in item["probable"]
+            },
         } for item in bodies.values() if item["signals"] or item["confirmed"] or item["probable"])
         return {
             "bodies": len(details),

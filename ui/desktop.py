@@ -461,7 +461,15 @@ class OdinDesktopApp:
             if item.get("confirmed"):
                 contents.append("confirmadas: " + ", ".join(item["confirmed"]))
             if item.get("probable"):
-                contents.append("probables: " + ", ".join(item["probable"]))
+                probable_values = item.get("probable_values", {})
+                probable = [
+                    (
+                        f"{species} ({self._credits(probable_values[species], True)})"
+                        if probable_values.get(species) else species
+                    )
+                    for species in item["probable"]
+                ]
+                contents.append("probables: " + ", ".join(probable))
             if not contents:
                 contents.append(f"{item.get('signals', 0)} señales; especies por identificar")
             detail_lines.append(f"{item.get('body')}: " + " · ".join(contents))

@@ -14,6 +14,15 @@ def report(*species: str, signal: bool = True, body: str = "Prueba 2") -> Office
 
 
 class ScientificContextTests(unittest.TestCase):
+    def test_remembers_base_value_for_each_probable_species(self) -> None:
+        registry = ScientificContextRegistry()
+        registry.record("Sol", report("Bacterium Informem", body="Sol A 1"))
+
+        self.assertEqual(
+            registry.system_prediction_values("Sol"),
+            {"Sol A 1": {"Bacterium Informem": 1_000_000}},
+        )
+
     def test_remembers_species_names_without_values(self) -> None:
         registry = ScientificContextRegistry()
         registry.record("Sistema", report("Bacterium Aurasus", "Stratum Tectonicas"))
