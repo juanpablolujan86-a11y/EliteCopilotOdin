@@ -316,8 +316,21 @@ class OdinDesktopApp:
         notebook.pack(fill="both", expand=True)
         mimir = tk.Frame(notebook, bg=ELITE["surface"], padx=12, pady=8)
         notebook.add(mimir, text="MÍMIR")
+        for key, label in (("biology", "Resumen"),):
+            self.values[key] = tk.StringVar(value="—")
+            self._detail_row(mimir, label, self.values[key])
+        tk.Label(
+            mimir, text="PLANETAS CON BIOLOGÍA", anchor="w",
+            bg=ELITE["surface"], fg=ELITE["orange"],
+            font=("Segoe UI", 9, "bold"),
+        ).pack(fill="x", pady=(7, 3))
+        self.values["biology_details"] = tk.StringVar(value="Sin señales biológicas")
+        tk.Label(
+            mimir, textvariable=self.values["biology_details"], anchor="nw",
+            bg=ELITE["surface"], fg=ELITE["amber"],
+            font=("Cascadia Mono", 9), justify="left", wraplength=285,
+        ).pack(fill="x", pady=(0, 7))
         for key, label in (
-            ("biology", "Resumen"), ("biology_details", "Planetas"),
             ("body", "Cuerpo actual"), ("samples", "Muestras completadas"),
         ):
             self.values[key] = tk.StringVar(value="—")
@@ -455,27 +468,7 @@ class OdinDesktopApp:
         self.values["biology"].set(
             f"{biology.get('species', 0)} especies · {biology.get('bodies', 0)} planetas"
         )
-        detail_lines = []
-        for item in biology.get("details", ()):
-            contents = []
-            if item.get("confirmed"):
-                contents.append("confirmadas: " + ", ".join(item["confirmed"]))
-            if item.get("probable"):
-                probable_values = item.get("probable_values", {})
-                probable = [
-                    (
-                        f"{species} ({self._credits(probable_values[species], True)})"
-                        if probable_values.get(species) else species
-                    )
-                    for species in item["probable"]
-                ]
-                contents.append("probables: " + ", ".join(probable))
-            if not contents:
-                contents.append(f"{item.get('signals', 0)} señales; especies por identificar")
-            detail_lines.append(f"{item.get('body')}: " + " · ".join(contents))
-        self.values["biology_details"].set(
-            "\n".join(detail_lines) if detail_lines else "Sin señales biológicas"
-        )
+        self.values["biology_details"].set(self._biology_details_text(biology))
         self.values["body"].set(snapshot.get("body") or "—")
         self.values["samples"].set(str(expedition.get("species", 0)))
         injections = snapshot.get("injections", {})
@@ -793,6 +786,27 @@ class OdinDesktopApp:
     def _credits(value, approximate: bool = False) -> str:
         prefix = "≈ " if approximate else ""
         return f"{prefix}{int(value or 0):,} CR".replace(",", ".")
+
+    @staticmethod
+    def _biology_details_text(biology: dict) -> str:
+        lines = []
+        for item in biology.get("details", ()):
+            signals = int(item.get("signals", 0) or 0)
+            signal_text = f" · {signals} señales" if signals else ""
+            lines.append(f"◆ {item.get('body', 'Cuerpo desconocido')}{signal_text}")
+            for species in item.get("confirmed", ()):
+                lines.append(f"  ✓ {species}")
+            probable_values = item.get("probable_values", {})
+            for species in item.get("probable", ()):
+                value = probable_values.get(species)
+                value_text = (
+                    f" — {OdinDesktopApp._credits(value, True)}" if value else ""
+                )
+                lines.append(f"  ◇ {species}{value_text}")
+            if not item.get("confirmed") and not item.get("probable"):
+                lines.append("  ○ Especies por identificar")
+            lines.append("")
+        return "\n".join(lines).rstrip() or "Sin señales biológicas"
 
 
 def run_desktop(odin) -> None:

@@ -68,6 +68,22 @@ class DesktopTests(unittest.TestCase):
             {"Bacterium Informem": 8_418_000},
         )
 
+    def test_mimir_biology_is_rendered_as_vertical_planet_list(self) -> None:
+        text = OdinDesktopApp._biology_details_text({"details": ({
+            "body": "Prueba 4 a", "signals": 2, "confirmed": (),
+            "probable": ("Bacterium Informem", "Stratum Tectonicas"),
+            "probable_values": {
+                "Bacterium Informem": 8_418_000,
+                "Stratum Tectonicas": 19_010_800,
+            },
+        },)})
+
+        self.assertEqual(text.splitlines(), [
+            "◆ Prueba 4 a · 2 señales",
+            "  ◇ Bacterium Informem — ≈ 8.418.000 CR",
+            "  ◇ Stratum Tectonicas — ≈ 19.010.800 CR",
+        ])
+
     def test_freyja_dashboard_exposes_active_trade_leg(self) -> None:
         center = CommandCenter.__new__(CommandCenter)
         center.freyja_ledger = Mock()
