@@ -336,6 +336,33 @@ class OdinDesktopApp:
 
         freyja = tk.Frame(notebook, bg=ELITE["surface"], padx=12, pady=8)
         notebook.add(freyja, text="FREYJA")
+        tk.Label(
+            freyja, text="ELEGIR MODELO COMERCIAL", anchor="w",
+            bg=ELITE["surface"], fg=ELITE["orange"],
+            font=("Segoe UI", 10, "bold"),
+        ).pack(fill="x", pady=(2, 7))
+        trade_buttons = tk.Frame(freyja, bg=ELITE["surface"])
+        trade_buttons.pack(fill="x", pady=(0, 8))
+        self.trade_buttons = []
+        for index, (strategy, label) in enumerate((
+            ("quick", "1 · RUTA RÁPIDA"),
+            ("three_station", "2 · TRES ESTACIONES"),
+            ("expedition", "3 · EXPEDICIÓN"),
+            ("powerplay", "4 · POWERPLAY"),
+        )):
+            button = tk.Button(
+                trade_buttons, text=label,
+                command=lambda selected=strategy: self._request_trade(selected),
+                bg=ELITE["surface_alt"], fg=ELITE["amber"], relief="flat",
+                activebackground=ELITE["orange_soft"],
+                activeforeground=ELITE["background"], padx=7, pady=7,
+                font=("Segoe UI", 8, "bold"), cursor="hand2",
+            )
+            button.grid(
+                row=index // 2, column=index % 2, sticky="nsew", padx=3, pady=3
+            )
+            trade_buttons.grid_columnconfigure(index % 2, weight=1)
+            self.trade_buttons.append(button)
         for key, label in (
             ("trade_status", "Estado"), ("trade_strategy", "Modalidad"),
             ("trade_commodity", "Producto"), ("trade_target", "Próximo objetivo"),
@@ -448,6 +475,20 @@ class OdinDesktopApp:
             f"{injections.get('basic', 0)} / {injections.get('standard', 0)} / {injections.get('premium', 0)}"
         )
         trade = snapshot.get("trade", {})
+        trade_calculating = bool(trade.get("calculating"))
+        requested_strategy = trade.get("requested_strategy", "")
+        for button, strategy in zip(
+            self.trade_buttons,
+            ("quick", "three_station", "expedition", "powerplay"),
+        ):
+            button.configure(
+                state="disabled" if trade_calculating else "normal",
+                bg=(
+                    ELITE["orange_soft"]
+                    if trade_calculating and strategy == requested_strategy
+                    else ELITE["surface_alt"]
+                ),
+            )
         self.values["trade_status"].set(trade.get("progress", "Sin ruta comercial activa"))
         self.values["trade_strategy"].set(trade.get("strategy", "Sin modalidad activa"))
         self.values["trade_commodity"].set(trade.get("commodity", "—"))
@@ -484,6 +525,22 @@ class OdinDesktopApp:
             return
         messagebox.showinfo(
             "HEIMDALL", "Ya hay una ruta en proceso. Esperá a que finalice.",
+            parent=self.root,
+        )
+
+    def _request_trade(self, strategy: str) -> None:
+        labels = {
+            "quick": "ruta rápida", "three_station": "tres estaciones",
+            "expedition": "expedición comercial", "powerplay": "Powerplay",
+        }
+        if self.odin.request_trade_calculation(strategy):
+            print(f"FREYJA: modalidad {labels[strategy]} solicitada desde la interfaz.")
+            for button in self.trade_buttons:
+                button.configure(state="disabled")
+            return
+        messagebox.showinfo(
+            "FREYJA",
+            "Freyja ya está calculando una operación. Esperá a que finalice.",
             parent=self.root,
         )
 

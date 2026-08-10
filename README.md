@@ -90,6 +90,8 @@ copiarse manualmente si falla la actualización automática del portapapeles.
 El lateral de oficiales utiliza pestañas amplias para MÍMIR, HEIMDALL, FREYJA
 y RED. Freyja muestra la modalidad, el tramo comercial, producto, toneladas,
 destino, beneficio estimado y ganancia realizada.
+Sus cuatro botones permiten iniciar desde la interfaz una ruta rápida, un
+circuito de tres estaciones, una expedición comercial o comercio Powerplay.
 
 El modo de consola anterior continúa disponible como respaldo:
 

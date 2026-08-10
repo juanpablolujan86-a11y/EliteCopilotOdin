@@ -78,6 +78,19 @@ class DesktopTests(unittest.TestCase):
         self.assertIn("Dawes Hub", trade["target"])
         self.assertEqual(trade["realized_profit"], 250000)
 
+    def test_freyja_gui_accepts_only_one_valid_trade_request(self) -> None:
+        center = CommandCenter.__new__(CommandCenter)
+        center._manual_trade_requests = queue.Queue()
+        center._trade_calculation_busy = threading.Event()
+        center._trade_requested_strategy = ""
+
+        self.assertTrue(center.request_trade_calculation("three_station"))
+        self.assertEqual(center._manual_trade_requests.get_nowait(), "three_station")
+        self.assertEqual(center._trade_requested_strategy, "three_station")
+        self.assertFalse(center.request_trade_calculation("invalid"))
+        center._trade_calculation_busy.set()
+        self.assertFalse(center.request_trade_calculation("quick"))
+
 
 if __name__ == "__main__":
     unittest.main()

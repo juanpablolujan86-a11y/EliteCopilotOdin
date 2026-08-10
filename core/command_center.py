@@ -154,6 +154,9 @@ class CommandCenter:
         self.market_cache: MarketCache | None = None
         self._pending_freyja_trade_menu = False
         self._pending_freyja_cancel_confirmation = False
+        self._manual_trade_requests: queue.Queue[str] = queue.Queue()
+        self._trade_calculation_busy = threading.Event()
+        self._trade_requested_strategy = ""
         self.voice_hotkey = WindowsHotkey()
         self._voice_busy = threading.Event()
         self._voice_questions: queue.Queue[str] = queue.Queue()
@@ -850,6 +853,14 @@ class CommandCenter:
                 if requested_destination:
                     self._start_voice_route(requested_destination)
 
+            if not self._trade_calculation_busy.is_set():
+                try:
+                    trade_selection = self._manual_trade_requests.get_nowait()
+                except queue.Empty:
+                    trade_selection = ""
+                if trade_selection:
+                    self._start_freyja_trade_calculation(trade_selection)
+
             if (
                 self.config.push_to_talk_enabled
                 and self.voice_hotkey.pressed()
@@ -1027,6 +1038,14 @@ class CommandCenter:
             "realized_profit": int(summary.realized_profit if summary else 0),
             "cargo_units": int(summary.cargo_units if summary else 0),
             "progress": "Sin ruta comercial activa",
+            "calculating": (
+                getattr(self, "_trade_calculation_busy", threading.Event()).is_set()
+                or (
+                    getattr(self, "_manual_trade_requests", None) is not None
+                    and not self._manual_trade_requests.empty()
+                )
+            ),
+            "requested_strategy": getattr(self, "_trade_requested_strategy", ""),
         }
         if not state:
             return result
@@ -1918,6 +1937,8 @@ class CommandCenter:
         return None
 
     def _start_freyja_trade_calculation(self, selection: str) -> None:
+        self._trade_calculation_busy.set()
+        self._trade_requested_strategy = selection
         self._voice_busy.set()
         print("FREYJA: Consultando mercados de la Burbuja...\n")
         threading.Thread(
@@ -1941,6 +1962,22 @@ class CommandCenter:
             )
         finally:
             trade_database.disconnect()
+            self._trade_calculation_busy.clear()
+            self._trade_requested_strategy = ""
+
+    def request_trade_calculation(self, selection: str) -> bool:
+        """Encola desde la interfaz uno de los cuatro modelos de FREYJA."""
+
+        allowed = {"quick", "three_station", "expedition", "powerplay"}
+        if (
+            selection not in allowed
+            or self._trade_calculation_busy.is_set()
+            or not self._manual_trade_requests.empty()
+        ):
+            return False
+        self._trade_requested_strategy = selection
+        self._manual_trade_requests.put(selection)
+        return True
 
     def _announce_freyja_trade_start(self, selection: str) -> None:
         announcements = {
