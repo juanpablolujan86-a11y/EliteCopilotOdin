@@ -17,6 +17,7 @@ a = Analysis(
         (str(root / "INARA_API_KEY.example.txt"), "."),
         (str(root / "API_KEYS_README.txt"), "."),
         (str(root / "README.md"), "."),
+        (str(root / "docs" / "BETA_TESTING.md"), "docs"),
     ],
     hiddenimports=["tkinter", "tkinter.ttk"],
     hookspath=[],

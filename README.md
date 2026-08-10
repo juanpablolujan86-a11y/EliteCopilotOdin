@@ -6,7 +6,7 @@ comandante y coordina oficiales especializados mediante un EventBus.
 
 ## Estado actual
 
-Versión actual: **v0.7.1 — MÍMIR y HEIMDALL consolidados**.
+Versión actual: **v0.7.2-beta — MÍMIR contextual, HEIMDALL consolidado y FREYJA en pruebas**.
 
 ## Instalación para comandantes de prueba
 

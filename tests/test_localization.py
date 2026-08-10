@@ -15,8 +15,11 @@ class LocalizationTestCase(unittest.TestCase):
         self.assertEqual(priority_label("UNKNOWN"), "UNKNOWN")
 
     def test_header_identifies_current_release(self) -> None:
-        self.assertEqual(VERSION, "0.7.1")
-        self.assertEqual(CAPABILITY, "MÍMIR y HEIMDALL consolidados")
+        self.assertEqual(VERSION, "0.7.2-beta")
+        self.assertEqual(
+            CAPABILITY,
+            "MÍMIR contextual, HEIMDALL consolidado y FREYJA en pruebas",
+        )
 
 
 if __name__ == "__main__":
