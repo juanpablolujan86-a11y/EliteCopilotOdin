@@ -103,18 +103,6 @@ class CommanderStateUpdater:
             "Population",
             self.commander_state.population,
         )
-
-    def handle_body_context(self, event: dict) -> None:
-        """Selecciona el planeta al aproximarse, aterrizar o desembarcar."""
-
-        body = event.get("Body") or event.get("BodyName")
-        if body:
-            self.commander_state.current_body = str(body)
-
-    def handle_leave_body(self, _event: dict) -> None:
-        """Abandona la selección planetaria al volver al espacio."""
-
-        self.commander_state.current_body = ""
         star_position = context.get("StarPos")
         if isinstance(star_position, list) and len(star_position) == 3:
             self.commander_state.star_position = tuple(star_position)
@@ -134,6 +122,18 @@ class CommanderStateUpdater:
             "timestamp",
             self.commander_state.last_jump,
         )
+
+    def handle_body_context(self, event: dict) -> None:
+        """Selecciona el planeta al aproximarse, aterrizar o desembarcar."""
+
+        body = event.get("Body") or event.get("BodyName")
+        if body:
+            self.commander_state.current_body = str(body)
+
+    def handle_leave_body(self, _event: dict) -> None:
+        """Abandona la selección planetaria al volver al espacio."""
+
+        self.commander_state.current_body = ""
 
     def handle_profile_event(self, event: dict) -> None:
         """Actualiza identidad, saldo y nave usando valores oficiales."""

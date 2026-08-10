@@ -22,6 +22,27 @@ class OllamaClientTests(unittest.TestCase):
         self.assertIn("Sistema: Sol", call.kwargs["json"]["messages"][1]["content"])
 
     @patch("intelligence.ollama.requests.post")
+    def test_chat_falls_back_to_generate_when_chat_endpoint_is_missing(self, post: Mock):
+        missing = Mock(status_code=404)
+        generated = Mock(status_code=200)
+        generated.raise_for_status.return_value = None
+        generated.json.return_value = {
+            "model": "gemma3:4b", "done": True,
+            "response": "Conexión correcta.",
+        }
+        post.side_effect = (missing, generated)
+
+        reply = OllamaClient().chat(
+            "Estado", system="Sos ODIN", context="Sistema: Sol"
+        )
+
+        self.assertEqual(reply.text, "Conexión correcta.")
+        self.assertEqual(post.call_args_list[1].args[0], "http://127.0.0.1:11434/api/generate")
+        fallback_prompt = post.call_args_list[1].kwargs["json"]["prompt"]
+        self.assertIn("Sos ODIN", fallback_prompt)
+        self.assertIn("Sistema: Sol", fallback_prompt)
+
+    @patch("intelligence.ollama.requests.post")
     def test_connection_failure_has_safe_message(self, post: Mock):
         import requests
         post.side_effect = requests.ConnectionError()

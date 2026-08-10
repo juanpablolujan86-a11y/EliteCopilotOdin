@@ -51,6 +51,8 @@ class OllamaClient:
                 },
                 timeout=180,
             )
+            if response.status_code == 404:
+                return self._generate(prompt, system=system, context=context)
             response.raise_for_status()
             payload = response.json()
         except (requests.RequestException, ValueError) as error:
@@ -59,3 +61,40 @@ class OllamaClient:
         if not text:
             raise OllamaError("Ollama respondió sin contenido.")
         return OllamaReply(text, str(payload.get("model", self.model)), bool(payload.get("done", False)))
+
+    def _generate(self, prompt: str, *, system: str, context: str) -> OllamaReply:
+        """Compatibilidad con servidores que solo publican /api/generate."""
+
+        sections = []
+        if system:
+            sections.append(system)
+        if context:
+            sections.append(f"Contexto actual de ODIN:\n{context}")
+        sections.append(f"Comandante: {prompt}\nODIN:")
+        try:
+            response = requests.post(
+                f"{self.base_url}/api/generate",
+                json={
+                    "model": self.model,
+                    "prompt": "\n\n".join(sections),
+                    "stream": False,
+                    "think": False,
+                    "options": {"num_ctx": 4096, "num_predict": 160},
+                    "keep_alive": "10m",
+                },
+                timeout=180,
+            )
+            response.raise_for_status()
+            payload = response.json()
+        except (requests.RequestException, ValueError) as error:
+            raise OllamaError(
+                "Ollama no está disponible o el modelo no está descargado."
+            ) from error
+        text = str(payload.get("response", "")).strip()
+        if not text:
+            raise OllamaError("Ollama respondió sin contenido.")
+        return OllamaReply(
+            text,
+            str(payload.get("model", self.model)),
+            bool(payload.get("done", False)),
+        )

@@ -20,6 +20,21 @@ class DesktopTests(unittest.TestCase):
 
         self.assertEqual(state.current_body, "")
 
+    def test_leaving_body_clears_context_without_touching_restored_system(self) -> None:
+        state = CommanderState(current_body="Sistema 4 a")
+        updater = CommanderStateUpdater(state)
+        updater.restore_context({
+            "StarSystem": "Sistema", "SystemAddress": 42,
+            "StarPos": [1.0, 2.0, 3.0], "StarClass": "K",
+            "timestamp": "2026-08-10T00:00:00Z",
+        })
+
+        updater.handle_leave_body({"event": "LeaveBody"})
+
+        self.assertEqual(state.current_body, "")
+        self.assertEqual(state.star_position, (1.0, 2.0, 3.0))
+        self.assertEqual(state.system_stars, [{"type": "K", "luminosity": ""}])
+
     def test_log_stream_queues_complete_text_without_blocking(self) -> None:
         messages = queue.Queue()
         stream = GuiLogStream(messages)
