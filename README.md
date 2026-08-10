@@ -8,6 +8,20 @@ comandante y coordina oficiales especializados mediante un EventBus.
 
 Versión actual: **v0.7.1 — MÍMIR y HEIMDALL consolidados**.
 
+## Instalación para comandantes de prueba
+
+El instalador de Windows copia ODIN en el perfil del usuario, crea accesos
+directos y deja configuradas por defecto voces Edge en español para ODIN,
+MÍMIR, HEIMDALL y FREYJA. Durante la instalación ofrece, como opción marcada
+pero no obligatoria, instalar Ollama desde su distribución oficial y descargar
+`gemma3:4b`.
+
+Sin Ollama, la lectura del Journal, la interfaz, las voces, las predicciones de
+MÍMIR, las rutas de HEIMDALL, el comercio de FREYJA y las órdenes programadas
+siguen funcionando. Solamente queda indisponible la respuesta conversacional
+libre. El modelo requiere conexión durante la instalación y varios gigabytes de
+espacio. Si el equipo ya tiene Ollama, el asistente reutiliza esa instalación.
+
 HEIMDALL conserva el contexto de navegación de la nave, audita los controles,
 evalúa combustible y autonomía, reconoce cargas de cono y saltos potenciados,
 y sigue rutas convencionales o de neutrones. Puede solicitar rutas a Spansh,
