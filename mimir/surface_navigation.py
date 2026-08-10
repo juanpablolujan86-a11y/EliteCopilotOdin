@@ -26,6 +26,23 @@ class SurfaceNavigationTracker:
         self._last_ready: bool | None = None
         self._cycle_id = 0
 
+    def reset(self) -> None:
+        """Descarta el seguimiento activo al abandonar el sistema."""
+
+        self.latitude = None
+        self.longitude = None
+        self.planet_radius_m = None
+        self.genus = ""
+        self.species = ""
+        self.progress = 0
+        self.sample_locations.clear()
+        self.distance_m = None
+        self.required_distance_m = None
+        self.ready_for_sample = False
+        self._last_distance_band = None
+        self._last_ready = None
+        self._cycle_id += 1
+
     def update_status(self, status: dict) -> SurfaceNavigationUpdated | None:
         latitude = status.get("Latitude")
         longitude = status.get("Longitude")

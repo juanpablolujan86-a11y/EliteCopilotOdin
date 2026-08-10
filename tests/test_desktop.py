@@ -5,10 +5,21 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 from core.command_center import CommandCenter
+from core.processors.commander_state_updater import CommanderStateUpdater
+from state.commander_state import CommanderState
 from ui.desktop import GuiLogStream, OdinDesktopApp
 
 
 class DesktopTests(unittest.TestCase):
+    def test_fsd_jump_clears_previous_planet_context(self) -> None:
+        state = CommanderState(current_body="Sistema anterior 4 a")
+
+        CommanderStateUpdater(state).handle_fsd_jump({
+            "StarSystem": "Sistema nuevo", "SystemAddress": 84,
+        })
+
+        self.assertEqual(state.current_body, "")
+
     def test_log_stream_queues_complete_text_without_blocking(self) -> None:
         messages = queue.Queue()
         stream = GuiLogStream(messages)
@@ -92,6 +103,68 @@ class DesktopTests(unittest.TestCase):
         self.assertEqual(sample["progress"], 1)
         self.assertEqual(sample["distance_m"], 75)
         self.assertEqual(sample["required_distance_m"], 100)
+
+    def test_mimir_dashboard_stays_empty_until_new_system_biology_arrives(self) -> None:
+        center = CommandCenter.__new__(CommandCenter)
+        center.commander_state = SimpleNamespace(system_address=42, current_body="")
+        center._mimir_visible_body_ids = set()
+        center.database = Mock()
+        center.database.query.side_effect = (
+            [{
+                "body_id": 5, "body_name": "Sistema 5",
+                "source_event": "SAASignalsFound", "signal_type": "Biological",
+                "signal_count": 1, "genus": "Bacteria", "species": None,
+                "scan_type": None,
+            }],
+            [{"body_id": 5, "body_name": "Sistema 5"}],
+        )
+
+        biology = center._dashboard_biology({"Sistema 5": ("Bacterium Informem",)})
+
+        self.assertEqual(biology["details"], ())
+
+    def test_mimir_dashboard_shows_only_current_planet_and_dss_genus(self) -> None:
+        center = CommandCenter.__new__(CommandCenter)
+        center.commander_state = SimpleNamespace(
+            system_address=42, current_body="Sistema 2",
+        )
+        center._mimir_visible_body_ids = {1, 2}
+        center.surface_navigation = SimpleNamespace(
+            species="", distance_m=None, required_distance_m=None,
+            ready_for_sample=False,
+        )
+        center.database = Mock()
+        center.database.query.side_effect = (
+            [
+                {
+                    "body_id": 1, "body_name": "Sistema 1",
+                    "source_event": "FSSBodySignals", "signal_type": "Biological",
+                    "signal_count": 1, "genus": None, "species": None,
+                    "scan_type": None,
+                },
+                {
+                    "body_id": 2, "body_name": "Sistema 2",
+                    "source_event": "SAASignalsFound", "signal_type": "Biological",
+                    "signal_count": 1, "genus": "Bacteria", "species": None,
+                    "scan_type": None,
+                },
+            ],
+            [
+                {"body_id": 1, "body_name": "Sistema 1"},
+                {"body_id": 2, "body_name": "Sistema 2"},
+            ],
+        )
+
+        biology = center._dashboard_biology({
+            "Sistema 1": ("Stratum Tectonicas",),
+            "Sistema 2": ("Bacterium Informem",),
+        })
+
+        self.assertEqual(len(biology["details"]), 1)
+        self.assertEqual(biology["details"][0]["body"], "Sistema 2")
+        self.assertEqual(biology["details"][0]["confirmed"], ("Bacteria",))
+        self.assertEqual(biology["details"][0]["probable"], ())
+        self.assertEqual(biology["details"][0]["confirmation"], "DSS")
 
     def test_mimir_biology_is_rendered_as_vertical_planet_list(self) -> None:
         text = OdinDesktopApp._biology_details_text({"details": ({

@@ -34,10 +34,9 @@ class CommanderStateUpdater:
             self.commander_state.system_address,
         )
 
-        self.commander_state.current_body = event.get(
-            "Body",
-            self.commander_state.current_body,
-        )
+        # Un salto siempre abandona el contexto planetario anterior. El campo
+        # Body de FSDJump suele ser la estrella de llegada, no un planeta.
+        self.commander_state.current_body = ""
 
         self.commander_state.fuel_level = event.get(
             "FuelLevel",
@@ -104,6 +103,18 @@ class CommanderStateUpdater:
             "Population",
             self.commander_state.population,
         )
+
+    def handle_body_context(self, event: dict) -> None:
+        """Selecciona el planeta al aproximarse, aterrizar o desembarcar."""
+
+        body = event.get("Body") or event.get("BodyName")
+        if body:
+            self.commander_state.current_body = str(body)
+
+    def handle_leave_body(self, _event: dict) -> None:
+        """Abandona la selección planetaria al volver al espacio."""
+
+        self.commander_state.current_body = ""
         star_position = context.get("StarPos")
         if isinstance(star_position, list) and len(star_position) == 3:
             self.commander_state.star_position = tuple(star_position)

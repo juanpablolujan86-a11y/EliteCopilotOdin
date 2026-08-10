@@ -807,7 +807,9 @@ class OdinDesktopApp:
             signal_text = f" · {signals} señales" if signals else ""
             lines.append(f"◆ {item.get('body', 'Cuerpo desconocido')}{signal_text}")
             for species in item.get("confirmed", ()):
-                lines.append(f"  ✓ {species}")
+                source = item.get("confirmation")
+                suffix = f" · CONFIRMADA POR {source}" if source else ""
+                lines.append(f"  ✓ {species}{suffix}")
             probable_values = item.get("probable_values", {})
             probable_rewards = item.get("probable_rewards", {})
             for species in item.get("probable", ()):

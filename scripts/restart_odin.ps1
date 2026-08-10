@@ -5,6 +5,14 @@ $running = Get-CimInstance Win32_Process | Where-Object {
     $_.Name -eq "python.exe" -and $_.CommandLine -match "main\.py" -and
     ($_.ExecutablePath -eq $expectedPython -or $_.CommandLine -like "*$projectRoot*")
 }
+$packaged = Get-CimInstance Win32_Process | Where-Object {
+    $_.Name -eq "ODIN.exe" -and
+    $_.ExecutablePath -and
+    [System.IO.Path]::GetFullPath($_.ExecutablePath).StartsWith(
+        $projectRoot + "\",
+        [System.StringComparison]::OrdinalIgnoreCase
+    )
+}
 $staleConsoles = Get-CimInstance Win32_Process | Where-Object {
     $_.Name -eq "powershell.exe" -and
     $_.CommandLine -like "*\.venv\Scripts\python.exe*" -and
@@ -12,6 +20,9 @@ $staleConsoles = Get-CimInstance Win32_Process | Where-Object {
 }
 if ($running) {
     Stop-Process -Id @($running.ProcessId) -Force -ErrorAction SilentlyContinue
+}
+if ($packaged) {
+    Stop-Process -Id @($packaged.ProcessId) -Force -ErrorAction SilentlyContinue
 }
 if ($staleConsoles) {
     Stop-Process -Id @($staleConsoles.ProcessId) -Force -ErrorAction SilentlyContinue

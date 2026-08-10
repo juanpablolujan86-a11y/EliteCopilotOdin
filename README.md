@@ -115,6 +115,9 @@ bonificador ×5 disponible por primera pisada.
 También presenta el seguimiento de recolección por especie: progreso de 1/3 a
 3/3, distancia recorrida y restante, disponibilidad de la siguiente muestra y
 colecciones completadas.
+La vista se vacía al saltar a otro sistema, muestra únicamente el planeta activo
+al aproximarse o aterrizar y reemplaza las posibilidades por los géneros reales
+cuando el DSS completa el análisis de sus señales.
 
 El modo de consola anterior continúa disponible como respaldo:
 

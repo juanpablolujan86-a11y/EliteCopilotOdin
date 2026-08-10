@@ -175,6 +175,7 @@ class CommandCenter:
         self._route_replan_busy = threading.Event()
         self._officer_voice_messages: queue.Queue[VoiceMessageReady] = queue.Queue()
         self._surface_ready_announced: set[tuple[int, int]] = set()
+        self._mimir_visible_body_ids: set[int] = set()
         self.scientific_context = ScientificContextRegistry()
         self.command_memory = VoiceCommandMemory(self.database)
         self._last_voice_question = ""
@@ -574,6 +575,8 @@ class CommandCenter:
             commander_state_updater.handle_fsd_jump
         )
 
+        self.event_bus.subscribe("FSDJump", self._reset_mimir_dashboard)
+
         self.event_bus.subscribe(
             "FSDJump",
             exploration_processor.handle_fsd_jump
@@ -632,9 +635,17 @@ class CommandCenter:
 
         self.event_bus.subscribe(
             "SAASignalsFound",
+            self._observe_mimir_biology,
+        )
+        self.event_bus.subscribe(
+            "SAASignalsFound",
             exploration_processor.handle_saa_signals_found
         )
 
+        self.event_bus.subscribe(
+            "FSSBodySignals",
+            self._observe_mimir_biology,
+        )
         self.event_bus.subscribe(
             "FSSBodySignals",
             exploration_processor.handle_saa_signals_found
@@ -642,8 +653,17 @@ class CommandCenter:
 
         self.event_bus.subscribe(
             "ScanOrganic",
+            self._observe_mimir_biology,
+        )
+        self.event_bus.subscribe(
+            "ScanOrganic",
             exploration_processor.handle_scan_organic
         )
+
+        for event_name in ("ApproachBody", "Touchdown", "Disembark", "SupercruiseExit"):
+            self.event_bus.subscribe(event_name, commander_state_updater.handle_body_context)
+        for event_name in ("LeaveBody", "SupercruiseEntry"):
+            self.event_bus.subscribe(event_name, commander_state_updater.handle_leave_body)
 
         self.event_bus.subscribe(
             "ScanOrganic",
@@ -785,6 +805,8 @@ class CommandCenter:
         try:
             with redirect_stdout(silent_output):
                 for event in events:
+                    if event.get("event") in {"SAASignalsFound", "FSSBodySignals"}:
+                        self._observe_mimir_biology(event)
                     handler = handlers.get(event.get("event"))
                     if handler is None:
                         continue
@@ -1090,6 +1112,29 @@ class CommandCenter:
         })
         return result
 
+    def _reset_mimir_dashboard(self, _event: dict) -> None:
+        """Vacía la vista científica al comenzar un sistema nuevo."""
+
+        self._mimir_visible_body_ids.clear()
+        self.surface_navigation.reset()
+        self.dashboard_snapshot["biology"] = {
+            "bodies": 0, "species": 0, "predictions": {}, "details": (),
+        }
+
+    def _observe_mimir_biology(self, event: dict) -> None:
+        """Habilita un cuerpo cuando el Journal informa biología nueva."""
+
+        body_id = event.get("BodyID", event.get("Body"))
+        if body_id is None:
+            return
+        is_organic = event.get("event") == "ScanOrganic"
+        has_biology = bool(event.get("Genuses")) or any(
+            ExplorationProcessor._is_biological_signal(signal)
+            for signal in event.get("Signals", ())
+        )
+        if is_organic or has_biology:
+            self._mimir_visible_body_ids.add(int(body_id))
+
     def _dashboard_biology(
         self,
         predictions: dict[str, tuple[str, ...]],
@@ -1103,7 +1148,7 @@ class CommandCenter:
             rows = self.database.query(
                 """
                 SELECT body_id, body_name, source_event, signal_type,
-                       signal_count, genus, species
+                       signal_count, genus, species, scan_type
                 FROM biological_signals
                 WHERE system_address = ?
                 ORDER BY body_id, id
@@ -1119,11 +1164,15 @@ class CommandCenter:
             }
             for row in rows:
                 body_id = row["body_id"]
+                visible_ids = getattr(self, "_mimir_visible_body_ids", None)
+                if visible_ids is not None and body_id not in visible_ids:
+                    continue
                 body_name = row["body_name"] or known_names.get(body_id) or f"Cuerpo {body_id}"
                 key = (body_id, body_name)
                 item = bodies.setdefault(key, {
                     "body": body_name, "signals": 0,
                     "confirmed": set(), "probable": set(), "sampling": {},
+                    "dss_confirmed": False,
                 })
                 if (
                     row["source_event"] in {"FSSBodySignals", "SAASignalsFound"}
@@ -1135,6 +1184,8 @@ class CommandCenter:
                         item["confirmed"].update(
                             part.strip() for part in str(value).split(",") if part.strip()
                         )
+                if row["source_event"] == "SAASignalsFound" and row["genus"]:
+                    item["dss_confirmed"] = True
                 if row["source_event"] == "ScanOrganic":
                     sample_name = row["species"] or row["genus"] or "Biología"
                     progress = {"Log": 1, "Sample": 2, "Analyse": 3}.get(
@@ -1145,19 +1196,40 @@ class CommandCenter:
                     )
         by_name = {item["body"].casefold(): item for item in bodies.values()}
         for body_name, species in predictions.items():
+            body_id = next(
+                (identifier for identifier, name in known_names.items()
+                 if name.casefold() == body_name.casefold()),
+                None,
+            ) if self.commander_state.system_address else None
+            visible_ids = getattr(self, "_mimir_visible_body_ids", None)
+            if visible_ids is not None and body_id not in visible_ids:
+                continue
             item = by_name.get(body_name.casefold())
             if item is None:
                 item = {
                     "body": body_name, "signals": 0,
                     "confirmed": set(), "probable": set(), "sampling": {},
+                    "dss_confirmed": False,
                 }
                 bodies[(None, body_name)] = item
                 by_name[body_name.casefold()] = item
-            item["probable"].update(species)
+            if not item["dss_confirmed"] and not item["sampling"]:
+                item["probable"].update(species)
+        current_body = str(
+            getattr(self.commander_state, "current_body", "") or ""
+        ).casefold()
+        if current_body:
+            bodies = {
+                key: item for key, item in bodies.items()
+                if item["body"].casefold() == current_body
+            }
         details = tuple({
             "body": item["body"],
             "signals": item["signals"],
             "confirmed": tuple(sorted(item["confirmed"])),
+            "confirmation": "DSS" if item["dss_confirmed"] else (
+                "MUESTRA" if item["sampling"] else ""
+            ),
             "probable": tuple(sorted(item["probable"])),
             "probable_values": {
                 species: int(value)
