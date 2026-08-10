@@ -19,6 +19,9 @@ class SurfaceNavigationTracker:
         self.species = ""
         self.progress = 0
         self.sample_locations: list[tuple[float, float]] = []
+        self.distance_m: float | None = None
+        self.required_distance_m: float | None = None
+        self.ready_for_sample = False
         self._last_distance_band: int | None = None
         self._last_ready: bool | None = None
         self._cycle_id = 0
@@ -61,6 +64,9 @@ class SurfaceNavigationTracker:
                 self.sample_locations.append(location)
 
         if progress >= 3:
+            self.distance_m = None
+            self.required_distance_m = None
+            self.ready_for_sample = False
             return None
         return self._distance_update(only_when_changed=False)
 
@@ -85,6 +91,9 @@ class SurfaceNavigationTracker:
         )
         required = self.required_distance(self.genus)
         ready = distance >= required
+        self.distance_m = min(distance, required)
+        self.required_distance_m = required
+        self.ready_for_sample = ready
         band = int(distance // 25)
         if only_when_changed:
             # Una vez fuera del radio válido no seguimos aumentando el

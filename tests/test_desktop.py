@@ -68,6 +68,31 @@ class DesktopTests(unittest.TestCase):
             {"Bacterium Informem": 8_418_000},
         )
 
+    def test_mimir_dashboard_tracks_organic_sample_progress(self) -> None:
+        center = CommandCenter.__new__(CommandCenter)
+        center.commander_state = SimpleNamespace(system_address=42)
+        center.surface_navigation = SimpleNamespace(
+            species="Bacterium Informem", distance_m=75,
+            required_distance_m=100, ready_for_sample=False,
+        )
+        center.database = Mock()
+        center.database.query.side_effect = (
+            [{
+                "body_id": 5, "body_name": None,
+                "source_event": "ScanOrganic", "signal_type": None,
+                "signal_count": 1, "genus": "Bacterium",
+                "species": "Bacterium Informem", "scan_type": "Log",
+            }],
+            [{"body_id": 5, "body_name": "Prueba 4 a"}],
+        )
+
+        biology = center._dashboard_biology({})
+        sample = biology["details"][0]["sampling"][0]
+
+        self.assertEqual(sample["progress"], 1)
+        self.assertEqual(sample["distance_m"], 75)
+        self.assertEqual(sample["required_distance_m"], 100)
+
     def test_mimir_biology_is_rendered_as_vertical_planet_list(self) -> None:
         text = OdinDesktopApp._biology_details_text({"details": ({
             "body": "Prueba 4 a", "signals": 2, "confirmed": (),
@@ -91,6 +116,27 @@ class DesktopTests(unittest.TestCase):
             "  ◇ Bacterium Informem — PRIMERA PISADA ×5: ≈ 42.090.000 CR",
             "  ◇ Stratum Tectonicas — NORMAL: ≈ 19.010.800 CR",
         ])
+
+    def test_mimir_sample_tracking_shows_progress_distance_and_completion(self) -> None:
+        text = OdinDesktopApp._sampling_details_text({"details": ({
+            "body": "Prueba 4 a",
+            "sampling": (
+                {
+                    "species": "Bacterium Informem", "progress": 1,
+                    "distance_m": 63.5, "required_distance_m": 100,
+                    "ready": False,
+                },
+                {
+                    "species": "Stratum Tectonicas", "progress": 3,
+                    "distance_m": None, "required_distance_m": None,
+                    "ready": False,
+                },
+            ),
+        },)})
+
+        self.assertIn("Bacterium Informem · 1/3", text)
+        self.assertIn("64/100 m · faltan 36 m", text)
+        self.assertIn("Stratum Tectonicas · 3/3 COMPLETADA", text)
 
     def test_freyja_dashboard_exposes_active_trade_leg(self) -> None:
         center = CommandCenter.__new__(CommandCenter)

@@ -330,6 +330,17 @@ class OdinDesktopApp:
             bg=ELITE["surface"], fg=ELITE["amber"],
             font=("Cascadia Mono", 9), justify="left", wraplength=285,
         ).pack(fill="x", pady=(0, 7))
+        tk.Label(
+            mimir, text="SEGUIMIENTO DE MUESTRAS", anchor="w",
+            bg=ELITE["surface"], fg=ELITE["orange"],
+            font=("Segoe UI", 9, "bold"),
+        ).pack(fill="x", pady=(5, 3))
+        self.values["sampling_details"] = tk.StringVar(value="Sin muestras activas")
+        tk.Label(
+            mimir, textvariable=self.values["sampling_details"], anchor="nw",
+            bg=ELITE["surface"], fg=ELITE["text"],
+            font=("Cascadia Mono", 9), justify="left", wraplength=285,
+        ).pack(fill="x", pady=(0, 7))
         for key, label in (
             ("body", "Cuerpo actual"), ("samples", "Muestras completadas"),
         ):
@@ -469,6 +480,7 @@ class OdinDesktopApp:
             f"{biology.get('species', 0)} especies · {biology.get('bodies', 0)} planetas"
         )
         self.values["biology_details"].set(self._biology_details_text(biology))
+        self.values["sampling_details"].set(self._sampling_details_text(biology))
         self.values["body"].set(snapshot.get("body") or "—")
         self.values["samples"].set(str(expedition.get("species", 0)))
         injections = snapshot.get("injections", {})
@@ -816,6 +828,35 @@ class OdinDesktopApp:
                 lines.append("  ○ Especies por identificar")
             lines.append("")
         return "\n".join(lines).rstrip() or "Sin señales biológicas"
+
+    @staticmethod
+    def _sampling_details_text(biology: dict) -> str:
+        lines = []
+        for item in biology.get("details", ()):
+            sampling = item.get("sampling", ())
+            if not sampling:
+                continue
+            lines.append(f"◆ {item.get('body', 'Cuerpo desconocido')}")
+            for sample in sampling:
+                progress = int(sample.get("progress", 0) or 0)
+                species = sample.get("species", "Biología")
+                if progress >= 3:
+                    lines.append(f"  ✓ {species} · 3/3 COMPLETADA")
+                    continue
+                lines.append(f"  ◇ {species} · {progress}/3")
+                distance = sample.get("distance_m")
+                required = sample.get("required_distance_m")
+                if distance is not None and required:
+                    remaining = max(0, round(float(required) - float(distance)))
+                    if sample.get("ready"):
+                        lines.append("    LISTA PARA LA SIGUIENTE MUESTRA")
+                    else:
+                        lines.append(
+                            f"    {round(float(distance))}/{round(float(required))} m"
+                            f" · faltan {remaining} m"
+                        )
+            lines.append("")
+        return "\n".join(lines).rstrip() or "Sin muestras activas"
 
 
 def run_desktop(odin) -> None:

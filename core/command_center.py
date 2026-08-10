@@ -1123,7 +1123,7 @@ class CommandCenter:
                 key = (body_id, body_name)
                 item = bodies.setdefault(key, {
                     "body": body_name, "signals": 0,
-                    "confirmed": set(), "probable": set(),
+                    "confirmed": set(), "probable": set(), "sampling": {},
                 })
                 if (
                     row["source_event"] in {"FSSBodySignals", "SAASignalsFound"}
@@ -1135,13 +1135,21 @@ class CommandCenter:
                         item["confirmed"].update(
                             part.strip() for part in str(value).split(",") if part.strip()
                         )
+                if row["source_event"] == "ScanOrganic":
+                    sample_name = row["species"] or row["genus"] or "Biología"
+                    progress = {"Log": 1, "Sample": 2, "Analyse": 3}.get(
+                        row["scan_type"], 0
+                    )
+                    item["sampling"][sample_name] = max(
+                        progress, item["sampling"].get(sample_name, 0)
+                    )
         by_name = {item["body"].casefold(): item for item in bodies.values()}
         for body_name, species in predictions.items():
             item = by_name.get(body_name.casefold())
             if item is None:
                 item = {
                     "body": body_name, "signals": 0,
-                    "confirmed": set(), "probable": set(),
+                    "confirmed": set(), "probable": set(), "sampling": {},
                 }
                 bodies[(None, body_name)] = item
                 by_name[body_name.casefold()] = item
@@ -1165,6 +1173,25 @@ class CommandCenter:
                 ).items()
                 if species in item["probable"]
             },
+            "sampling": tuple({
+                "species": species,
+                "progress": progress,
+                "distance_m": (
+                    self.surface_navigation.distance_m
+                    if species == self.surface_navigation.species
+                    and progress in (1, 2) else None
+                ),
+                "required_distance_m": (
+                    self.surface_navigation.required_distance_m
+                    if species == self.surface_navigation.species
+                    and progress in (1, 2) else None
+                ),
+                "ready": (
+                    self.surface_navigation.ready_for_sample
+                    if species == self.surface_navigation.species
+                    and progress in (1, 2) else False
+                ),
+            } for species, progress in sorted(item["sampling"].items())),
         } for item in bodies.values() if item["signals"] or item["confirmed"] or item["probable"])
         return {
             "bodies": len(details),

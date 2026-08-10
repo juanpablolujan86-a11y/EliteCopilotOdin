@@ -98,6 +98,9 @@ cuando las voces están silenciadas o el sintetizador no está disponible.
 La pestaña MÍMIR agrupa las señales por planeta y muestra, junto a cada especie
 probable, su recompensa aproximada e indica si corresponde al valor normal o al
 bonificador ×5 disponible por primera pisada.
+También presenta el seguimiento de recolección por especie: progreso de 1/3 a
+3/3, distancia recorrida y restante, disponibilidad de la siguiente muestra y
+colecciones completadas.
 
 El modo de consola anterior continúa disponible como respaldo:
 
