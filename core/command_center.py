@@ -154,9 +154,10 @@ class CommandCenter:
         self.market_cache: MarketCache | None = None
         self._pending_freyja_trade_menu = False
         self._pending_freyja_cancel_confirmation = False
-        self._manual_trade_requests: queue.Queue[str] = queue.Queue()
+        self._manual_trade_requests: queue.Queue[tuple[str, str]] = queue.Queue()
         self._trade_calculation_busy = threading.Event()
         self._trade_requested_strategy = ""
+        self._trade_requested_commodity = ""
         self.voice_hotkey = WindowsHotkey()
         self._voice_busy = threading.Event()
         self._voice_questions: queue.Queue[str] = queue.Queue()
@@ -877,11 +878,14 @@ class CommandCenter:
 
             if not self._trade_calculation_busy.is_set():
                 try:
-                    trade_selection = self._manual_trade_requests.get_nowait()
+                    trade_request = self._manual_trade_requests.get_nowait()
                 except queue.Empty:
-                    trade_selection = ""
-                if trade_selection:
-                    self._start_freyja_trade_calculation(trade_selection)
+                    trade_request = None
+                if trade_request:
+                    trade_selection, commodity = trade_request
+                    self._start_freyja_trade_calculation(
+                        trade_selection, preferred_commodity=commodity
+                    )
 
             if (
                 self.config.push_to_talk_enabled
@@ -1095,6 +1099,7 @@ class CommandCenter:
                 )
             ),
             "requested_strategy": getattr(self, "_trade_requested_strategy", ""),
+            "requested_commodity": getattr(self, "_trade_requested_commodity", ""),
         }
         if not state:
             return result
@@ -2081,25 +2086,31 @@ class CommandCenter:
             return "powerplay"
         return None
 
-    def _start_freyja_trade_calculation(self, selection: str) -> None:
+    def _start_freyja_trade_calculation(
+        self, selection: str, preferred_commodity: str = ""
+    ) -> None:
         self._trade_calculation_busy.set()
         self._trade_requested_strategy = selection
         self._voice_busy.set()
         print("FREYJA: Consultando mercados de la Burbuja...\n")
         threading.Thread(
             target=self._run_freyja_trade_calculation,
-            args=(selection,),
+            args=(selection, preferred_commodity),
             name=f"freyja-{selection}-calculation",
             daemon=True,
         ).start()
 
-    def _run_freyja_trade_calculation(self, selection: str) -> None:
+    def _run_freyja_trade_calculation(
+        self, selection: str, preferred_commodity: str = ""
+    ) -> None:
         trade_database = DatabaseManager(self.config.data_root)
         try:
             self._announce_freyja_trade_start(selection)
             trade_database.connect()
             trade_database.create_tables()
-            self._calculate_freyja_trade(selection, MarketCache(trade_database))
+            self._calculate_freyja_trade(
+                selection, MarketCache(trade_database), preferred_commodity
+            )
         except Exception:
             self._start_fixed_voice_response(
                 "Se produjo un error al calcular la operaci\u00f3n comercial. Int\u00e9ntelo nuevamente, comandante.",
@@ -2109,8 +2120,11 @@ class CommandCenter:
             trade_database.disconnect()
             self._trade_calculation_busy.clear()
             self._trade_requested_strategy = ""
+            self._trade_requested_commodity = ""
 
-    def request_trade_calculation(self, selection: str) -> bool:
+    def request_trade_calculation(
+        self, selection: str, preferred_commodity: str = ""
+    ) -> bool:
         """Encola desde la interfaz uno de los cuatro modelos de FREYJA."""
 
         allowed = {"quick", "three_station", "expedition", "powerplay"}
@@ -2120,8 +2134,10 @@ class CommandCenter:
             or not self._manual_trade_requests.empty()
         ):
             return False
+        commodity = " ".join(str(preferred_commodity).casefold().split())
         self._trade_requested_strategy = selection
-        self._manual_trade_requests.put(selection)
+        self._trade_requested_commodity = commodity
+        self._manual_trade_requests.put((selection, commodity))
         return True
 
     def _announce_freyja_trade_start(self, selection: str) -> None:
@@ -2159,7 +2175,10 @@ class CommandCenter:
             self._voice_busy.clear()
             self.wake_listener.resume()
 
-    def _calculate_freyja_trade(self, selection: str, market_cache: MarketCache) -> None:
+    def _calculate_freyja_trade(
+        self, selection: str, market_cache: MarketCache,
+        preferred_commodity: str = "",
+    ) -> None:
         if blocker := self.active_trade_route.recalculation_blocker():
             self._start_fixed_voice_response(blocker, officer="FREYJA")
             return
@@ -2194,6 +2213,9 @@ class CommandCenter:
             [] if selection == "powerplay"
             else market_cache.opportunities(planning_profile)
         )
+        opportunities = self._filter_trade_commodity(
+            opportunities, preferred_commodity
+        )
         if selection == "quick":
             plan = QuickRouteOptimizer().choose(
                 planning_profile, opportunities,
@@ -2201,7 +2223,7 @@ class CommandCenter:
             )
             if plan is None:
                 plan = self._refresh_and_recalculate_freyja(
-                    selection, planning_profile, market_cache
+                    selection, planning_profile, market_cache, preferred_commodity
                 )
         elif selection == "three_station":
             plan = ThreeStationOptimizer().choose(
@@ -2210,7 +2232,7 @@ class CommandCenter:
             )
             if plan is None:
                 plan = self._refresh_and_recalculate_freyja(
-                    selection, planning_profile, market_cache
+                    selection, planning_profile, market_cache, preferred_commodity
                 )
         elif selection == "expedition":
             plan = TradeExpeditionOptimizer().choose(
@@ -2223,6 +2245,9 @@ class CommandCenter:
                         SpanshMarketClient(), self.BUBBLE_TRADE_CENTER, size=75
                     )
                     opportunities = market_cache.opportunities(planning_profile)
+                    opportunities = self._filter_trade_commodity(
+                        opportunities, preferred_commodity
+                    )
                     plan = TradeExpeditionOptimizer().choose(
                         planning_profile, opportunities, max_jumps=30
                         , max_age_hours=self.FREYJA_MARKET_MAX_AGE_HOURS
@@ -2244,6 +2269,9 @@ class CommandCenter:
                 planning_profile,
                 sell_power=self.trade_profile.powerplay_power,
             )
+            opportunities = self._filter_trade_commodity(
+                opportunities, preferred_commodity
+            )
             plan = PowerplayTradeOptimizer().choose(
                 planning_profile, opportunities,
                 max_age_hours=self.FREYJA_MARKET_MAX_AGE_HOURS,
@@ -2260,6 +2288,9 @@ class CommandCenter:
                         opportunities = market_cache.opportunities(
                             planning_profile,
                             sell_power=self.trade_profile.powerplay_power,
+                        )
+                        opportunities = self._filter_trade_commodity(
+                            opportunities, preferred_commodity
                         )
                         plan = PowerplayTradeOptimizer().choose(
                             planning_profile, opportunities,
@@ -2326,7 +2357,8 @@ class CommandCenter:
         )
 
     def _refresh_and_recalculate_freyja(
-        self, selection: str, profile, market_cache: MarketCache
+        self, selection: str, profile, market_cache: MarketCache,
+        preferred_commodity: str = "",
     ):
         try:
             market_cache.refresh_region(
@@ -2340,6 +2372,9 @@ class CommandCenter:
         else:
             max_age_hours = self.FREYJA_MARKET_MAX_AGE_HOURS
         opportunities = market_cache.opportunities(profile)
+        opportunities = self._filter_trade_commodity(
+            opportunities, preferred_commodity
+        )
         if selection == "quick":
             return QuickRouteOptimizer().choose(
                 profile, opportunities,
@@ -2354,6 +2389,16 @@ class CommandCenter:
             profile, opportunities, max_jumps=30,
             max_age_hours=max_age_hours,
         )
+
+    @staticmethod
+    def _filter_trade_commodity(opportunities, preferred_commodity: str):
+        preferred = " ".join(str(preferred_commodity).casefold().split())
+        if not preferred:
+            return opportunities
+        return [
+            opportunity for opportunity in opportunities
+            if preferred in opportunity.commodity.casefold()
+        ]
 
     @staticmethod
     def _quick_trade_voice_summary(plan) -> str:

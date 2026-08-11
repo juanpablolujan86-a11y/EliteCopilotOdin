@@ -365,6 +365,22 @@ class OdinDesktopApp:
             bg=ELITE["surface"], fg=ELITE["orange"],
             font=("Segoe UI", 10, "bold"),
         ).pack(fill="x", pady=(2, 7))
+        commodity_row = tk.Frame(freyja, bg=ELITE["surface"])
+        commodity_row.pack(fill="x", pady=(0, 8))
+        tk.Label(
+            commodity_row, text="MERCANCÍA", bg=ELITE["surface"],
+            fg=ELITE["muted"], font=("Segoe UI", 8),
+        ).pack(side="left", padx=(0, 8))
+        self.values["trade_commodity_input"] = tk.StringVar()
+        self.trade_commodity_entry = tk.Entry(
+            commodity_row,
+            textvariable=self.values["trade_commodity_input"],
+            bg=ELITE["surface_alt"], fg=ELITE["text"],
+            insertbackground=ELITE["orange"], relief="flat",
+            font=("Segoe UI", 9),
+        )
+        self.trade_commodity_entry.pack(side="left", fill="x", expand=True, ipady=5)
+        self.trade_commodity_entry.insert(0, "")
         trade_buttons = tk.Frame(freyja, bg=ELITE["surface"])
         trade_buttons.pack(fill="x", pady=(0, 8))
         self.trade_buttons = []
@@ -490,6 +506,9 @@ class OdinDesktopApp:
         trade = snapshot.get("trade", {})
         trade_calculating = bool(trade.get("calculating"))
         requested_strategy = trade.get("requested_strategy", "")
+        self.trade_commodity_entry.configure(
+            state="disabled" if trade_calculating else "normal"
+        )
         for button, strategy in zip(
             self.trade_buttons,
             ("quick", "three_station", "expedition", "powerplay"),
@@ -546,8 +565,13 @@ class OdinDesktopApp:
             "quick": "ruta rápida", "three_station": "tres estaciones",
             "expedition": "expedición comercial", "powerplay": "Powerplay",
         }
-        if self.odin.request_trade_calculation(strategy):
-            print(f"FREYJA: modalidad {labels[strategy]} solicitada desde la interfaz.")
+        commodity = self.values["trade_commodity_input"].get().strip()
+        if self.odin.request_trade_calculation(strategy, commodity):
+            product = f" para {commodity}" if commodity else ""
+            print(
+                f"FREYJA: modalidad {labels[strategy]}{product} "
+                "solicitada desde la interfaz."
+            )
             for button in self.trade_buttons:
                 button.configure(state="disabled")
             return

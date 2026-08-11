@@ -256,13 +256,35 @@ class DesktopTests(unittest.TestCase):
         center._manual_trade_requests = queue.Queue()
         center._trade_calculation_busy = threading.Event()
         center._trade_requested_strategy = ""
+        center._trade_requested_commodity = ""
 
-        self.assertTrue(center.request_trade_calculation("three_station"))
-        self.assertEqual(center._manual_trade_requests.get_nowait(), "three_station")
+        self.assertTrue(center.request_trade_calculation("three_station", " Gold "))
+        self.assertEqual(
+            center._manual_trade_requests.get_nowait(), ("three_station", "gold")
+        )
         self.assertEqual(center._trade_requested_strategy, "three_station")
+        self.assertEqual(center._trade_requested_commodity, "gold")
         self.assertFalse(center.request_trade_calculation("invalid"))
         center._trade_calculation_busy.set()
         self.assertFalse(center.request_trade_calculation("quick"))
+
+    def test_freyja_filters_market_options_by_requested_commodity(self) -> None:
+        opportunities = [
+            SimpleNamespace(commodity="gold"),
+            SimpleNamespace(commodity="silver"),
+            SimpleNamespace(commodity="golden algae"),
+        ]
+
+        filtered = CommandCenter._filter_trade_commodity(opportunities, " Gold ")
+
+        self.assertEqual(
+            [opportunity.commodity for opportunity in filtered],
+            ["gold", "golden algae"],
+        )
+        self.assertIs(
+            CommandCenter._filter_trade_commodity(opportunities, ""),
+            opportunities,
+        )
 
 
 if __name__ == "__main__":
