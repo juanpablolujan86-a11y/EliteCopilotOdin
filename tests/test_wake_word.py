@@ -15,6 +15,16 @@ class WakeWordTests(unittest.TestCase):
         self.assertFalse(listener.passive_enabled.is_set())
         listener.arm()
         self.assertTrue(listener.armed.is_set())
+        self.assertFalse(listener._recording_stop_signal.is_set())
+
+    def test_disabling_passive_mode_cancels_capture_already_in_progress(self):
+        listener = WakeWordListener(
+            Path("."), Mock(), recorder=Mock(), transcriber=Mock()
+        )
+
+        listener.enable_passive_listening(False)
+
+        self.assertTrue(listener._recording_stop_signal.is_set())
 
     def test_ignores_conversation_without_wake_word(self) -> None:
         self.assertEqual(interpret_wake_phrase("qué buen planeta"), (None, False))

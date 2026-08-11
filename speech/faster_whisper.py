@@ -6,6 +6,7 @@ import math
 import os
 import sys
 import threading
+import gc
 from pathlib import Path
 
 from core.config import Config
@@ -33,12 +34,15 @@ class FasterWhisperTranscriber:
         fallback: WhisperTranscriber | None = None,
         *,
         model_name: str = "small",
+        idle_release_seconds: float = 300.0,
     ) -> None:
         self.config = config or Config()
         self.fallback = fallback or WhisperTranscriber(model_preference="small")
         self.model_name = model_name
+        self.idle_release_seconds = idle_release_seconds
         self._model = None
         self._model_lock = threading.Lock()
+        self._release_timer: threading.Timer | None = None
         self._dll_handles: list[object] = []
 
     def warm_up(self) -> bool:
@@ -87,7 +91,31 @@ class FasterWhisperTranscriber:
             for segment in materialized
         ]
         confidence = sum(probabilities) / len(probabilities) if probabilities else 0.0
+        self._schedule_release()
         return text, confidence
+
+    def _schedule_release(self) -> None:
+        if self.idle_release_seconds <= 0:
+            return
+        with self._model_lock:
+            if self._release_timer is not None:
+                self._release_timer.cancel()
+            self._release_timer = threading.Timer(
+                self.idle_release_seconds, self.release
+            )
+            self._release_timer.daemon = True
+            self._release_timer.start()
+
+    def release(self) -> None:
+        """Libera el modelo después de un período sin órdenes de voz."""
+
+        with self._model_lock:
+            timer = self._release_timer
+            self._release_timer = None
+            self._model = None
+        if timer is not None and timer is not threading.current_thread():
+            timer.cancel()
+        gc.collect()
 
     def _load_model(self):
         if self._model is not None:

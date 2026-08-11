@@ -9,6 +9,14 @@ from speech.faster_whisper import FasterWhisperTranscriber
 
 
 class FasterWhisperTranscriberTests(unittest.TestCase):
+    def test_release_drops_loaded_model(self):
+        transcriber=FasterWhisperTranscriber(idle_release_seconds=0)
+        transcriber._model=Mock()
+
+        transcriber.release()
+
+        self.assertIsNone(transcriber._model)
+
     def test_default_model_is_compact_for_live_gameplay(self):
         transcriber=FasterWhisperTranscriber()
         self.assertEqual(transcriber.model_name,"small")

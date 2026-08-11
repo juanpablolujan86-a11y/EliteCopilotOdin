@@ -13,6 +13,19 @@ from speech.faster_whisper import FasterWhisperTranscriber
 from speech.wake_recognizer import VoskWakeRecognizer, WakeRecognitionError
 
 
+class _RecordingStopSignal:
+    """Cancela una captura pasiva sin detener definitivamente el listener."""
+
+    def __init__(self, listener: "WakeWordListener") -> None:
+        self.listener = listener
+
+    def is_set(self) -> bool:
+        return self.listener.stop_event.is_set() or (
+            self.listener._passive_cancelled.is_set()
+            and not self.listener.armed.is_set()
+        )
+
+
 def interpret_wake_phrase(
     text: str, *, forced: bool = False, waiting_for_question: bool = False
 ) -> tuple[str | None, bool]:
@@ -71,6 +84,8 @@ class WakeWordListener:
         self.paused = threading.Event()
         self.passive_enabled = threading.Event()
         self.passive_enabled.set()
+        self._passive_cancelled = threading.Event()
+        self._recording_stop_signal = _RecordingStopSignal(self)
         self._pause_condition = threading.Condition()
 
     def arm(self) -> None:
@@ -83,8 +98,12 @@ class WakeWordListener:
     def enable_passive_listening(self, enabled: bool) -> None:
         if enabled:
             self.passive_enabled.set()
+            self._passive_cancelled.clear()
         else:
             self.passive_enabled.clear()
+            # record_utterance puede estar capturando cuando se guarda la
+            # configuración. Esta señal interrumpe esa captura de inmediato.
+            self._passive_cancelled.set()
         with self._pause_condition:
             self._pause_condition.notify_all()
 
@@ -107,9 +126,11 @@ class WakeWordListener:
                     silence_seconds=(
                         1.0 if waiting_for_question or self.armed.is_set() else 0.25
                     ),
-                    stop_event=self.stop_event,
+                    stop_event=self._recording_stop_signal,
                 )
                 if audio is None:
+                    if not self.passive_enabled.is_set() and not self.armed.is_set():
+                        waiting_for_question = False
                     continue
                 recognizer = (
                     self.transcriber

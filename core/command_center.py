@@ -974,10 +974,11 @@ class CommandCenter:
     def apply_voice_activation_mode(self, *, wake_enabled: bool) -> None:
         """Aplica en caliente la escucha pasiva guardada en Configuración."""
 
+        if not wake_enabled:
+            self.wake_listener.armed.clear()
         self.wake_listener.enable_passive_listening(wake_enabled)
         if wake_enabled:
             return
-        self.wake_listener.armed.clear()
         for pending in (
             self._wake_activations,
             self._voice_questions,
@@ -1301,12 +1302,14 @@ class CommandCenter:
     def _prepare_wake_acknowledgement(self) -> None:
         try:
             warm_up = getattr(self.wake_listener.transcriber, "warm_up", None)
-            if callable(warm_up):
+            if self.config.wake_word_enabled and callable(warm_up):
                 ready = warm_up()
                 print(
                     "Reconocimiento de voz: "
                     + ("Faster Whisper Small listo" if ready else "whisper.cpp de respaldo")
                 )
+            elif not self.config.wake_word_enabled:
+                print("Reconocimiento de voz: carga diferida hasta presionar F8")
             voice = OfficerVoiceService(self.config)
             messages = tuple(
                 ("ODIN", message) for message in self.WAKE_ACKNOWLEDGEMENTS
