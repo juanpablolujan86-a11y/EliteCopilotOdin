@@ -745,6 +745,9 @@ class OdinDesktopApp:
                     push_to_talk_enabled=voice_mode.get() in {"ptt", "both"},
                     wake_word_enabled=voice_mode.get() in {"wake", "both"},
                 )
+                self.odin.apply_voice_activation_mode(
+                    wake_enabled=voice_mode.get() in {"wake", "both"}
+                )
                 voice_settings = self.voice_repository.load()
                 for assignment in voice_settings.officers.values():
                     assignment.volume = volume.get()
@@ -752,7 +755,10 @@ class OdinDesktopApp:
             except (OSError, ValueError) as error:
                 messagebox.showerror("ODIN", f"No se pudo guardar: {error}", parent=window)
                 return
-            print("Configuración personal guardada. Los cambios de red se aplicarán al reiniciar ODIN.")
+            print(
+                "Configuración personal guardada. El modo de voz ya está activo; "
+                "los cambios de red se aplicarán al reiniciar ODIN."
+            )
             messagebox.showinfo(
                 "ODIN", "Configuración guardada de forma segura.", parent=window
             )

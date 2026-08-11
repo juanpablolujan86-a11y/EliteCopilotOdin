@@ -16,6 +16,26 @@ from models.events.voice_message_ready import VoiceMessageReady
 from voice.service import VoiceServiceError
 
 class OfficerVoiceDispatchTests(unittest.TestCase):
+    def test_disabling_wake_word_applies_immediately_and_clears_pending_audio(self):
+        center = CommandCenter.__new__(CommandCenter)
+        center.wake_listener = Mock()
+        center.wake_listener.armed = threading.Event()
+        center.wake_listener.armed.set()
+        center._wake_activations = queue.Queue()
+        center._voice_questions = queue.Queue()
+        center._unclear_voice_commands = queue.Queue()
+        center._wake_activations.put(True)
+        center._voice_questions.put("estado")
+        center._unclear_voice_commands.put(True)
+
+        center.apply_voice_activation_mode(wake_enabled=False)
+
+        center.wake_listener.enable_passive_listening.assert_called_once_with(False)
+        self.assertFalse(center.wake_listener.armed.is_set())
+        self.assertTrue(center._wake_activations.empty())
+        self.assertTrue(center._voice_questions.empty())
+        self.assertTrue(center._unclear_voice_commands.empty())
+
     def test_officer_message_is_logged_even_when_voice_is_muted(self):
         center = CommandCenter.__new__(CommandCenter)
         center.config = SimpleNamespace()

@@ -971,6 +971,24 @@ class CommandCenter:
 
         self._stop_requested.set()
 
+    def apply_voice_activation_mode(self, *, wake_enabled: bool) -> None:
+        """Aplica en caliente la escucha pasiva guardada en Configuración."""
+
+        self.wake_listener.enable_passive_listening(wake_enabled)
+        if wake_enabled:
+            return
+        self.wake_listener.armed.clear()
+        for pending in (
+            self._wake_activations,
+            self._voice_questions,
+            self._unclear_voice_commands,
+        ):
+            while True:
+                try:
+                    pending.get_nowait()
+                except queue.Empty:
+                    break
+
     def _refresh_dashboard_snapshot(self) -> None:
         navigation = (
             self.navigation_manager.context
