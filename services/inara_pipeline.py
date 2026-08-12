@@ -41,10 +41,17 @@ class InaraJournalPipeline:
 
     @staticmethod
     def _with_cargo_inventory(event: dict, cargo_file: Path | None) -> dict:
-        if event.get("event") != "Cargo" or cargo_file is None:
+        if event.get("event") not in {"Cargo", "MarketBuy", "MarketSell"} or cargo_file is None:
             return event
         snapshot = json.loads(Path(cargo_file).read_text(encoding="utf-8-sig"))
         inventory = snapshot.get("Inventory")
         if not isinstance(inventory, list):
             raise ValueError("Cargo.json no contiene un inventario válido")
-        return {**event, "Inventory": inventory}
+        # Inara no acepta MarketBuy/MarketSell como eventos propios. Después
+        # de una operación se envía el inventario autoritativo de Cargo.json.
+        return {
+            **event,
+            "timestamp": snapshot.get("timestamp") or event.get("timestamp"),
+            "event": "Cargo",
+            "Inventory": inventory,
+        }

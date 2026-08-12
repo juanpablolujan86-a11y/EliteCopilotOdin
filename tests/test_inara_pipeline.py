@@ -46,6 +46,32 @@ class InaraJournalPipelineTests(unittest.TestCase):
             },cargo_file=self.root/"missing.json"),0)
         self.assertEqual(self.outbox.counts(),{})
 
+    def test_market_purchase_syncs_authoritative_cargo_snapshot(self):
+        cargo=self.root/"Cargo.json"
+        cargo.write_text(json.dumps({
+            "timestamp":"2026-08-09T12:00:03Z",
+            "Inventory":[{"Name":"tritium","Count":187,"Stolen":0}]
+        }),encoding="utf-8")
+        self.assertEqual(self.pipeline.capture({
+            "timestamp":"2026-08-09T12:00:00Z","event":"MarketBuy",
+            "Type":"tritium","Count":187,
+        },cargo_file=cargo),1)
+        queued=self.outbox.due()[0].event
+        self.assertEqual(queued["eventName"],"setCommanderInventoryCargo")
+        self.assertEqual(queued["eventTimestamp"],"2026-08-09T12:00:03Z")
+        self.assertEqual(
+            queued["eventData"],[{"itemName":"tritium","itemCount":187}]
+        )
+
+    def test_market_sale_syncs_empty_cargo_snapshot(self):
+        cargo=self.root/"Cargo.json"
+        cargo.write_text(json.dumps({"Inventory":[]}),encoding="utf-8")
+        self.assertEqual(self.pipeline.capture({
+            "timestamp":"2026-08-09T12:00:00Z","event":"MarketSell",
+            "Type":"gold","Count":2,
+        },cargo_file=cargo),1)
+        self.assertEqual(self.outbox.due()[0].event["eventData"],[])
+
     def test_bootstrap_restores_location_without_queueing_history(self):
         journal=self.root/"Journal.log"
         journal.write_text(
