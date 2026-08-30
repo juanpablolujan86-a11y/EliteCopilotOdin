@@ -9,6 +9,8 @@ import tempfile
 import uuid
 from pathlib import Path
 
+from platform_adapters.process import hidden_process_flags
+
 
 class AudioPlaybackError(RuntimeError):
     pass
@@ -116,7 +118,7 @@ Remove-Item -LiteralPath $path -Force
             timeout=60,
             check=False,
             env=environment,
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            creationflags=hidden_process_flags(),
         )
         if result.returncode:
             detail = result.stderr.strip().splitlines()[-1] if result.stderr.strip() else ""

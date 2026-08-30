@@ -8,6 +8,8 @@ import subprocess
 import uuid
 from pathlib import Path
 
+from platform_adapters.process import hidden_process_flags
+
 
 class TranscriptionError(RuntimeError):
     pass
@@ -59,10 +61,7 @@ class WhisperTranscriber:
             result = subprocess.run(
                 command, capture_output=True, text=True, encoding="utf-8",
                 errors="replace", timeout=120, check=False,
-                creationflags=(
-                    getattr(subprocess, "BELOW_NORMAL_PRIORITY_CLASS", 0)
-                    | getattr(subprocess, "CREATE_NO_WINDOW", 0)
-                ),
+                creationflags=hidden_process_flags(below_normal=True),
             )
         except (OSError, subprocess.TimeoutExpired) as error:
             raise TranscriptionError(f"Falló el reconocimiento de voz: {error}") from error
@@ -104,10 +103,7 @@ class WhisperTranscriber:
             result = subprocess.run(
                 command, capture_output=True, text=True, encoding="utf-8",
                 errors="replace", timeout=120, check=False,
-                creationflags=(
-                    getattr(subprocess, "BELOW_NORMAL_PRIORITY_CLASS", 0)
-                    | getattr(subprocess, "CREATE_NO_WINDOW", 0)
-                ),
+                creationflags=hidden_process_flags(below_normal=True),
             )
         except (OSError, subprocess.TimeoutExpired) as error:
             raise TranscriptionError(f"Falló el reconocimiento de voz: {error}") from error

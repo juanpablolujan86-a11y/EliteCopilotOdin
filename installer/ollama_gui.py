@@ -14,10 +14,11 @@ import urllib.request
 from pathlib import Path
 from tkinter import messagebox, ttk
 
+from platform_adapters.process import hidden_process_flags
+
 
 OLLAMA_URL = "https://ollama.com/download/OllamaSetup.exe"
 MODEL = "gemma3:4b"
-CREATE_NO_WINDOW = 0x08000000 if os.name == "nt" else 0
 ANSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 
 
@@ -49,7 +50,7 @@ def _ollama_path() -> Path | None:
     try:
         result = subprocess.run(
             ["where.exe", "ollama.exe"], capture_output=True, text=True,
-            creationflags=CREATE_NO_WINDOW, timeout=5,
+            creationflags=hidden_process_flags(), timeout=5,
         )
         first = result.stdout.splitlines()[0].strip() if result.returncode == 0 else ""
         return Path(first) if first else None
@@ -170,7 +171,8 @@ class OllamaSetupWindow:
                     return
                 self.messages.put(("indeterminate", "Instalando Ollama…", "La instalación se realiza en segundo plano."))
                 completed = subprocess.run(
-                    [str(installer), "/SILENT"], creationflags=CREATE_NO_WINDOW,
+                    [str(installer), "/SILENT"],
+                    creationflags=hidden_process_flags(),
                 )
                 try:
                     installer.unlink(missing_ok=True)
@@ -214,7 +216,7 @@ class OllamaSetupWindow:
         self.process = subprocess.Popen(
             [str(executable), "pull", MODEL], stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT, text=True, errors="replace", bufsize=1,
-            creationflags=CREATE_NO_WINDOW,
+            creationflags=hidden_process_flags(),
         )
         assert self.process.stdout is not None
         buffer = ""

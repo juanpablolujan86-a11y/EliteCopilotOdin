@@ -8,6 +8,8 @@ import time
 import urllib.request
 from pathlib import Path
 
+from platform_adapters.process import hidden_process_flags
+
 
 def ollama_executable() -> Path | None:
     candidates = (
@@ -37,14 +39,12 @@ def ensure_ollama_server(wait_seconds: float = 15.0) -> bool:
     executable = ollama_executable()
     if executable is None:
         return False
-    creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) | getattr(
-        subprocess, "DETACHED_PROCESS", 0
-    )
     try:
         subprocess.Popen(
             [str(executable), "serve"], cwd=str(executable.parent),
             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL, creationflags=creationflags,
+            stderr=subprocess.DEVNULL,
+            creationflags=hidden_process_flags(detached=True),
         )
     except OSError:
         return False

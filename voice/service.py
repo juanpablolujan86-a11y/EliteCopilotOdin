@@ -6,11 +6,17 @@ import hashlib
 from pathlib import Path
 
 from core.config import Config
+from platform_adapters.audio import (
+    AudioPlayer,
+    SpeechPlayer,
+    create_audio_player,
+    create_speech_player,
+)
 from security.secret_store import SecretStore, create_secret_store
 from voice.credentials import ELEVENLABS_TARGET
 from voice.edge import EdgeTtsClient, EdgeTtsError
 from voice.elevenlabs import ElevenLabsClient, ElevenLabsError
-from voice.playback import AudioPlaybackError, WindowsMp3Player, WindowsSpeechPlayer
+from voice.playback import AudioPlaybackError
 from voice.settings import VoiceSettingsRepository
 
 
@@ -32,15 +38,15 @@ class OfficerVoiceService:
         config: Config | None = None,
         credentials: SecretStore | None = None,
         client: ElevenLabsClient | None = None,
-        player: WindowsMp3Player | None = None,
-        windows_player: WindowsSpeechPlayer | None = None,
+        player: AudioPlayer | None = None,
+        windows_player: SpeechPlayer | None = None,
         edge_client: EdgeTtsClient | None = None,
     ) -> None:
         self.config = config or Config()
         self.credentials = credentials or create_secret_store(ELEVENLABS_TARGET)
         self.client = client or ElevenLabsClient()
-        self.player = player or WindowsMp3Player(self.config.data_root / "voice" / "cache")
-        self.windows_player = windows_player or WindowsSpeechPlayer()
+        self.player = player or create_audio_player(self.config.data_root / "voice" / "cache")
+        self.windows_player = windows_player or create_speech_player()
         self.edge_client = edge_client or EdgeTtsClient()
         self.repository = VoiceSettingsRepository(self.config.data_root)
 

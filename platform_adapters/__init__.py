@@ -3,9 +3,13 @@
 from platform_adapters.clipboard import ClipboardAdapter, copy_text, create_clipboard
 from platform_adapters.hotkey import HotkeyAdapter, create_hotkey
 from platform_adapters.single_instance import SingleInstanceAdapter, create_single_instance
+from platform_adapters.audio import AudioPlayer, SpeechPlayer, create_audio_player, create_speech_player
+from platform_adapters.process import hidden_process_flags
 
 __all__ = [
     "ClipboardAdapter", "copy_text", "create_clipboard",
     "HotkeyAdapter", "create_hotkey",
     "SingleInstanceAdapter", "create_single_instance",
+    "AudioPlayer", "SpeechPlayer", "create_audio_player", "create_speech_player",
+    "hidden_process_flags",
 ]
