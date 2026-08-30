@@ -9,6 +9,7 @@ from ctypes import wintypes
 from heimdall.bindings import BindingAction, BindingAudit, BindingInput
 from heimdall.cockpit import CockpitState
 from core.localization import text as localized_text
+from platform_adapters.cockpit import CockpitControlSender, create_cockpit_sender
 
 
 class WindowsEliteKeySender:
@@ -129,8 +130,12 @@ class WindowsEliteKeySender:
 class DockingAssist:
     """Decide acciones idempotentes usando Journal, Status y bindings reales."""
 
-    def __init__(self, sender=None, language: str = "es-419") -> None:
-        self.sender = sender or WindowsEliteKeySender()
+    def __init__(
+        self,
+        sender: CockpitControlSender | None = None,
+        language: str = "es-419",
+    ) -> None:
+        self.sender = sender or create_cockpit_sender()
         self.language = language
         self.enabled = False
         self.audit: BindingAudit | None = None
