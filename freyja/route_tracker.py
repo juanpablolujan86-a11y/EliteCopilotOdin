@@ -6,16 +6,19 @@ from pathlib import Path
 from core.internal_events import InternalEvent
 from heimdall.clipboard import write_text
 from models.events.voice_message_ready import VoiceMessageReady
+from core.localization import text as localized_text
 
 
 class ActiveTradeRoute:
     def __init__(
-        self, path: Path, event_bus, clipboard_writer=write_text, diagnostics=None
+        self, path: Path, event_bus, clipboard_writer=write_text, diagnostics=None,
+        language: str = "es-419",
     ) -> None:
         self.path = path
         self.event_bus = event_bus
         self.clipboard_writer = clipboard_writer
         self.diagnostics = diagnostics
+        self.language = language
         self.state = self._load()
         if self.state:
             self._record(
@@ -24,6 +27,9 @@ class ActiveTradeRoute:
                 fase=self.state.get("phase", "to_buy"),
                 total=len(self.state.get("legs", [])),
             )
+
+    def _t(self, key: str, **values) -> str:
+        return localized_text(key, self.language, **values)
 
     def activate(self, plan, strategy: str = "quick") -> None:
         trades = tuple(getattr(plan, "legs", ()) or ())
@@ -40,6 +46,8 @@ class ActiveTradeRoute:
                 "buy_station": item.buy_station,
                 "sell_system": item.sell_system,
                 "sell_station": item.sell_station,
+                "planned_buy_price": int(getattr(item, "buy_price", 0) or 0),
+                "planned_sell_price": int(getattr(item, "sell_price", 0) or 0),
             })
         self.state = {
             "index": 0, "phase": "to_buy", "last_arrival": "",
@@ -65,16 +73,33 @@ class ActiveTradeRoute:
         self.state["sold_units"] = 0
         self.state["phase"] = "to_sell"
         self.state["last_arrival"] = ""
+        actual_buy_price = int(event.get("BuyPrice", 0) or 0)
+        planned_sell_price = int(leg.get("planned_sell_price", 0) or 0)
+        projected_margin = (
+            (planned_sell_price - actual_buy_price) / actual_buy_price
+            if actual_buy_price > 0 else 0.0
+        )
+        self.state["actual_buy_price"] = actual_buy_price
+        self.state["projected_margin"] = projected_margin
         self._save()
         self._record("compra", producto=leg["commodity"], cantidad=count,
                      objetivo=leg["units"], sistema_venta=leg["sell_system"])
         self.clipboard_writer(leg["sell_system"])
+        if self.state.get("strategy") == "powerplay":
+            message = self._t(
+                "freyja.route.powerplay_purchase",
+                margin=projected_margin * 100,
+            )
+        else:
+            message = self._t(
+                "freyja.route.purchase", system=leg["sell_system"],
+                station=leg["sell_station"],
+            )
         self.event_bus.publish_internal(
             InternalEvent.VOICE_MESSAGE_READY,
             VoiceMessageReady(
                 "FREYJA",
-                f"Compra confirmada. Copié {leg['sell_system']} al portapapeles "
-                f"como sistema de venta para {leg['sell_station']}.",
+                message,
                 "compra comercial confirmada",
             ),
         )
@@ -105,8 +130,8 @@ class ActiveTradeRoute:
                 InternalEvent.VOICE_MESSAGE_READY,
                 VoiceMessageReady(
                     "FREYJA",
-                    f"Venta parcial confirmada. Quedan {remaining} toneladas "
-                    f"de {legs[index]['commodity']} por vender.",
+                    self._t("freyja.route.partial_sale", remaining=remaining,
+                            commodity=legs[index]["commodity"]),
                     "venta comercial parcial",
                 ),
             )
@@ -118,7 +143,7 @@ class ActiveTradeRoute:
             self.path.unlink(missing_ok=True)
             self._record("completada", producto=completed["commodity"],
                          tramos=len(legs))
-            message = "Ruta comercial completada, comandante."
+            message = self._t("freyja.route.completed")
         else:
             self.state["index"] = index
             self.state["phase"] = "to_buy"
@@ -130,12 +155,11 @@ class ActiveTradeRoute:
             self._record("tramo_completado", tramo=index, siguiente=index + 1,
                          total=len(legs), siguiente_producto=leg["commodity"])
             self.clipboard_writer(leg["buy_system"])
-            message = (
-                f"Siguiente tramo: compre {leg['units']} toneladas de "
-                f"{leg['commodity']} en {leg['buy_station']}, sistema "
-                f"{leg['buy_system']}, y véndalas en {leg['sell_station']}, "
-                f"sistema {leg['sell_system']}. Copié {leg['buy_system']} "
-                "al portapapeles."
+            message = self._t(
+                "freyja.route.next_leg", units=leg["units"],
+                commodity=leg["commodity"], buy_station=leg["buy_station"],
+                buy_system=leg["buy_system"], sell_station=leg["sell_station"],
+                sell_system=leg["sell_system"],
             )
         self.event_bus.publish_internal(
             InternalEvent.VOICE_MESSAGE_READY,
@@ -159,14 +183,14 @@ class ActiveTradeRoute:
         self._record("llegada", fase=phase, sistema=arrived,
                      producto=leg["commodity"])
         if phase == "to_buy":
-            message = (
-                f"Llegamos al sistema de compra. Diríjase a {leg['buy_station']} "
-                f"y compre {leg['units']} toneladas de {leg['commodity']}."
+            message = self._t(
+                "freyja.route.arrived_buy", station=leg["buy_station"],
+                units=leg["units"], commodity=leg["commodity"],
             )
         else:
-            message = (
-                f"Llegamos al sistema de venta. Diríjase a {leg['sell_station']} "
-                f"y venda {leg['units']} toneladas de {leg['commodity']}."
+            message = self._t(
+                "freyja.route.arrived_sell", station=leg["sell_station"],
+                units=leg["units"], commodity=leg["commodity"],
             )
         self.event_bus.publish_internal(
             InternalEvent.VOICE_MESSAGE_READY,
@@ -189,10 +213,10 @@ class ActiveTradeRoute:
         self._save()
         self._record("atraque", fase=phase, estacion=station,
                      producto=leg["commodity"])
-        action = "Compre" if phase == "to_buy" else "Venda"
-        message = (
-            f"Atraque confirmado en {station}. {action} "
-            f"{leg['units']} toneladas de {leg['commodity']}."
+        message = self._t(
+            "freyja.route.docked_buy" if phase == "to_buy" else
+            "freyja.route.docked_sell", station=station, units=leg["units"],
+            commodity=leg["commodity"],
         )
         self.event_bus.publish_internal(
             InternalEvent.VOICE_MESSAGE_READY,
@@ -202,13 +226,14 @@ class ActiveTradeRoute:
     def status_message(self) -> str:
         leg = self._current_leg()
         if leg is None:
-            return "No hay una ruta comercial activa, comandante."
+            return self._t("freyja.route.none")
         index = int(self.state.get("index", 0))
         total = len(self.state.get("legs", []))
         if self.state.get("phase", "to_buy") == "to_buy":
-            action = (
-                f"compre {leg['units']} toneladas de {leg['commodity']} en "
-                f"{leg['buy_station']}, sistema {leg['buy_system']}"
+            action = self._t(
+                "freyja.route.action_buy", units=leg["units"],
+                commodity=leg["commodity"], station=leg["buy_station"],
+                system=leg["buy_system"],
             )
         else:
             remaining = max(
@@ -216,15 +241,16 @@ class ActiveTradeRoute:
                 int(self.state.get("bought_units", leg["units"]))
                 - int(self.state.get("sold_units", 0)),
             )
-            action = (
-                f"venda {remaining} toneladas de {leg['commodity']} en "
-                f"{leg['sell_station']}, sistema {leg['sell_system']}"
+            action = self._t(
+                "freyja.route.action_sell", units=remaining,
+                commodity=leg["commodity"], station=leg["sell_station"],
+                system=leg["sell_system"],
             )
         remaining_legs = max(0, total - index)
         estimated_profit = int(self.state.get("estimated_profit", 0) or 0)
-        return (
-            f"Tramo {index + 1} de {total}: {action}. Quedan {remaining_legs} "
-            f"tramos y el beneficio total estimado es de {estimated_profit} créditos."
+        return self._t(
+            "freyja.route.status", current=index + 1, total=total,
+            action=action, remaining=remaining_legs, profit=estimated_profit,
         )
 
     def cancel(self) -> bool:
@@ -241,13 +267,11 @@ class ActiveTradeRoute:
         blocker = self.recalculation_blocker()
         if blocker is None:
             return None
-        return (
-            blocker.replace("No recalcularé la ruta mientras", "Advertencia:")
-            .replace(
-                "Complete la venta o cancele la ruta comercial.",
-                "Si cancela, Freyja dejará de guiar esa venta.",
-            )
-        )
+        leg = self._current_leg()
+        remaining = max(0, int(self.state.get("bought_units", leg["units"]))
+                        - int(self.state.get("sold_units", 0)))
+        return self._t("freyja.route.cancel_warning", remaining=remaining,
+                       commodity=leg["commodity"])
 
     def active_strategy(self) -> str | None:
         if not self.state:
@@ -267,11 +291,8 @@ class ActiveTradeRoute:
                 int(self.state.get("bought_units", leg["units"]))
                 - int(self.state.get("sold_units", 0)),
             )
-            return (
-                f"No recalcularé la ruta mientras queden {remaining} toneladas "
-                f"de {leg['commodity']} por vender. Complete la venta o cancele "
-                "la ruta comercial."
-            )
+            return self._t("freyja.route.recalc_blocker", remaining=remaining,
+                           commodity=leg["commodity"])
         return None
 
     def _save(self) -> None:

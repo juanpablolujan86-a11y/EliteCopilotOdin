@@ -277,6 +277,12 @@ class HeimdallDiagnostics:
 
     def record_planned_route(self, plan) -> None:
         next_waypoint = plan.next_waypoint
+        # ExactRoutePlan is returned by the galaxy plotter and intentionally
+        # does not expose the neutron planner's jump_range/efficiency fields.
+        # Diagnostics must accept both route models; logging must never abort
+        # an otherwise valid route calculation.
+        jump_range = float(getattr(plan, "jump_range", 0.0) or 0.0)
+        efficiency = getattr(plan, "efficiency", "n/a")
         self.logger.info(
             "ROUTE_PLANNED | proveedor=%s | estrategia=%s | origen=%s | "
             "destino=%s | alcance=%.2f ly | eficiencia=%s | distancia=%.2f ly | "
@@ -285,8 +291,8 @@ class HeimdallDiagnostics:
             plan.strategy,
             plan.source_system,
             plan.destination_system,
-            plan.jump_range,
-            plan.efficiency,
+            jump_range,
+            efficiency,
             plan.distance,
             plan.total_jumps,
             len(plan.waypoints),

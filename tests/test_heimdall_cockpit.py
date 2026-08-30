@@ -7,12 +7,15 @@ from heimdall.cockpit import (
     CockpitState,
     DOCKED,
     IN_MAIN_SHIP,
+    IN_SRV,
     LANDED,
+    LANDING_GEAR_DOWN,
     LIGHTS_ON,
     NIGHT_VISION_ON,
     SUPERCRUISE,
     parse_cockpit_intent,
 )
+from core.command_center import CommandCenter
 
 
 def audit() -> BindingAudit:
@@ -32,13 +35,28 @@ def audit() -> BindingAudit:
 
 
 class CockpitAdvisorTests(unittest.TestCase):
+    def test_recognizes_calibration_commands_in_english_and_portuguese(self) -> None:
+        expected = {
+            "request docking": "docking_request", "night vision": "night_vision",
+            "cargo scoop": "cargo_scoop", "landing gear": "landing_gear",
+            "hyperspace jump": "hyperspace", "solicitar atracação": "docking_request",
+            "visão noturna": "night_vision", "coletor de carga": "cargo_scoop",
+            "trem de pouso": "landing_gear", "salto no hiperespaço": "hyperspace",
+        }
+        for command, feature in expected.items():
+            with self.subTest(command=command):
+                intent = parse_cockpit_intent(command)
+                self.assertIsNotNone(intent)
+                self.assertEqual(intent.feature, feature)
+
     def test_reads_cockpit_flags(self) -> None:
         state = CockpitState.from_status(
-            {"Flags": IN_MAIN_SHIP | LIGHTS_ON | NIGHT_VISION_ON}
+            {"Flags": IN_MAIN_SHIP | LIGHTS_ON | NIGHT_VISION_ON | LANDING_GEAR_DOWN}
         )
         self.assertTrue(state.in_main_ship)
         self.assertTrue(state.lights_on)
         self.assertTrue(state.night_vision_on)
+        self.assertTrue(state.landing_gear_down)
 
     def test_reports_existing_state_without_simulating_key(self) -> None:
         advisor = CockpitAdvisor(audit())
@@ -60,7 +78,7 @@ class CockpitAdvisorTests(unittest.TestCase):
         answer = advisor.describe(parse_cockpit_intent("prendé las luces"))
         self.assertIn("No confirmo", answer)
 
-    def test_recognizes_docking_request_and_keeps_it_in_information_mode(self) -> None:
+    def test_recognizes_docking_request_as_contacts_panel_action(self) -> None:
         advisor = CockpitAdvisor(audit())
         advisor.update_status({"Flags": IN_MAIN_SHIP})
 
@@ -68,22 +86,60 @@ class CockpitAdvisorTests(unittest.TestCase):
         answer = advisor.describe(intent)
 
         self.assertEqual(intent.feature, "docking_request")
-        self.assertIn("Modo informativo", answer)
-        self.assertIn("O", answer)
-        self.assertIn("no enviaré ninguna pulsación", answer)
+        self.assertIn("panel de Contactos", answer)
 
-    def test_docking_request_is_blocked_in_incompatible_states(self) -> None:
+    def test_advisor_identifies_docking_as_contacts_panel_action(self) -> None:
         advisor = CockpitAdvisor(audit())
         intent = parse_cockpit_intent("pedí permiso para atracar")
-        cases = (
-            (IN_MAIN_SHIP | DOCKED, "ya está atracada"),
-            (IN_MAIN_SHIP | LANDED, "en superficie"),
-            (IN_MAIN_SHIP | SUPERCRUISE, "supercrucero"),
+        advisor.update_status({"Flags": IN_MAIN_SHIP})
+        self.assertIn("panel de Contactos", advisor.describe(intent))
+
+    def test_recognizes_short_cockpit_voice_commands(self) -> None:
+        night = parse_cockpit_intent("ODIN luz nocturna")
+        cargo = parse_cockpit_intent("ODIN, colector de carga")
+
+        self.assertEqual((night.feature, night.requested_state), ("night_vision", None))
+        self.assertEqual((cargo.feature, cargo.requested_state), ("cargo_scoop", None))
+
+    def test_recognizes_gear_and_hyperspace_commands(self) -> None:
+        gear = parse_cockpit_intent("ODIN, tren de aterrizaje")
+        jump = parse_cockpit_intent("ODIN, hipersalto")
+        self.assertEqual((gear.feature, gear.requested_state), ("landing_gear", None))
+        self.assertEqual((jump.feature, jump.requested_state), ("hyperspace", True))
+        self.assertEqual(
+            parse_cockpit_intent("hiper salto").feature, "hyperspace"
         )
-        for flags, expected in cases:
-            with self.subTest(flags=flags):
-                advisor.update_status({"Flags": flags})
-                self.assertIn(expected, advisor.describe(intent))
+        self.assertEqual(
+            parse_cockpit_intent("salto al hiperespacio").feature, "hyperspace"
+        )
+        self.assertTrue(CommandCenter._is_credible_voice_question("hipersalto"))
+        self.assertEqual(
+            parse_cockpit_intent("ODIN, baja el tren de aterrizaje").requested_state,
+            True,
+        )
+        self.assertEqual(
+            parse_cockpit_intent("ODIN, sube el tren de aterrizaje").requested_state,
+            False,
+        )
+
+    def test_recognizes_srv_lights_and_night_vision(self) -> None:
+        lights = parse_cockpit_intent("ODIN, encendé las luces del Scarab")
+        night = parse_cockpit_intent("ODIN, visión nocturna del SRV")
+        self.assertEqual((lights.feature, lights.requested_state), ("srv_lights", True))
+        self.assertEqual(
+            (night.feature, night.requested_state), ("srv_night_vision", None)
+        )
+        self.assertTrue(CockpitState.from_status({"Flags": IN_SRV}).in_srv)
+
+    def test_accepts_vrs_transcription_for_scarab(self) -> None:
+        intent = parse_cockpit_intent("ODIN, luces del VRS")
+        self.assertEqual(intent.feature, "srv_lights")
+
+    def test_recognizes_srv_cargo_scoop(self) -> None:
+        intent = parse_cockpit_intent("ODIN, colector de carga del Scarab")
+        self.assertEqual(
+            (intent.feature, intent.requested_state), ("srv_cargo_scoop", None)
+        )
 
 
 if __name__ == "__main__":

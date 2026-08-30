@@ -52,6 +52,19 @@ class InaraClientTests(unittest.TestCase):
         result=InaraClient(session).submit(self.credentials,[self.event])
         self.assertFalse(result.accepted); self.assertFalse(result.retryable)
 
+    def test_partial_rejection_reports_event_error_not_successful_header(self):
+        session=Mock(); session.post.return_value=self.response(payload={
+            "header":{"eventStatus":200},
+            "events":[{"eventStatus":400,"eventStatusText":"Missing property"}],
+        })
+        result=InaraClient(session).submit(self.credentials,[self.event])
+        self.assertFalse(result.accepted)
+        self.assertEqual(result.status,400)
+        self.assertIn("Missing property",result.detail)
+        self.assertEqual(len(result.event_results),1)
+        self.assertFalse(result.event_results[0].accepted)
+        self.assertEqual(result.event_results[0].status,400)
+
     def test_network_rate_limit_and_html_are_retryable(self):
         session=Mock(); session.post.side_effect=requests.ConnectionError("offline")
         self.assertTrue(InaraClient(session).submit(

@@ -4,11 +4,32 @@ import unittest
 from pathlib import Path
 
 from core.journal_reader import JournalReader
+from core.journal_watcher import JournalWatcher
 from core.processors.commander_state_updater import CommanderStateUpdater
 from state.commander_state import CommanderState
 
 
 class JournalBootstrapTestCase(unittest.TestCase):
+    def test_watcher_replays_new_journal_from_load_game(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            old = root / "Journal.old.log"
+            new = root / "Journal.new.log"
+            old.write_text('{"event":"FSDJump","StarSystem":"Old"}\n', encoding="utf-8")
+            new.write_text(
+                '{"event":"Commander","Name":"Zorro"}\n'
+                '{"event":"LoadGame","Credits":765738062}\n',
+                encoding="utf-8",
+            )
+            watcher = JournalWatcher(old)
+            watcher.start()
+
+            watcher.follow(new, replay_existing=True)
+            events = watcher.poll()
+
+        self.assertEqual([event["event"] for event in events], ["Commander", "LoadGame"])
+        self.assertEqual(events[-1]["Credits"], 765738062)
+
     def test_current_system_is_restored_without_replaying_events(self) -> None:
         events = [
             {
@@ -101,6 +122,7 @@ class JournalBootstrapTestCase(unittest.TestCase):
                 "event": "Powerplay", "Power": "Li Yong-Rui", "Rank": 25,
                 "Merits": 175715, "TimePledged": 50438411,
             },
+            {"event": "PowerplayMerits", "PowerplayMerits": 175900},
             {"event": "FSDJump", "StarSystem": "Sol", "SystemAddress": 1},
         ]
         with tempfile.TemporaryDirectory() as directory:
@@ -121,7 +143,7 @@ class JournalBootstrapTestCase(unittest.TestCase):
         self.assertEqual(state.ship_type_localised, "Caspian Explorer")
         self.assertEqual(state.powerplay_power, "Li Yong-Rui")
         self.assertEqual(state.powerplay_rank, 25)
-        self.assertEqual(state.powerplay_merits, 175715)
+        self.assertEqual(state.powerplay_merits, 175900)
 
     def test_expedition_sales_increase_known_credit_balance(self) -> None:
         state = CommanderState(credits=1000)
@@ -132,3 +154,27 @@ class JournalBootstrapTestCase(unittest.TestCase):
             "BioData": [{"Value": 100, "Bonus": 400}],
         })
         self.assertEqual(state.credits, 1750)
+
+    def test_carrier_bank_transfer_replaces_player_balance(self) -> None:
+        state = CommanderState(credits=765_738_062)
+        updater = CommanderStateUpdater(state)
+        updater.handle_balance_event({
+            "event": "CarrierBankTransfer",
+            "Deposit": 650_000_000,
+            "PlayerBalance": 115_712_464,
+            "CarrierBalance": 1_054_132_425,
+        })
+        self.assertEqual(state.credits, 115_712_464)
+
+    def test_latest_player_balance_prefers_newer_carrier_transfer(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            journal = Path(directory) / "Journal.test.log"
+            journal.write_text(
+                '{"event":"LoadGame","Credits":765738062}\n'
+                '{"event":"CarrierBankTransfer","PlayerBalance":115712464}\n',
+                encoding="utf-8",
+            )
+            event = JournalReader(Path(directory)).latest_player_balance_event()
+
+        self.assertEqual(event["event"], "CarrierBankTransfer")
+        self.assertEqual(event["PlayerBalance"], 115_712_464)

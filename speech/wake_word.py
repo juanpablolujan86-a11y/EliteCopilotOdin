@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import re
 import threading
+import logging
+from numbers import Real
 from pathlib import Path
 from typing import Callable
 
@@ -11,6 +13,9 @@ from speech.recorder import MicrophoneError, MicrophoneRecorder
 from speech.whisper import TranscriptionError, WhisperTranscriber
 from speech.faster_whisper import FasterWhisperTranscriber
 from speech.wake_recognizer import VoskWakeRecognizer, WakeRecognitionError
+
+
+logger = logging.getLogger("odin.voice")
 
 
 class _RecordingStopSignal:
@@ -62,6 +67,10 @@ class WakeWordListener:
         self.on_activation = on_activation or (lambda: None)
         self.on_unclear = on_unclear or (lambda: None)
         self.recorder = recorder or MicrophoneRecorder()
+        command_silence = getattr(self.recorder, "command_silence_seconds", 1.0)
+        self.command_silence_seconds = (
+            float(command_silence) if isinstance(command_silence, Real) else 1.0
+        )
         # La escucha permanente debe competir lo mínimo posible con el juego.
         # Base reconoce órdenes breves con mucha menos carga que Small; los
         # alias de interpret_wake_phrase cubren sus variantes de "ODIN".
@@ -124,7 +133,8 @@ class WakeWordListener:
                 audio = self.recorder.record_utterance(
                     self.audio_path,
                     silence_seconds=(
-                        1.0 if waiting_for_question or self.armed.is_set() else 0.25
+                        self.command_silence_seconds
+                        if waiting_for_question or self.armed.is_set() else 0.65
                     ),
                     stop_event=self._recording_stop_signal,
                 )
@@ -146,10 +156,20 @@ class WakeWordListener:
                 else:
                     text = recognizer.transcribe(audio)
                 text = text.strip()
+                logger.info(
+                    "VOICE_RECOGNIZED | mode=%s | text=%r",
+                    "command" if waiting_for_question or self.armed.is_set() else "wake",
+                    text,
+                )
             except (
                 MicrophoneError, TranscriptionError, WakeRecognitionError,
                 UnicodeError, OSError,
-            ):
+            ) as error:
+                logger.warning(
+                    "VOICE_RECOGNITION_FAILED | mode=%s | error=%s: %s",
+                    "command" if waiting_for_question or self.armed.is_set() else "wake",
+                    type(error).__name__, error,
+                )
                 # Si ODIN ya había confirmado que estaba escuchando, nunca debe
                 # fallar en silencio: solicita repetir la orden y queda listo
                 # para un nuevo intento.

@@ -38,6 +38,17 @@ class JournalWatcher:
 
             self.position = file.tell()
 
+    def follow(self, journal_file: Path, *, replay_existing: bool = False) -> None:
+        """Cambia al Journal nuevo creado por Elite durante la misma ejecución."""
+
+        self.journal_file = journal_file
+        if replay_existing:
+            # Commander y LoadGame contienen identidad y saldo y deben leerse
+            # aunque el archivo haya aparecido entre dos consultas.
+            self.position = 0
+        else:
+            self.start()
+
     def poll(self):
 
         """
@@ -46,12 +57,17 @@ class JournalWatcher:
 
         events = []
 
-        with open(
-            self.journal_file,
-            "r",
-            encoding="utf-8",
-            errors="ignore"
-        ) as file:
+        try:
+            file = open(
+                self.journal_file,
+                "r",
+                encoding="utf-8",
+                errors="ignore"
+            )
+        except (FileNotFoundError, PermissionError, OSError):
+            return events
+
+        with file:
 
             file.seek(self.position)
 

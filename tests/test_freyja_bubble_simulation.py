@@ -194,13 +194,33 @@ class FreyjaBubbleSimulationTests(unittest.TestCase):
         plan = PowerplayTradeOptimizer().choose(profile, [eligible])
 
         self.assertIsNotNone(plan)
-        self.assertTrue(plan.merit_eligible)
+        self.assertFalse(plan.merit_eligible)
         self.assertIsNone(plan.merit_estimate)
         self.assertGreater(plan.trade.estimated_profit, 0)
         self.assertIn("Compre", plan.summary())
         self.assertIn("sistema Sistema Compra", plan.summary())
         self.assertIn("sistema Sistema Venta", plan.summary())
-        self.assertIn("confirmar\u00e1 con el Journal", plan.summary())
+        self.assertIn("solo por créditos", plan.summary())
+
+    def test_powerplay_trade_requires_stock_for_ninety_percent_of_hold(self) -> None:
+        profile = TradeProfile(
+            "Sol", 100_000_000, 5_000_000, 1_000, 0, 30, (0, 0, 0),
+            powerplay_power="Li Yong-Rui",
+        )
+        scarce = self.opportunity(
+            commodity="silver", buy_price=10_000, sell_price=16_000,
+            supply=385, demand=10_000,
+        )
+        scarce = MarketOpportunity(
+            **{
+                field: getattr(scarce, field)
+                for field in scarce.__dataclass_fields__
+                if field not in {"sell_power", "sell_power_state"}
+            },
+            sell_power="Li Yong-Rui", sell_power_state="Stronghold",
+        )
+
+        self.assertIsNone(PowerplayTradeOptimizer().choose(profile, [scarce]))
 
     def test_powerplay_trade_rejects_wrong_power_or_low_margin(self) -> None:
         profile = TradeProfile(

@@ -26,9 +26,10 @@ def _normalize_voice_text(text: str) -> str:
 
 def parse_home_route_intent(text: str) -> HomeRouteIntent | None:
     lowered = _normalize_voice_text(text)
-    home = re.search(r"\b(?:casa|base)\b", lowered)
+    home = re.search(r"\b(?:casa|base|home)\b", lowered)
     movement = re.search(
-        r"\b(?:vamos|vamo|ir|viaj|ruta|llev|regres|volv|dorme)", lowered
+        r"\b(?:vamos|vamo|ir|viaj|ruta|llev|regres|volv|dorme|go|take|route|"
+        r"return|travel|rota|leve|voltar|retorn)", lowered
     )
     return HomeRouteIntent() if home and movement else None
 

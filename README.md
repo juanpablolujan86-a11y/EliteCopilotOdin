@@ -6,7 +6,7 @@ comandante y coordina oficiales especializados mediante un EventBus.
 
 ## Estado actual
 
-Versión actual: **v0.7.2-beta — MÍMIR contextual, HEIMDALL consolidado y FREYJA en pruebas**.
+Versión actual: **v0.8.0-beta — MÍMIR, HEIMDALL, FREYJA y BROKK beta**.
 
 ## Instalación para comandantes de prueba
 
@@ -15,6 +15,11 @@ directos y deja configuradas por defecto voces Edge en español para ODIN,
 MÍMIR, HEIMDALL y FREYJA. Durante la instalación ofrece, como opción marcada
 pero no obligatoria, instalar Ollama desde su distribución oficial y descargar
 `gemma3:4b`.
+
+La preparación opcional de Ollama utiliza una ventana gráfica propia de ODIN,
+sin abrir PowerShell. La descarga muestra porcentaje, velocidad, tamaño
+transferido y cantidad restante; la instalación y `ollama pull` se ejecutan en
+segundo plano sin consola visible.
 
 Sin Ollama, la lectura del Journal, la interfaz, las voces, las predicciones de
 MÍMIR, las rutas de HEIMDALL, el comercio de FREYJA y las órdenes programadas
@@ -137,6 +142,16 @@ Cada proveedor indica `CONFIGURADA` o `NO CONFIGURADA` sin mostrar el valor de
 la API key protegida.
 El modo de conversación también es configurable: sólo `Push to Talk (F8)`,
 sólo activación por la palabra `ODIN`, o ambos mecanismos simultáneamente.
+El selector de idioma admite español latinoamericano, español de España,
+inglés estadounidense, inglés británico y portugués de Brasil. Al cambiarlo,
+ODIN conserva volumen y velocidad pero asigna voces Edge compatibles a cada
+oficial. La traducción completa de todos los paneles se aplica progresivamente;
+el cambio de interfaz requiere reiniciar ODIN.
+La misma sección incluye `CALIBRAR MI VOZ`. El asistente pausa la escucha
+pasiva, presenta siete órdenes operativas seguras y muestra la transcripción de
+Whisper antes de permitir guardarla. El WAV temporal se elimina después de cada
+muestra; sólo queda la asociación confirmada, aislada por Frontier ID o nombre
+del comandante. `BORRAR PERFIL` elimina toda su memoria local de órdenes.
 Al cerrar la interfaz se conserva su tamaño y posición para volver a abrirla
 en el mismo monitor, incluso en escritorios con coordenadas negativas.
 El panel de Heimdall permite pegar un sistema de destino y solicitar una ruta
@@ -264,7 +279,17 @@ python -m unittest discover -s tests -v
 
 Las pruebas no modifican la biblioteca de conocimiento.
 
+## Datos externos
+
+Las fuentes locales y sus condiciones de uso están documentadas en
+[`docs/THIRD_PARTY_DATA.md`](docs/THIRD_PARTY_DATA.md).
+
 ## Próximo objetivo
 
-**Siguiente etapa:** navegación exobiológica de superficie y diseño del
-próximo oficial especializado de ODIN.
+**Siguiente etapa:** beta final para terceros y cierre de ODIN 1.0. La ruta
+larga de HEIMDALL, la calibración acústica local, los cinco idiomas y la
+sincronización de Inara ya están implementados y validados. Quedan pruebas
+reales de la síntesis FSD autorizada, los modos avanzados de BROKK y la
+instalación/voz en otros equipos. Las comprobaciones de méritos Powerplay
+permanecen aplazadas porque el Journal no confirmó méritos en las ventas
+controladas realizadas.

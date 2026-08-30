@@ -5,6 +5,7 @@ from pathlib import Path
 
 from core.database import DatabaseManager
 from heimdall.navigation import NavigationContextManager, RouteWaypoint
+from heimdall.fsd_specs import FSDModuleCatalog
 
 
 class NavigationContextManagerTestCase(unittest.TestCase):
@@ -60,6 +61,77 @@ class NavigationContextManagerTestCase(unittest.TestCase):
         self.assertEqual(context.current_position, (1.0, 2.0, 3.0))
         self.assertEqual(context.max_fuel_per_jump, 7.48)
         self.assertEqual(context.conservative_jumps_available, 16)
+
+    def test_exact_plotter_readiness_never_hides_missing_physical_data(self) -> None:
+        context = self.manager.context
+        context.current_system = "Sol"
+        context.fuel_capacity = 32
+        context.reserve_capacity = 0.63
+        context.unladen_mass = 400
+        context.fsd_optimal_mass = 1800
+        context.max_fuel_per_jump = 5
+
+        incomplete = context.exact_plotter_readiness()
+        self.assertFalse(incomplete["ready"])
+        self.assertEqual(
+            set(incomplete["missing"]), {"fuel_power", "fuel_multiplier"}
+        )
+
+        context.fsd_fuel_power = 2.0
+        context.fsd_fuel_multiplier = 0.012
+        self.assertTrue(context.exact_plotter_readiness()["ready"])
+
+    def test_loadout_combines_edmc_base_constants_with_engineering_override(self) -> None:
+        catalog_path = self.root / "modules.json"
+        catalog_path.write_text(json.dumps({
+            "int_hyperdrive_size5_class5": {
+                "optmass": 1050, "maxfuel": 5,
+                "fuelmul": 0.012, "fuelpower": 2.45,
+            }
+        }), encoding="utf-8")
+        manager = NavigationContextManager(
+            self.database, self.navroute, FSDModuleCatalog((catalog_path,))
+        )
+        manager.context.current_system = "Sol"
+
+        manager.handle_event({
+            "event": "Loadout", "UnladenMass": 400, "CargoCapacity": 64,
+            "FuelCapacity": {"Main": 32, "Reserve": 0.63},
+            "Modules": [{
+                "Slot": "FrameShiftDrive", "Item": "int_hyperdrive_size5_class5",
+                "Engineering": {"Modifiers": [
+                    {"Label": "FSDOptimalMass", "Value": 1692.6},
+                ]},
+            }],
+        })
+
+        self.assertEqual(manager.context.fsd_optimal_mass, 1692.6)
+        self.assertEqual(manager.context.fsd_fuel_power, 2.45)
+        self.assertEqual(manager.context.fsd_fuel_multiplier, 0.012)
+        self.assertTrue(manager.context.exact_plotter_readiness()["ready"])
+
+    def test_exact_parameters_validate_cargo_and_use_complete_ship_physics(self) -> None:
+        context = self.manager.context
+        context.current_system = "Sol"
+        context.cargo_capacity = 64
+        context.fuel_capacity = 32
+        context.reserve_capacity = 0.63
+        context.fuel_reservoir = 0.4
+        context.unladen_mass = 400
+        context.fsd_optimal_mass = 1800
+        context.max_fuel_per_jump = 5
+        context.fsd_fuel_power = 2.0
+        context.fsd_fuel_multiplier = 0.012
+        context.fsd_range_boost = 10.5
+
+        request = context.exact_plotter_parameters("Colonia", cargo=48)
+
+        self.assertEqual(request["source"], "Sol")
+        self.assertEqual(request["cargo"], 48)
+        self.assertEqual(request["base_mass"], 400.63)
+        self.assertEqual(request["range_boost"], 10.5)
+        with self.assertRaisesRegex(ValueError, "capacidad"):
+            context.exact_plotter_parameters("Colonia", cargo=65)
 
     def test_reads_route_and_classifies_scoopable_stars(self) -> None:
         self.navroute.write_text(json.dumps({"Route": [
@@ -138,6 +210,23 @@ class NavigationContextManagerTestCase(unittest.TestCase):
         self.assertEqual(progress.remaining_jumps, 0)
         self.assertIsNone(progress.next_waypoint)
 
+    def test_conventional_summary_uses_only_matching_real_game_route(self) -> None:
+        self.manager.context.current_address = 10
+        self.manager.context.route = (
+            RouteWaypoint("Inicio", 10, (0.0, 0.0, 0.0), "K"),
+            RouteWaypoint("Escala", 20, (3.0, 4.0, 0.0), "L"),
+            RouteWaypoint("Final", 30, (3.0, 4.0, 12.0), "G"),
+        )
+
+        summary = self.manager.context.conventional_route_summary("Final")
+
+        self.assertEqual(summary["total_jumps"], 2)
+        self.assertEqual(summary["remaining_distance_ly"], 17.0)
+        self.assertEqual(summary["scoopable_remaining"], 1)
+        self.assertEqual(
+            self.manager.context.conventional_route_summary("Otro destino"), {}
+        )
+
     def test_fuel_assessment_finds_next_scoopable_star(self) -> None:
         self.manager.context.current_address = 1
         self.manager.context.fuel_main = 20.0
@@ -207,6 +296,10 @@ class NavigationContextManagerTestCase(unittest.TestCase):
         charged = self.manager.context.high_energy_assessment()
         self.assertTrue(charged.charged)
         self.assertEqual(charged.cone_exposures_session, 1)
+        self.manager.handle_event({"event": "JetConeBoost", "BoostValue": 6.0})
+        self.assertEqual(
+            self.manager.context.high_energy_assessment().cone_exposures_session, 1
+        )
 
         self.manager.handle_event({
             "event": "FSDJump", "StarSystem": "Destino", "SystemAddress": 2,
@@ -219,6 +312,33 @@ class NavigationContextManagerTestCase(unittest.TestCase):
         self.assertEqual(used.last_boost_used, 4)
         self.assertEqual(used.boosted_jumps_session, 1)
         self.assertEqual(self.manager.context.last_jump_distance, 366.8)
+
+    def test_high_energy_guidance_uses_only_confirmed_event_stages(self) -> None:
+        self.manager.context.target_star_class = "N"
+        approach = self.manager.context.high_energy_guidance("FSDTarget")
+        self.assertEqual(approach.stage, "approach")
+        self.assertEqual(approach.star_type, "neutron")
+        self.assertFalse(approach.charged)
+
+        self.manager.handle_event({"event": "JetConeBoost", "BoostValue": 4.0})
+        charged = self.manager.context.high_energy_guidance("JetConeBoost")
+        self.assertEqual(charged.stage, "charged")
+        self.assertTrue(charged.charged)
+
+        self.manager.handle_event({
+            "event": "FSDJump", "StarSystem": "Siguiente", "BoostUsed": 4,
+        })
+        complete = self.manager.context.high_energy_guidance("FSDJump")
+        self.assertEqual(complete.stage, "boost_complete")
+        self.assertFalse(complete.charged)
+
+    def test_white_dwarf_guidance_is_always_a_warning(self) -> None:
+        self.manager.context.target_star_class = "DA"
+
+        guidance = self.manager.context.high_energy_guidance("FSDTarget")
+
+        self.assertEqual(guidance.star_type, "white_dwarf")
+        self.assertTrue(guidance.warning)
 
     def test_restore_does_not_duplicate_session_boost_counters(self) -> None:
         journal = self._journal([

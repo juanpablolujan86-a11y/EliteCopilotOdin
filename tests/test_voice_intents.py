@@ -4,6 +4,16 @@ from intelligence.intents import parse_home_route_intent, parse_neutron_route_in
 
 
 class VoiceIntentTests(unittest.TestCase):
+    def test_home_route_recognizes_english_commands(self) -> None:
+        for command in ("ODIN take me home", "let's go home", "route to base"):
+            with self.subTest(command=command):
+                self.assertIsNotNone(parse_home_route_intent(command))
+
+    def test_home_route_recognizes_portuguese_commands(self) -> None:
+        for command in ("ODIN vamos para casa", "me leve para casa", "rota para base"):
+            with self.subTest(command=command):
+                self.assertIsNotNone(parse_home_route_intent(command))
+
     def test_understands_base_and_home_aliases(self) -> None:
         self.assertIsNotNone(parse_home_route_intent("vamos a la base"))
         self.assertIsNotNone(parse_home_route_intent("ODIN vamos a casa"))

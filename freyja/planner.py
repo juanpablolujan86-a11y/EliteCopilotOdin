@@ -4,6 +4,7 @@ import json, math
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from core.localization import text as localized_text
 
 @dataclass(frozen=True, slots=True)
 class TradeProfile:
@@ -45,19 +46,18 @@ class QuickTradePlan:
     estimated_sell_price: int
     cargo_utilization: float
 
-    def sale_instruction(self) -> str:
-        unit = "tonelada" if self.recommended_sale_tons == 1 else "toneladas"
-        instruction = (
-            f"Comandante, vendé {self.recommended_sale_tons} {unit} de "
-            f"{self.opportunity.commodity} en {self.opportunity.sell_station}. "
+    def sale_instruction(self, language: str = "es-419") -> str:
+        instruction = localized_text(
+            "freyja.plan.sale", language, tons=self.recommended_sale_tons,
+            commodity=self.opportunity.commodity,
+            station=self.opportunity.sell_station,
         )
         if self.estimated_bulk_discount > 0:
-            return instruction + (
-                "La reducción estimada por volumen es de "
-                f"{self.estimated_bulk_discount * 100:.1f} por ciento, "
-                "dentro del límite aceptado."
+            return instruction + localized_text(
+                "freyja.plan.bulk_discount", language,
+                discount=self.estimated_bulk_discount * 100,
             )
-        return instruction + "No se estima penalización por volumen."
+        return instruction + localized_text("freyja.plan.no_bulk_discount", language)
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,18 +68,17 @@ class ThreeStationTradePlan:
     profit_per_minute: float
     total_jumps: int
 
-    def summary(self) -> str:
+    def summary(self, language: str = "es-419") -> str:
         stations = [self.legs[0].opportunity.buy_station]
         stations.extend(leg.opportunity.sell_station for leg in self.legs)
         first = self.legs[0]
         item = first.opportunity
-        return (
-            " → ".join(stations)
-            + f": {self.estimated_profit} créditos estimados en "
-            f"{self.total_jumps} saltos. Primer tramo: compre {first.units} "
-            f"toneladas de {item.commodity} en {item.buy_station}, sistema "
-            f"{item.buy_system}, y véndalas en {item.sell_station}, sistema "
-            f"{item.sell_system}."
+        return localized_text(
+            "freyja.plan.three_summary", language, route=" → ".join(stations),
+            profit=self.estimated_profit, jumps=self.total_jumps,
+            units=first.units, commodity=item.commodity,
+            buy_station=item.buy_station, buy_system=item.buy_system,
+            sell_station=item.sell_station, sell_system=item.sell_system,
         )
 
 
@@ -91,20 +90,20 @@ class TradeExpeditionPlan:
     profit_per_minute: float
     total_jumps: int
 
-    def summary(self) -> str:
+    def summary(self, language: str = "es-419") -> str:
         first=self.legs[0].opportunity
         last=self.legs[-1].opportunity
-        summary = (
-            f"La expedición comienza en {first.buy_station}, sistema "
-            f"{first.buy_system}, y finaliza en {last.sell_station}, sistema "
-            f"{last.sell_system}. Son {len(self.legs)} operaciones y "
-            f"{self.total_jumps} saltos, con {self.estimated_profit} "
-            f"créditos estimados. Primer tramo: compre {self.legs[0].units} "
-            f"toneladas de {first.commodity} en {first.buy_station} y "
-            f"véndalas en {first.sell_station}, sistema {first.sell_system}."
+        summary = localized_text(
+            "freyja.plan.expedition_summary", language,
+            buy_station=first.buy_station, buy_system=first.buy_system,
+            sell_station=last.sell_station, sell_system=last.sell_system,
+            operations=len(self.legs), jumps=self.total_jumps,
+            profit=self.estimated_profit, units=self.legs[0].units,
+            commodity=first.commodity, first_sell_station=first.sell_station,
+            first_sell_system=first.sell_system,
         )
         if any(leg.stale_hours > 24 for leg in self.legs):
-            summary += " Confirme los precios al llegar; algunos mercados tienen más de un día."
+            summary += localized_text("freyja.plan.stale_markets", language)
         return summary
 
 @dataclass(frozen=True, slots=True)
@@ -114,26 +113,21 @@ class PowerplayTradePlan:
     merit_eligible: bool
     merit_estimate: int | None = None
 
-    def summary(self) -> str:
-        eligibility = (
-            "La venta es elegible para generar m\u00e9ritos de Powerplay; "
-            "la cantidad se confirmar\u00e1 con el Journal."
-            if self.merit_eligible else
-            "La venta genera cr\u00e9ditos, pero no cumple las condiciones de m\u00e9ritos."
-        )
+    def summary(self, language: str = "es-419") -> str:
         item = self.trade.opportunity
-        return (
-            f"Compre {self.trade.units} toneladas de {item.commodity} en "
-            f"{item.buy_station}, sistema {item.buy_system}, y v\u00e9ndalas en "
-            f"{item.sell_station}, sistema {item.sell_system}. La ganancia "
-            f"estimada es de {self.trade.estimated_profit} cr\u00e9ditos en "
-            f"{item.jumps} saltos. {eligibility}"
+        return localized_text(
+            "freyja.plan.powerplay_summary", language, units=self.trade.units,
+            commodity=item.commodity, buy_station=item.buy_station,
+            buy_system=item.buy_system, sell_station=item.sell_station,
+            sell_system=item.sell_system, profit=self.trade.estimated_profit,
+            jumps=item.jumps,
         )
 
 class TradeProfileBuilder:
     LARGE_SHIPS = {
         "anaconda", "belugaliner", "cutter", "federation_corvette",
         "type9", "type9_heavy", "type10", "type10_defender",
+        "panthermkii", "panther_clipper_mkii", "pantherclippermkii",
     }
 
     @staticmethod
@@ -164,6 +158,7 @@ class PowerplayTradeOptimizer:
     """Prioriza comercio rentable dentro del territorio de la potencia afiliada."""
 
     MIN_PROFIT_MARGIN = 0.40
+    MIN_CARGO_UTILIZATION = 0.90
     ELIGIBLE_STATES = frozenset({
         "acquisition", "exploited", "fortified", "stronghold", "controlled",
     })
@@ -198,10 +193,11 @@ class PowerplayTradeOptimizer:
             )
             if same_power and state in self.ELIGIBLE_STATES and margin >= self.MIN_PROFIT_MARGIN:
                 candidates.append(opportunity)
+        kwargs.setdefault("min_cargo_utilization", self.MIN_CARGO_UTILIZATION)
         trade = self.quick.choose(profile, candidates, **kwargs)
         if trade is None:
             return None
-        return PowerplayTradePlan(trade, power, True, None)
+        return PowerplayTradePlan(trade, power, False, None)
 
 class QuickRouteOptimizer:
     BULK_FULL_PRICE_RATIO = 0.25
@@ -216,6 +212,7 @@ class QuickRouteOptimizer:
         max_age_hours=8.0,
         max_bulk_discount=0.08,
         max_profit_sacrifice=0.08,
+        min_cargo_utilization=0.0,
     ):
         plans=[]
         excluded = {
@@ -254,6 +251,8 @@ class QuickRouteOptimizer:
             profit=(estimated_sell_price-item.buy_price)*units
             minutes=max(1.0, 4.0+item.jumps*1.25+self._supercruise_minutes(item.station_distance_ls))
             utilization=units/profile.cargo_free if profile.cargo_free else 0.0
+            if utilization < min_cargo_utilization:
+                continue
             plans.append(QuickTradePlan(item,units,item.buy_price*units,profit,minutes,
                                         profit/minutes,age,units,bulk_discount,
                                         estimated_sell_price,utilization))

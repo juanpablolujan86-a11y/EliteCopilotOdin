@@ -45,6 +45,7 @@ class ScientificOfficer:
         species_file: Path,
         rules_file: Path,
         minimum_value: int = 1_000_000,
+        language: str = "es-419",
     ) -> None:
         self.predictor = SpeciesPredictor(
             species_file=species_file,
@@ -56,7 +57,7 @@ class ScientificOfficer:
         )
 
         self.recommendation_engine = (
-            ScientificRecommendationEngine()
+            ScientificRecommendationEngine(language)
         )
 
     def predict_species(

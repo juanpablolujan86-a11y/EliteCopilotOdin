@@ -100,7 +100,8 @@ class VoiceCommandMemory:
         return 0.90 if movement and aliases else 0.0
 
     def remember(
-        self, commander: str, phrase: str, intent: str, payload: dict[str, str]
+        self, commander: str, phrase: str, intent: str, payload: dict[str, str],
+        *, source: str = "adaptive",
     ) -> None:
         normalized = normalize_phrase(phrase)
         if not normalized:
@@ -110,19 +111,38 @@ class VoiceCommandMemory:
             """
             INSERT INTO voice_command_memory
                 (commander_key, normalized_phrase, original_phrase, intent,
-                 payload_json, use_count, confirmation_count, enabled,
+                 payload_json, use_count, confirmation_count, enabled, source,
                  created_at, last_used_at)
-            VALUES (?, ?, ?, ?, ?, 1, 0, 1, ?, ?)
+            VALUES (?, ?, ?, ?, ?, 1, 0, 1, ?, ?, ?)
             ON CONFLICT(commander_key, normalized_phrase) DO UPDATE SET
                 original_phrase=excluded.original_phrase,
                 intent=excluded.intent,
                 payload_json=excluded.payload_json,
+                source=excluded.source,
                 use_count=voice_command_memory.use_count+1,
                 enabled=1,
                 last_used_at=excluded.last_used_at
             """,
-            (commander, normalized, phrase.strip(), intent, json.dumps(payload), now, now),
+            (
+                commander, normalized, phrase.strip(), intent,
+                json.dumps(payload), source, now, now,
+            ),
         )
+
+    def count(self, commander: str, *, source: str | None = None) -> int:
+        query = "SELECT COUNT(*) FROM voice_command_memory WHERE commander_key=?"
+        parameters: tuple = (commander,)
+        if source is not None:
+            query += " AND source=?"
+            parameters = (commander, source)
+        return int(self.database.query(query, parameters)[0][0])
+
+    def forget_commander(self, commander: str) -> int:
+        count = self.count(commander)
+        self.database.execute(
+            "DELETE FROM voice_command_memory WHERE commander_key=?", (commander,)
+        )
+        return count
 
     def confirm(self, commander: str, phrase: str) -> bool:
         normalized = normalize_phrase(phrase)

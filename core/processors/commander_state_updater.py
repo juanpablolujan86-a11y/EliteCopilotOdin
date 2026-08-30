@@ -47,6 +47,18 @@ class CommanderStateUpdater:
             "Population",
             self.commander_state.population,
         )
+        self.commander_state.controlling_power = str(
+            event.get("ControllingPower", "") or ""
+        )
+        self.commander_state.powerplay_state = str(
+            event.get("PowerplayState", "") or ""
+        )
+        self.commander_state.powerplay_reinforcement = int(
+            event.get("PowerplayStateReinforcement", 0) or 0
+        )
+        self.commander_state.powerplay_undermining = int(
+            event.get("PowerplayStateUndermining", 0) or 0
+        )
 
         star_position = event.get("StarPos")
         if isinstance(star_position, list) and len(star_position) == 3:
@@ -102,6 +114,24 @@ class CommanderStateUpdater:
         self.commander_state.population = context.get(
             "Population",
             self.commander_state.population,
+        )
+        self.commander_state.controlling_power = str(
+            context.get("ControllingPower", self.commander_state.controlling_power) or ""
+        )
+        self.commander_state.powerplay_state = str(
+            context.get("PowerplayState", self.commander_state.powerplay_state) or ""
+        )
+        self.commander_state.powerplay_reinforcement = int(
+            context.get(
+                "PowerplayStateReinforcement",
+                self.commander_state.powerplay_reinforcement,
+            ) or 0
+        )
+        self.commander_state.powerplay_undermining = int(
+            context.get(
+                "PowerplayStateUndermining",
+                self.commander_state.powerplay_undermining,
+            ) or 0
         )
         star_position = context.get("StarPos")
         if isinstance(star_position, list) and len(star_position) == 3:
@@ -199,3 +229,12 @@ class CommanderStateUpdater:
         else:
             earned = 0
         self.commander_state.credits += earned
+
+    def handle_balance_event(self, event: dict) -> None:
+        """Actualiza el saldo con valores absolutos informados por el Journal."""
+
+        balance = event.get("PlayerBalance")
+        if balance is None:
+            balance = event.get("Credits")
+        if balance is not None:
+            self.commander_state.credits = int(balance)

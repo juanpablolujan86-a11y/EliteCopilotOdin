@@ -19,6 +19,7 @@ class FreyjaMarketSourceTests(unittest.TestCase):
         self.assertEqual(self.cache.ingest_market_file(path),1)
         row=self.db.query("SELECT * FROM freyja_market_commodities")[0]
         self.assertEqual((row["commodity"],row["stock"]),("gold",50))
+        self.assertEqual((row["buy_price"],row["sell_price"]),(100,90))
     def test_spansh_client_uses_station_endpoint(self):
         response=Mock(); response.json.return_value={"record":{"market_id":7,"name":"Galileo"}}
         session=Mock(); session.get.return_value=response
@@ -34,6 +35,33 @@ class FreyjaMarketSourceTests(unittest.TestCase):
         self.assertEqual(request.args[0],"https://spansh.co.uk/api/stations/search")
         self.assertEqual(request.kwargs["json"]["reference_coords"]["x"],-43.25)
         self.assertTrue(request.kwargs["json"]["filters"]["has_market"]["value"])
+
+    def test_spansh_client_can_search_stations_without_requiring_market(self):
+        response=Mock(); response.json.return_value={"results":[]}
+        session=Mock(); session.post.return_value=response
+
+        SpanshMarketClient(session).stations_near(
+            (1,2,3),require_market=False
+        )
+
+        payload=session.post.call_args.kwargs["json"]
+        self.assertEqual(payload["filters"],{})
+
+    def test_spansh_client_filters_stations_by_controlling_power(self):
+        response=Mock(); response.json.return_value={"results":[{"market_id":8}]}
+        session=Mock(); session.post.return_value=response
+
+        records=SpanshMarketClient(session).stations_near_power(
+            (1,2,3),"Li Yong-Rui",page=2
+        )
+
+        self.assertEqual(records,({"market_id":8},))
+        payload=session.post.call_args.kwargs["json"]
+        self.assertEqual(
+            payload["filters"]["system_controlling_power"]["value"],
+            "Li Yong-Rui",
+        )
+        self.assertEqual(payload["page"],2)
     def test_builds_realistic_opportunity_between_cached_markets(self):
         current=datetime.now(timezone.utc).isoformat()
         self.cache.ingest_spansh_station({"market_id":1,"system_name":"A","name":"Uno",
@@ -76,6 +104,63 @@ class FreyjaMarketSourceTests(unittest.TestCase):
         self.assertEqual(row["has_large_pad"],1)
         self.assertEqual(row["power_name"],"Li Yong-Rui")
         self.assertEqual(row["station_type"],"Coriolis Starport")
+
+    def test_cached_powerplay_sales_filter_system_commodity_and_large_pad(self):
+        for market_id, system, station, large, price in (
+            (1, "Objetivo", "Puesto pequeño", False, 500),
+            (2, "Objetivo", "Puerto grande", True, 450),
+            (3, "Fuera", "Puerto rival", True, 900),
+        ):
+            self.cache.ingest_spansh_station({
+                "market_id": market_id, "system_name": system, "name": station,
+                "has_large_pad": large, "market_updated_at": "2026-08-01T00:00:00Z",
+                "market": [{"commodity": "silver", "sell_price": price, "demand": 100}],
+            })
+
+        sales = self.cache.sales_in_systems(
+            "Silver", ("Objetivo",), requires_large_pad=True
+        )
+
+        self.assertEqual(len(sales), 1)
+        self.assertEqual(sales[0]["station_name"], "Puerto grande")
+        self.assertEqual(sales[0]["sell_price"], 450)
+
+    def test_cached_stations_respect_candidate_system_and_large_pad(self):
+        for market_id, system, station, large in (
+            (1, "Objetivo", "Puesto pequeño", False),
+            (2, "Objetivo", "Puerto grande", True),
+            (3, "Fuera", "Puerto ajeno", True),
+        ):
+            self.cache.ingest_spansh_station({
+                "market_id": market_id, "system_name": system, "name": station,
+                "has_large_pad": large, "distance_to_arrival": 300,
+                "market_updated_at": "2026-08-01T00:00:00Z", "market": [],
+            })
+
+        stations = self.cache.stations_in_systems(
+            ("Objetivo",), requires_large_pad=True
+        )
+
+        self.assertEqual(len(stations), 1)
+        self.assertEqual(stations[0]["station_name"], "Puerto grande")
+
+    def test_station_services_are_persisted_and_filterable(self):
+        self.cache.ingest_spansh_station({
+            "market_id": 91, "system_name": "Objetivo", "name": "Cartográfica",
+            "has_large_pad": True,
+            "services": ["Universal Cartographics", "Refuel"], "market": [],
+        })
+        self.cache.ingest_spansh_station({
+            "market_id": 92, "system_name": "Objetivo", "name": "Sin servicio",
+            "has_large_pad": True, "services": ["Refuel"], "market": [],
+        })
+
+        stations = self.cache.stations_with_service(
+            ("Objetivo",), "universal_cartographics", requires_large_pad=True
+        )
+
+        self.assertEqual(len(stations), 1)
+        self.assertEqual(stations[0]["station_name"], "Cartográfica")
 
     def test_opportunity_uses_actual_oldest_timestamp_not_text_order(self):
         older="2026-01-01T01:00:00+02:00"

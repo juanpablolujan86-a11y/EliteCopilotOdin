@@ -27,7 +27,31 @@ class VoskWakeRecognizer:
 
             with wave.open(str(audio), "rb") as recording:
                 grammar = json.dumps(
-                    ["odin", "odín", "olín", "odim", "[unk]"],
+                    [
+                        "odin", "odín", "olín", "odim",
+                        "odin solicita atraque", "odín solicita atraque",
+                        "odin solicita aterrizaje", "odin pide atraque",
+                        "odin tren de aterrizaje", "odín tren de aterrizaje",
+                        "odin despliega el tren de aterrizaje",
+                        "odín despliega el tren de aterrizaje",
+                        "odin repliega el tren de aterrizaje",
+                        "odín repliega el tren de aterrizaje",
+                        "odin baja el tren de aterrizaje",
+                        "odín baja el tren de aterrizaje",
+                        "odin sube el tren de aterrizaje",
+                        "odín sube el tren de aterrizaje",
+                        "odin luz nocturna", "odin visión nocturna",
+                        "odin colector de carga", "odin compuerta de carga",
+                        "odin hipersalto", "odín hipersalto",
+                        "odin hiper salto", "odín hiper salto",
+                        "odin salto hiperespacial", "odín salto hiperespacial",
+                        "odin salto al hiperespacio", "odín salto al hiperespacio",
+                        "odin donde vendo mi carga minera",
+                        "odín dónde vendo mi carga minera",
+                        "odin busca donde vender los minerales",
+                        "odín busca dónde vender los minerales",
+                        "[unk]",
+                    ],
                     ensure_ascii=False,
                 )
                 recognizer = KaldiRecognizer(

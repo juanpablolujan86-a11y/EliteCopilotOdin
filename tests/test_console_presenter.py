@@ -193,6 +193,24 @@ class ConsolePresenterTestCase(unittest.TestCase):
         self.assertIn("30/88 saltos", output.getvalue())
         self.assertIn("faltan 58", output.getvalue())
 
+    def test_operational_output_uses_selected_language(self) -> None:
+        presenter = ConsolePresenter("en-US")
+        output = io.StringIO()
+        with redirect_stdout(output):
+            presenter.show_route_progress(RouteClipboardUpdate(
+                arrived_system="Intermediate",
+                copied_system=None,
+                route_complete=False,
+                waypoint_index=1,
+                jumps_completed=30,
+                jumps_remaining=58,
+                total_jumps=88,
+            ))
+
+        self.assertIn("HEIMDALL route", output.getvalue())
+        self.assertIn("58 remaining", output.getvalue())
+        self.assertNotIn("saltos", output.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

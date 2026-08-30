@@ -30,6 +30,11 @@ class EDDNConfigTests(unittest.TestCase):
         self.assertTrue(config.push_to_talk_enabled)
         self.assertTrue(config.wake_word_enabled)
 
+    def test_language_defaults_safely_and_accepts_supported_locale(self):
+        self.assertEqual(self.config({}).language, "es-419")
+        self.assertEqual(self.config({"language": "EN-gb"}).language, "en-GB")
+        self.assertEqual(self.config({"language": "invalid"}).language, "es-419")
+
     def test_desktop_geometry_accepts_secondary_monitor_coordinates(self):
         self.assertEqual(
             self.config({"desktop_geometry": "1180x720-1920+120"}).desktop_geometry,
@@ -47,6 +52,7 @@ class EDDNConfigTests(unittest.TestCase):
             config.update_preferences(
                 eddn_capture_enabled=True,
                 eddn_upload_enabled=True,
+                language="pt-BR",
                 ignored_secret="never-written",
             )
 
@@ -54,6 +60,7 @@ class EDDNConfigTests(unittest.TestCase):
             self.assertTrue(payload["eddn_capture_enabled"])
             self.assertTrue(payload["eddn_upload_enabled"])
             self.assertNotIn("ignored_secret", payload)
+            self.assertEqual(payload["language"], "pt-BR")
             self.assertTrue(config.eddn_upload_enabled)
 
 

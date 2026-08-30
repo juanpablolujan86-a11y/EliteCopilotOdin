@@ -7,6 +7,7 @@ import time
 from dataclasses import dataclass
 from math import dist
 from pathlib import Path
+from core.localization import normalize_language, text
 
 
 FSD_INJECTION_RECIPES = {
@@ -76,11 +77,18 @@ class FSDInjectionInventory:
         for material in recipe
     )
 
-    def __init__(self, path: Path, *, clock=time.monotonic) -> None:
+    def __init__(self, path: Path, *, clock=time.monotonic, language: str = "es-419") -> None:
         self.path = path
         self.clock = clock
+        self.language = normalize_language(language)
         self.materials = self._load()
         self.pending_authorization: PendingFSDInjectionAuthorization | None = None
+
+    def _t(self, key: str, **values) -> str:
+        return text(key, self.language, **values)
+
+    def _grade(self, grade: str) -> str:
+        return self._t(f"fsd.grade.{grade}")
 
     def handle(self, event: dict) -> None:
         kind = str(event.get("event", ""))
@@ -144,12 +152,8 @@ class FSDInjectionInventory:
 
     def voice_summary(self) -> str:
         available = self.availability()
-        return (
-            "Puedo preparar "
-            f"{available.basic} inyecciones básicas, {available.standard} estándar "
-            f"y {available.premium} premium. No utilizaré materiales sin su "
-            "autorización, comandante."
-        )
+        return self._t("fsd.summary", basic=available.basic,
+                       standard=available.standard, premium=available.premium)
 
     def recommend(
         self, distance_ly: float, base_range_ly: float
@@ -177,30 +181,17 @@ class FSDInjectionInventory:
         recommendation = self.recommend(distance_ly, base_range_ly)
         self.pending_authorization = None
         if recommendation.base_range_ly <= 0:
-            return "Todavía no conozco el alcance real de la nave, comandante."
+            return self._t("fsd.no_range")
         if recommendation.already_reachable:
-            return (
-                f"El salto de {recommendation.distance_ly:.1f} años luz está dentro "
-                "del alcance normal. No hace falta consumir una inyección FSD."
-            )
+            return self._t("fsd.reachable", distance=f"{recommendation.distance_ly:.1f}")
         if not recommendation.reachable_with_injection:
-            return (
-                f"El salto de {recommendation.distance_ly:.1f} años luz supera incluso "
-                f"el alcance premium de {recommendation.boosted_range_ly:.1f} años luz."
-            )
-        label = FSD_INJECTION_LABELS[recommendation.grade]
+            return self._t("fsd.beyond_premium", distance=f"{recommendation.distance_ly:.1f}", range=f"{recommendation.boosted_range_ly:.1f}")
+        label = self._grade(recommendation.grade)
         if not recommendation.available:
-            return (
-                f"El salto requiere como mínimo una inyección {label}, pero no hay "
-                "materiales suficientes para fabricarla."
-            )
+            return self._t("fsd.missing", grade=label)
         self._prepare_authorization(recommendation)
-        return (
-            f"El salto requiere como mínimo una inyección {label}. Elevaría el "
-            f"alcance a {recommendation.boosted_range_ly:.1f} años luz. No la "
-            "utilizaré sin su autorización. Si desea continuar, diga: autorizo "
-            "la inyección FSD."
-        )
+        return self._t("fsd.authorization_request", grade=label,
+                       range=f"{recommendation.boosted_range_ly:.1f}")
 
     def route_requirements(
         self, route, current_index: int | None, base_range_ly: float
@@ -236,62 +227,46 @@ class FSDInjectionInventory:
         self, route, current_index: int | None, base_range_ly: float
     ) -> str:
         if base_range_ly <= 0:
-            return "Todavía no conozco el alcance real de la nave, comandante."
+            return self._t("fsd.no_range")
         self.pending_authorization = None
         requirements = self.route_requirements(route, current_index, base_range_ly)
         if current_index is None:
-            return "El sistema actual no coincide con la ruta cargada, comandante."
+            return self._t("fsd.route_mismatch")
         if not requirements:
-            return (
-                "Los tramos convencionales restantes están dentro del alcance "
-                "normal de la nave; no hace falta una inyección FSD."
-            )
+            return self._t("fsd.route_clear")
         first = requirements[0]
         recommendation = first.recommendation
         if not recommendation.reachable_with_injection:
-            detail = "no puede resolverse ni siquiera con una inyección premium"
+            detail = self._t("fsd.detail_impossible")
         else:
-            label = FSD_INJECTION_LABELS[recommendation.grade]
-            detail = f"requiere como mínimo una inyección {label}"
+            label = self._grade(recommendation.grade)
+            detail = self._t("fsd.detail_required", grade=label)
             if not recommendation.available:
-                detail += ", pero faltan materiales"
+                detail += self._t("fsd.detail_missing")
             else:
                 self._prepare_authorization(
                     recommendation,
                     first.source_system,
                     first.destination_system,
                 )
-        count_text = "1 tramo" if len(requirements) == 1 else f"{len(requirements)} tramos"
-        return (
-            f"Encontré {count_text} fuera del alcance normal. El "
-            f"primero va de {first.source_system} a {first.destination_system}, "
-            f"son {recommendation.distance_ly:.1f} años luz y {detail}. No "
-            "utilizaré materiales sin su autorización."
-        )
+        count_text = self._t("fsd.segment.one") if len(requirements) == 1 else self._t("fsd.segment.many", count=len(requirements))
+        return self._t("fsd.route_summary", count=count_text, source=first.source_system,
+                       destination=first.destination_system,
+                       distance=f"{recommendation.distance_ly:.1f}", detail=detail)
 
     def authorize_pending_voice(self) -> str:
         pending = self.pending_authorization
         self.pending_authorization = None
         if pending is None:
-            return (
-                "No hay una propuesta de inyección FSD pendiente. Primero debo "
-                "evaluar un salto concreto."
-            )
+            return self._t("fsd.no_pending")
         if self.clock() > pending.expires_at:
-            return (
-                "La propuesta de inyección FSD venció. Debo volver a evaluar el "
-                "salto antes de autorizarla."
-            )
-        label = FSD_INJECTION_LABELS[pending.grade]
+            return self._t("fsd.expired")
+        label = self._grade(pending.grade)
         route_detail = (
-            f" para el salto de {pending.source_system} a {pending.destination_system}"
+            self._t("fsd.route_detail", source=pending.source_system, destination=pending.destination_system)
             if pending.source_system and pending.destination_system else ""
         )
-        return (
-            f"Autorización registrada para una inyección {label}{route_detail}. "
-            "Realice la síntesis desde el panel de inventario. HEIMDALL verificará "
-            "el evento del Journal; ODIN no enviará pulsaciones."
-        )
+        return self._t("fsd.authorized", grade=label, route=route_detail)
 
     def _prepare_authorization(
         self,

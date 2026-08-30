@@ -1,5 +1,9 @@
-"""Versión visible de ODIN durante el desarrollo."""
+"""Versión visible de ODIN durante el desarrollo y las distribuciones."""
 
+import os
 
-VERSION = "0.7.2-beta"
-CAPABILITY = "MÍMIR contextual, HEIMDALL consolidado y FREYJA en pruebas"
+VERSION = os.environ.get("ODIN_VERSION_OVERRIDE", "0.8.0-beta")
+CAPABILITY = os.environ.get(
+    "ODIN_CAPABILITY_OVERRIDE",
+    "MÍMIR, HEIMDALL, FREYJA y BROKK beta",
+)

@@ -9,6 +9,7 @@ a = Analysis(
     pathex=[str(root)],
     binaries=[],
     datas=[
+        (str(root / "assets" / "odin_raven.ico"), "assets"),
         (str(root / "knowledge" / "biology" / "species.json"), "knowledge/biology"),
         (str(root / "knowledge" / "biology" / "prediction_rules.json"), "knowledge/biology"),
         (str(root / "knowledge" / "external" / "explodata" / "LICENSE.txt"), "knowledge/external/explodata"),
@@ -22,7 +23,7 @@ a = Analysis(
     hiddenimports=["tkinter", "tkinter.ttk"],
     hookspath=[],
     hooksconfig={},
-    runtime_hooks=[],
+    runtime_hooks=[str(root / "installer" / "runtime_pre_brokk.py")],
     excludes=["PySide6", "watchdog"],
     noarchive=False,
 )
@@ -39,6 +40,7 @@ exe = EXE(
     strip=False,
     upx=True,
     console=False,
+    icon=str(root / "assets" / "odin_raven.ico"),
     disable_windowed_traceback=False,
 )
 

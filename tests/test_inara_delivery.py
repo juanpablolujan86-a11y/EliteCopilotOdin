@@ -5,7 +5,7 @@ import tempfile
 import unittest
 
 from core.database import DatabaseManager
-from services.inara_client import InaraSubmissionResult
+from services.inara_client import InaraEventResult, InaraSubmissionResult
 from services.inara_credentials import InaraCredentials
 from services.inara_delivery import InaraDeliveryService
 from services.inara_outbox import InaraOutbox
@@ -49,6 +49,21 @@ class InaraDeliveryServiceTests(unittest.TestCase):
         with self.assertLogs("odin.inara",level="WARNING"):
             service.process_once(now=self.now)
         self.assertEqual(self.outbox.counts(),{"pending":1})
+
+    def test_mixed_batch_keeps_success_and_rejects_only_invalid_event(self):
+        self.outbox.enqueue({
+            "eventName":"setCommanderRankPower",
+            "eventTimestamp":"2026-08-09T12:01:00Z",
+            "eventData":{"powerName":"Test"},
+        },now=self.now)
+        result=InaraSubmissionResult(False,False,400,"Missing rank",(
+            InaraEventResult(True,False,200,""),
+            InaraEventResult(False,False,400,"No rank value provided."),
+        ))
+        service,_=self.service(result)
+        with self.assertLogs("odin.inara",level="INFO"):
+            self.assertEqual(service.process_once(now=self.now),2)
+        self.assertEqual(self.outbox.counts(),{"sent":1,"rejected":1})
 
 
 if __name__=="__main__": unittest.main()

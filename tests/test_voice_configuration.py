@@ -6,7 +6,9 @@ from unittest.mock import Mock, patch
 
 from voice.elevenlabs import ElevenLabsClient, ElevenLabsError
 from voice.key_file import PLACEHOLDER, import_key_file
-from voice.settings import VoiceSettingsRepository
+from voice.settings import (
+    VoiceSettingsRepository, apply_language_voice_preset,
+)
 
 
 class VoiceSettingsTests(unittest.TestCase):
@@ -30,6 +32,23 @@ class VoiceSettingsTests(unittest.TestCase):
             self.assertEqual(loaded.officers["MÍMIR"].provider, "elevenlabs")
             payload = json.loads(repository.path.read_text(encoding="utf-8"))
             self.assertNotIn("api_key", json.dumps(payload).lower())
+
+    def test_language_presets_assign_edge_voices_to_every_officer(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repository = VoiceSettingsRepository(Path(directory))
+            settings = repository.load()
+            original_volume = settings.officers["ODIN"].volume
+
+            apply_language_voice_preset(settings, "en-GB")
+
+            self.assertEqual(settings.officers["ODIN"].voice, "en-GB-RyanNeural")
+            self.assertEqual(settings.officers["FREYJA"].voice, "en-GB-LibbyNeural")
+            self.assertEqual(settings.officers["BROKK"].voice, "en-GB-RyanNeural")
+            self.assertEqual(settings.officers["ODIN"].volume, original_volume)
+            self.assertTrue(all(
+                assignment.provider == "edge"
+                for assignment in settings.officers.values()
+            ))
 
 
 class ElevenLabsClientTests(unittest.TestCase):

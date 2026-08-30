@@ -18,6 +18,7 @@ class InaraEventMapper:
     def __init__(self) -> None:
         self.current_system = ""
         self.current_station = ""
+        self.power_ranks: dict[str, int] = {}
 
     def map(self, journal_event: dict) -> tuple[dict, ...]:
         if not isinstance(journal_event, dict):
@@ -349,6 +350,13 @@ class InaraEventMapper:
             rank = -1
         elif kind in {"PowerplayJoin", "PowerplayDefect"} and not isinstance(rank, int):
             rank = 0
+        if isinstance(rank, int) and not isinstance(rank, bool):
+            self.power_ranks[str(power).casefold()] = rank
+        else:
+            rank = self.power_ranks.get(str(power).casefold())
+        # Inara exige rankValue incluso cuando el Journal sólo actualiza méritos.
+        if not isinstance(rank, int) or isinstance(rank, bool):
+            return ()
         if isinstance(rank, int) and not isinstance(rank, bool):
             data["rankValue"] = rank
         if isinstance(merits, int) and not isinstance(merits, bool):

@@ -37,6 +37,7 @@ from models.events.organic_scan_updated import OrganicScanUpdated
 from models.events.voice_message_ready import VoiceMessageReady
 from state.commander_state import CommanderState
 from mimir.surface_navigation import SurfaceNavigationTracker
+from core.localization import text as localized_text
 
 
 FIRST_FOOTFALL_MESSAGES = (
@@ -46,6 +47,7 @@ FIRST_FOOTFALL_MESSAGES = (
     "Felicidades, comandante. Este planeta ya puede presumir de haber sido pisado por un primate espacial certificado.",
     "Primeras huellas registradas. Darwin no predijo naves espaciales, pero seguramente aprobaría este aterrizaje.",
 )
+FIRST_FOOTFALL_KEYS = tuple(f"mimir.footfall.{index}" for index in range(1, 6))
 
 
 class ExplorationProcessor:
@@ -59,11 +61,13 @@ class ExplorationProcessor:
         commander_state: CommanderState,
         event_bus: EventBus,
         surface_navigation: SurfaceNavigationTracker | None = None,
+        language: str = "es-419",
     ) -> None:
         self.database = database
         self.commander_state = commander_state
         self.event_bus = event_bus
         self.surface_navigation = surface_navigation
+        self.language = language
         self._confirmed_genus_ids: dict[
             tuple[int, int],
             tuple[str, ...],
@@ -356,16 +360,17 @@ class ExplorationProcessor:
             InternalEvent.VOICE_MESSAGE_READY,
             VoiceMessageReady(
                 officer="MÍMIR",
-                message=self._first_footfall_message(body_name),
+                message=self._first_footfall_message(body_name, self.language),
                 reason="Primera pisada confirmada",
                 body_name=body_name,
             ),
         )
 
     @staticmethod
-    def _first_footfall_message(body_name: str) -> str:
+    def _first_footfall_message(body_name: str, language: str = "es-419") -> str:
         digest = hashlib.sha256(body_name.encode("utf-8")).digest()
-        return FIRST_FOOTFALL_MESSAGES[digest[0] % len(FIRST_FOOTFALL_MESSAGES)]
+        key = FIRST_FOOTFALL_KEYS[digest[0] % len(FIRST_FOOTFALL_KEYS)]
+        return localized_text(key, language)
 
     def handle_fss_discovery_scan(self, event: dict) -> None:
         """
@@ -841,16 +846,16 @@ class ExplorationProcessor:
         )
 
         if progress in (1, 2) and navigation_update is not None:
-            ordinal = "primera" if progress == 1 else "segunda"
-            next_ordinal = "segunda" if progress == 1 else "tercera"
             self.event_bus.publish_internal(
                 InternalEvent.VOICE_MESSAGE_READY,
                 VoiceMessageReady(
                     officer="MÍMIR",
-                    message=(
-                        f"{ordinal.capitalize()} muestra registrada. Para la "
-                        f"{next_ordinal} muestra de {species or genus or 'esta especie'}, "
-                        f"alejate al menos {navigation_update.required_distance_m:.0f} metros."
+                    message=localized_text(
+                        f"mimir.sample.progress.{progress}", self.language,
+                        species=species or genus or localized_text(
+                            "mimir.this_species", self.language
+                        ),
+                        distance=navigation_update.required_distance_m,
                     ),
                     reason=f"Distancia requerida después de muestra {progress}/3",
                 ),
@@ -912,14 +917,19 @@ class ExplorationProcessor:
         expected = int(expected_rows[0][0] or 0) if expected_rows else 0
         completed = int(completed_rows[0][0] or 0) if completed_rows else 0
         remaining = max(0, expected - completed)
-        message = f"Las tres muestras de {species_name} fueron recolectadas. "
+        message = localized_text(
+            "mimir.sample.collected", self.language, species=species_name
+        )
         if expected > 1 and remaining > 0:
-            noun = "especie" if remaining == 1 else "especies"
-            message += f"Quedan {remaining} {noun} por completar en este planeta."
+            message += localized_text(
+                "mimir.sample.remaining.one" if remaining == 1 else
+                "mimir.sample.remaining.many",
+                self.language, remaining=remaining,
+            )
         elif expected > 0 and remaining == 0:
-            message += "Completaste todas las especies de este planeta."
+            message += localized_text("mimir.sample.planet_complete", self.language)
         else:
-            message += "Muestreo biológico completado."
+            message += localized_text("mimir.sample.complete", self.language)
         self.event_bus.publish_internal(
             InternalEvent.VOICE_MESSAGE_READY,
             VoiceMessageReady(
@@ -960,9 +970,7 @@ class ExplorationProcessor:
             InternalEvent.VOICE_MESSAGE_READY,
             VoiceMessageReady(
                 officer="MÍMIR",
-                message=(
-                    "Comandante, en este sistema no hay planetas para escanear."
-                ),
+                message=localized_text("mimir.star_only", self.language),
                 reason="Sistema compuesto solamente por estrellas",
             ),
         )

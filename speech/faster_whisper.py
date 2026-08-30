@@ -15,10 +15,17 @@ from speech.whisper import TranscriptionError, WhisperTranscriber
 
 PROMPT = (
     "ODIN, MÍMIR, HEIMDALL, FREYJA, Elite Dangerous, quiero comerciar, "
+    "I want to trade, let's trade, quero comerciar, vamos comerciar, "
+    "take me home, vamos para casa, request docking, solicitar atracação, "
+    "night vision, visão noturna, cargo scoop, coletor de carga, "
+    "landing gear, trem de pouso, hyperspace jump, salto no hiperespaço, "
     "vamos a comerciar, opción uno, opción dos, opción tres, opción cuatro, "
     "comercio Powerplay, ruta de neutrones, exobiología, Stratum Tectonicas, "
     "estado de la ruta comercial, qué tengo que comprar, qué tengo que vender, "
-    "cancela la ruta comercial, recalculá la ruta comercial, "
+    "cancela la ruta comercial, ODIN silencio, cancelar escucha, crea un plan para, "
+    "quiero desbloquear al ingeniero Marco Qwent, recalculá la ruta comercial, "
+    "ODIN solicita atraque, solicita permiso de aterrizaje, "
+    "ODIN luz nocturna, ODIN colector de carga, "
     "repetí la instrucción comercial, cuánto beneficio tiene la ruta"
     ", cuánto beneficio llevo comerciando, cuánto invertí en comercio"
     ", confirmo la cancelación comercial"
@@ -38,6 +45,9 @@ class FasterWhisperTranscriber:
     ) -> None:
         self.config = config or Config()
         self.fallback = fallback or WhisperTranscriber(model_preference="small")
+        self.language = self.config.language.split("-", 1)[0]
+        if hasattr(self.fallback, "language"):
+            self.fallback.language = self.language
         self.model_name = model_name
         self.idle_release_seconds = idle_release_seconds
         self._model = None
@@ -71,7 +81,7 @@ class FasterWhisperTranscriber:
         model = self._load_model()
         segments, _info = model.transcribe(
             str(audio),
-            language="es",
+            language=self.language,
             # Las órdenes ya llegan recortadas por MicrophoneRecorder. Una
             # segunda VAD descartaba voces de micrófono con volumen bajo.
             # Greedy decoding reduce de forma importante la latencia para

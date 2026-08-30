@@ -6,6 +6,7 @@ import ctypes
 
 
 class WindowsHotkey:
+    VK_F7 = 0x76
     VK_F8 = 0x77
 
     def __init__(self, virtual_key: int = VK_F8) -> None:

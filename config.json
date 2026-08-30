@@ -1,3 +1,9 @@
 {
-    "journal_path": "C:\\Users\\Juan Pablo\\Saved Games\\Frontier Developments\\Elite Dangerous"
+    "journal_path": "C:\\Users\\Juan Pablo\\Saved Games\\Frontier Developments\\Elite Dangerous",
+    "eddn_capture_enabled": true,
+    "eddn_upload_enabled": true,
+    "eddn_test_mode": false,
+    "edsm_capture_enabled": true,
+    "edsm_upload_enabled": true,
+    "heimdall_auto_replan_enabled": true
 }

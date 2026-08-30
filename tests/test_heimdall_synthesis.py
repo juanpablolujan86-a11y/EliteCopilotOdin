@@ -7,6 +7,17 @@ from heimdall.synthesis import FSDInjectionInventory
 
 
 class FSDInjectionInventoryTests(unittest.TestCase):
+    def test_voice_summary_uses_selected_language(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            english = FSDInjectionInventory(
+                Path(directory) / "en.json", language="en-US"
+            )
+            portuguese = FSDInjectionInventory(
+                Path(directory) / "pt.json", language="pt-BR"
+            )
+            self.assertIn("I can prepare", english.voice_summary())
+            self.assertIn("Posso preparar", portuguese.voice_summary())
+
     @staticmethod
     def waypoint(system, x, star_class="G"):
         return SimpleNamespace(

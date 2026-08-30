@@ -170,6 +170,25 @@ class ActiveTradeRouteTests(unittest.TestCase):
                 ["activada","llegada","atraque","compra","venta_parcial","completada"],
             )
 
+    def test_powerplay_warns_when_actual_buy_price_breaks_merit_margin(self):
+        with tempfile.TemporaryDirectory() as directory:
+            bus = Mock()
+            trade = self.trade("silver", "A", "B")
+            trade.opportunity.buy_price = 30_000
+            trade.opportunity.sell_price = 49_169
+            tracker = ActiveTradeRoute(
+                Path(directory) / "active.json", bus, Mock()
+            )
+            tracker.activate(trade, "powerplay")
+
+            tracker.handle_market_buy({
+                "Type": "silver", "Count": 24, "BuyPrice": 40_435,
+            })
+
+            message = bus.publish_internal.call_args.args[1].message
+            self.assertIn("21.6 por ciento", message)
+            self.assertIn("no se esperan méritos", message)
+
 
 if __name__=="__main__":
     unittest.main()

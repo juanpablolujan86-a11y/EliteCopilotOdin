@@ -126,6 +126,7 @@ class JournalReader:
         relevant = {
             "Commander", "LoadGame", "Loadout", "Statistics",
             "SetUserShipName", "ShipyardSwap", "ShipyardBuy", "Powerplay",
+            "PowerplayMerits",
         }
         latest: dict[str, dict] = {}
         with journal_path.open("r", encoding="utf-8", errors="ignore") as stream:
@@ -176,6 +177,67 @@ class JournalReader:
                 except (json.JSONDecodeError, TypeError):
                     continue
                 if event.get("event") == "Materials":
+                    return event
+        return None
+
+    def latest_event_named(self, event_name: str) -> dict | None:
+        """Busca el evento más reciente de un tipo en todo el historial."""
+        journals = sorted(self.journal_folder.glob("Journal.*.log"), key=lambda path: path.stat().st_mtime, reverse=True)
+        for journal in journals:
+            with journal.open("r", encoding="utf-8", errors="ignore") as stream:
+                lines = stream.readlines()
+            for line in reversed(lines):
+                try:
+                    event = json.loads(line)
+                except (json.JSONDecodeError, TypeError):
+                    continue
+                if event.get("event") == event_name:
+                    return event
+        return None
+
+    def latest_loadout_event(self) -> dict | None:
+        """Busca el equipamiento de nave más reciente del historial disponible."""
+
+        journals = sorted(
+            self.journal_folder.glob("Journal.*.log"),
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        )
+        for journal in journals:
+            with journal.open("r", encoding="utf-8", errors="ignore") as stream:
+                lines = stream.readlines()
+            for line in reversed(lines):
+                try:
+                    event = json.loads(line)
+                except (json.JSONDecodeError, TypeError):
+                    continue
+                if event.get("event") == "Loadout":
+                    return event
+        return None
+
+    def latest_player_balance_event(self) -> dict | None:
+        """Recupera el saldo absoluto más reciente informado por el juego."""
+
+        journals = sorted(
+            self.journal_folder.glob("Journal.*.log"),
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        )
+        for journal in journals:
+            with journal.open("r", encoding="utf-8", errors="ignore") as stream:
+                lines = stream.readlines()
+            for line in reversed(lines):
+                try:
+                    event = json.loads(line)
+                except (json.JSONDecodeError, TypeError):
+                    continue
+                if event.get("event") == "CarrierBankTransfer" and (
+                    event.get("PlayerBalance") is not None
+                ):
+                    return event
+                if event.get("event") in {"LoadGame", "Commander"} and (
+                    event.get("Credits") is not None
+                ):
                     return event
         return None
 

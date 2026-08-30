@@ -27,8 +27,11 @@ class DatabaseManager:
 
     def connect(self) -> None:
         if self.connection is None:
-            self.connection = sqlite3.connect(self.database_file)
+            self.connection = sqlite3.connect(self.database_file, timeout=30.0)
             self.connection.row_factory = sqlite3.Row
+            self.connection.execute("PRAGMA busy_timeout = 30000")
+            self.connection.execute("PRAGMA journal_mode = WAL")
+            self.connection.execute("PRAGMA synchronous = NORMAL")
 
     def disconnect(self) -> None:
         if self.connection is not None:
@@ -147,6 +150,7 @@ class DatabaseManager:
             ("power_name","TEXT NOT NULL DEFAULT ''"),
             ("power_state","TEXT NOT NULL DEFAULT ''"),
             ("station_type","TEXT NOT NULL DEFAULT ''"),
+            ("services_json","TEXT NOT NULL DEFAULT '[]'"),
         ):
             self._ensure_column("freyja_markets",column,definition)
         self.execute("""CREATE TABLE IF NOT EXISTS freyja_market_commodities
@@ -193,12 +197,31 @@ class DatabaseManager:
                 use_count INTEGER NOT NULL DEFAULT 1,
                 confirmation_count INTEGER NOT NULL DEFAULT 0,
                 enabled INTEGER NOT NULL DEFAULT 1,
+                source TEXT NOT NULL DEFAULT 'adaptive',
                 created_at TEXT NOT NULL,
                 last_used_at TEXT NOT NULL,
                 PRIMARY KEY (commander_key, normalized_phrase)
             )
             """
         )
+        self._ensure_column(
+            "voice_command_memory", "source",
+            "TEXT NOT NULL DEFAULT 'adaptive'",
+        )
+        self.execute(
+            """
+            CREATE TABLE IF NOT EXISTS voice_calibration_profiles
+            (
+                commander_key TEXT PRIMARY KEY,
+                consented_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                sample_count INTEGER NOT NULL DEFAULT 0
+            )
+            """
+        )
+        self._ensure_column("voice_calibration_profiles", "duration_total", "REAL NOT NULL DEFAULT 0")
+        self._ensure_column("voice_calibration_profiles", "rms_total", "REAL NOT NULL DEFAULT 0")
+        self._ensure_column("voice_calibration_profiles", "acoustic_samples", "INTEGER NOT NULL DEFAULT 0")
 
         self._ensure_column(
             "stellar_bodies",
@@ -349,6 +372,7 @@ class DatabaseManager:
                 status TEXT NOT NULL DEFAULT 'active',
                 current_waypoint_index INTEGER NOT NULL DEFAULT 1,
                 jumps_completed INTEGER NOT NULL DEFAULT 0,
+                last_arrived_system TEXT NOT NULL DEFAULT '',
                 json TEXT NOT NULL,
                 created_at TEXT NOT NULL
             )
@@ -364,6 +388,11 @@ class DatabaseManager:
             "heimdall_planned_routes",
             "jumps_completed",
             "INTEGER NOT NULL DEFAULT 0",
+        )
+        self._ensure_column(
+            "heimdall_planned_routes",
+            "last_arrived_system",
+            "TEXT NOT NULL DEFAULT ''",
         )
 
         self._ensure_column(

@@ -20,6 +20,7 @@ class WhisperTranscriber:
         *,
         model_preference: str = "small",
         threads: int = 4,
+        language: str = "es",
     ) -> None:
         local = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
         root = data_root or local / "ODIN" / "speech"
@@ -37,6 +38,7 @@ class WhisperTranscriber:
         else:
             raise ValueError("El modelo de Whisper debe ser 'base' o 'small'.")
         self.threads = max(1, min(int(threads), 4))
+        self.language = language if language in {"es", "en", "pt"} else "es"
 
     def transcribe(self, audio: Path) -> str:
         if not self.executable.exists() or not self.model.exists():
@@ -46,17 +48,21 @@ class WhisperTranscriber:
         output_base = audio.parent / f"{audio.stem}-{uuid.uuid4().hex}"
         command = [
             str(self.executable), "-m", str(self.model), "-f", str(audio),
-            "-l", "es", "-nt", "-otxt", "-of", str(output_base),
+            "-l", self.language, "-nt", "-otxt", "-of", str(output_base),
             "-t", str(self.threads), "-ng", "-sns", "--prompt",
             "ODIN, MÍMIR, HEIMDALL, FREYJA, Elite Dangerous, Colonia, "
-            "quiero comerciar, vamos a comerciar, hacer comercio, comercio Powerplay, "
+            "quiero comerciar, I want to trade, quero comerciar, "
+            "request docking, solicitar atracação, night vision, visão noturna, "
             "Stratum Tectonicas, exobiología, ruta de neutrones",
         ]
         try:
             result = subprocess.run(
                 command, capture_output=True, text=True, encoding="utf-8",
                 errors="replace", timeout=120, check=False,
-                creationflags=getattr(subprocess, "BELOW_NORMAL_PRIORITY_CLASS", 0),
+                creationflags=(
+                    getattr(subprocess, "BELOW_NORMAL_PRIORITY_CLASS", 0)
+                    | getattr(subprocess, "CREATE_NO_WINDOW", 0)
+                ),
             )
         except (OSError, subprocess.TimeoutExpired) as error:
             raise TranscriptionError(f"Falló el reconocimiento de voz: {error}") from error
@@ -87,17 +93,21 @@ class WhisperTranscriber:
         output_base = audio.parent / f"{audio.stem}-{uuid.uuid4().hex}"
         command = [
             str(self.executable), "-m", str(self.model), "-f", str(audio),
-            "-l", "es", "-nt", "-ojf", "-of", str(output_base),
+            "-l", self.language, "-nt", "-ojf", "-of", str(output_base),
             "-t", str(self.threads), "-ng", "-sns", "--prompt",
             "ODIN, MÍMIR, HEIMDALL, FREYJA, Elite Dangerous, Colonia, "
-            "quiero comerciar, vamos a comerciar, hacer comercio, comercio Powerplay, "
+            "quiero comerciar, I want to trade, quero comerciar, "
+            "request docking, solicitar atracação, night vision, visão noturna, "
             "Stratum Tectonicas, exobiología, ruta de neutrones",
         ]
         try:
             result = subprocess.run(
                 command, capture_output=True, text=True, encoding="utf-8",
                 errors="replace", timeout=120, check=False,
-                creationflags=getattr(subprocess, "BELOW_NORMAL_PRIORITY_CLASS", 0),
+                creationflags=(
+                    getattr(subprocess, "BELOW_NORMAL_PRIORITY_CLASS", 0)
+                    | getattr(subprocess, "CREATE_NO_WINDOW", 0)
+                ),
             )
         except (OSError, subprocess.TimeoutExpired) as error:
             raise TranscriptionError(f"Falló el reconocimiento de voz: {error}") from error

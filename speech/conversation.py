@@ -20,8 +20,10 @@ class VoiceConversation:
     ) -> None:
         self.config = config or Config()
         self.recorder = recorder or MicrophoneRecorder()
-        self.transcriber = transcriber or WhisperTranscriber()
-        self.assistant = assistant or OdinLocalAssistant()
+        self.transcriber = transcriber or WhisperTranscriber(
+            language=self.config.language.split("-", 1)[0]
+        )
+        self.assistant = assistant or OdinLocalAssistant(config=self.config)
         self.voice = voice or OfficerVoiceService(self.config)
 
     def listen_once(self, seconds: float = 7.0, context: str = "") -> tuple[str, str]:

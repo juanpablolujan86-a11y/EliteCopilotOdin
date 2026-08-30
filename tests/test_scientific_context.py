@@ -14,6 +14,16 @@ def report(*species: str, signal: bool = True, body: str = "Prueba 2") -> Office
 
 
 class ScientificContextTests(unittest.TestCase):
+    def test_priority_alert_uses_selected_language(self) -> None:
+        english = ScientificContextRegistry("en-US").record(
+            "Sol", report("Stratum Tectonicas", body="Sol A 1")
+        )
+        portuguese = ScientificContextRegistry("pt-BR").record(
+            "Sol", report("Recepta Umbrux", body="Sol A 2")
+        )
+        self.assertIn("may contain Stratum Tectonicas", english.message)
+        self.assertIn("pode conter Recepta Umbrux", portuguese.message)
+
     def test_remembers_base_value_for_each_probable_species(self) -> None:
         registry = ScientificContextRegistry()
         registry.record("Sol", report("Bacterium Informem", body="Sol A 1"))

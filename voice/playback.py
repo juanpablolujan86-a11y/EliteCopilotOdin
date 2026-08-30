@@ -116,6 +116,7 @@ Remove-Item -LiteralPath $path -Force
             timeout=60,
             check=False,
             env=environment,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
         if result.returncode:
             detail = result.stderr.strip().splitlines()[-1] if result.stderr.strip() else ""

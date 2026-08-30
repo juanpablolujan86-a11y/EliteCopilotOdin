@@ -8,9 +8,34 @@ from core.command_center import CommandCenter
 from core.processors.commander_state_updater import CommanderStateUpdater
 from state.commander_state import CommanderState
 from ui.desktop import GuiLogStream, OdinDesktopApp
+from ui.voice_commands import voice_command_catalog
 
 
 class DesktopTests(unittest.TestCase):
+    def test_voice_command_catalog_contains_critical_officer_commands(self) -> None:
+        spanish = dict(voice_command_catalog("es-419"))
+        all_spanish = "\n".join(
+            command for commands in spanish.values() for command in commands
+        )
+        self.assertIn("Solicita atraque", all_spanish)
+        self.assertIn("Autorizo la inyección FSD", all_spanish)
+        self.assertIn("Quiero comerciar", all_spanish)
+        self.assertIn("Quiero minar [mineral]", all_spanish)
+
+        english = dict(voice_command_catalog("en-GB"))
+        portuguese = dict(voice_command_catalog("pt-BR"))
+        self.assertTrue(any("Request docking" in item for items in english.values() for item in items))
+        self.assertTrue(any("Solicite atracação" in item for items in portuguese.values() for item in items))
+
+    def test_powerplay_weekly_guide_covers_all_supported_families(self) -> None:
+        center = CommandCenter.__new__(CommandCenter)
+        guide = dict(center.powerplay_weekly_guide())
+        self.assertEqual(set(guide), {
+            "megaship", "combat", "trade", "mining", "transport",
+            "exploration", "on_foot", "salvage", "crime",
+        })
+        self.assertTrue(all(steps for steps in guide.values()))
+
     def test_fsd_jump_clears_previous_planet_context(self) -> None:
         state = CommanderState(current_body="Sistema anterior 4 a")
 
@@ -49,6 +74,38 @@ class DesktopTests(unittest.TestCase):
         self.assertEqual(OdinDesktopApp._credits(359520), "359.520 CR")
         self.assertEqual(OdinDesktopApp._credits(97300000, True), "≈ 97.300.000 CR")
 
+    def test_brokk_prospect_is_rendered_as_vertical_material_list(self) -> None:
+        text = OdinDesktopApp._mining_prospect_text({
+            "content": "Contenido alto", "remaining": 82.5,
+            "materials": (
+                {"name": "Platino", "proportion": 42.5},
+                {"name": "Osmio", "proportion": 18.0},
+            ),
+        })
+        self.assertEqual(text.splitlines(), [
+            "Contenido alto", "Reserva restante: 82.5%",
+            "◆ Platino · 42.5%", "◆ Osmio · 18.0%",
+        ])
+
+    def test_brokk_inventory_is_sorted_by_quantity(self) -> None:
+        text = OdinDesktopApp._mining_inventory_text(
+            {"Platino": 3, "Osmio": 8}, "Vacío", "t"
+        )
+        self.assertEqual(text.splitlines(), ["◆ Osmio · 8 t", "◆ Platino · 3 t"])
+
+    def test_brokk_equipment_lists_ready_and_missing_techniques(self) -> None:
+        text = OdinDesktopApp._mining_equipment_text({
+            "ship": "Type-10", "cargo_capacity": 256,
+            "techniques": {
+                "laser": {"ready": True, "missing": []},
+                "abrasion": {"ready": True, "missing": []},
+                "subsurface": {"ready": False, "missing": ["misiles subsuperficiales"]},
+                "core": {"ready": False, "missing": ["cargas sísmicas"]},
+            },
+        })
+        self.assertIn("✓ Láser de superficie · LISTA", text)
+        self.assertIn("◇ Subsuperficie · falta: misiles subsuperficiales", text)
+
     def test_gui_neutron_route_request_is_normalized_and_queued_once(self) -> None:
         center = CommandCenter.__new__(CommandCenter)
         center._manual_route_requests = queue.Queue()
@@ -58,6 +115,33 @@ class DesktopTests(unittest.TestCase):
         self.assertEqual(center._manual_route_requests.get_nowait(), "Colonia Dream")
         center._manual_route_requests.put("pending")
         self.assertFalse(center.request_neutron_route("Sol"))
+
+    def test_gui_exact_route_uses_current_cargo_and_rejects_missing_data(self) -> None:
+        center = CommandCenter.__new__(CommandCenter)
+        center._manual_route_requests = queue.Queue()
+        center._route_calculation_busy = threading.Event()
+        center._manual_exact_route_requests = queue.Queue()
+        center._exact_route_calculation_busy = threading.Event()
+        center.trade_profile = SimpleNamespace(cargo_used=27)
+        center.navigation_manager = SimpleNamespace(
+            context=SimpleNamespace(
+                exact_plotter_readiness=lambda: {"ready": True, "missing": ()}
+            )
+        )
+
+        accepted, detail = center.request_exact_route("  Colonia   Dream ")
+
+        self.assertTrue(accepted, detail)
+        self.assertEqual(
+            center._manual_exact_route_requests.get_nowait(),
+            ("Colonia Dream", 27),
+        )
+        center.navigation_manager.context.exact_plotter_readiness = lambda: {
+            "ready": False, "missing": ("masa sin carga",)
+        }
+        accepted, detail = center.request_exact_route("Sol")
+        self.assertFalse(accepted)
+        self.assertIn("masa sin carga", detail)
 
     def test_mimir_dashboard_includes_real_signal_planets_without_predictions(self) -> None:
         center = CommandCenter.__new__(CommandCenter)
@@ -182,7 +266,9 @@ class DesktopTests(unittest.TestCase):
         self.assertEqual(biology["details"][0]["confirmation"], "DSS")
 
     def test_mimir_biology_is_rendered_as_vertical_planet_list(self) -> None:
-        text = OdinDesktopApp._biology_details_text({"details": ({
+        app = OdinDesktopApp.__new__(OdinDesktopApp)
+        app.odin = SimpleNamespace(config=SimpleNamespace(language="es-419"))
+        text = app._biology_details_text({"details": ({
             "body": "Prueba 4 a", "signals": 2, "confirmed": (),
             "probable": ("Bacterium Informem", "Stratum Tectonicas"),
             "probable_values": {
@@ -206,7 +292,9 @@ class DesktopTests(unittest.TestCase):
         ])
 
     def test_mimir_sample_tracking_shows_progress_distance_and_completion(self) -> None:
-        text = OdinDesktopApp._sampling_details_text({"details": ({
+        app = OdinDesktopApp.__new__(OdinDesktopApp)
+        app.odin = SimpleNamespace(config=SimpleNamespace(language="es-419"))
+        text = app._sampling_details_text({"details": ({
             "body": "Prueba 4 a",
             "sampling": (
                 {
@@ -251,6 +339,53 @@ class DesktopTests(unittest.TestCase):
         self.assertIn("Dawes Hub", trade["target"])
         self.assertEqual(trade["realized_profit"], 250000)
 
+    def test_freyja_dashboard_exposes_powerplay_sale_result(self) -> None:
+        center = CommandCenter.__new__(CommandCenter)
+        center.freyja_ledger = Mock()
+        center.freyja_ledger.summary.return_value = SimpleNamespace(
+            realized_profit=0, cargo_units=12
+        )
+        center.active_trade_route = SimpleNamespace(state={
+            "index": 0, "phase": "to_buy", "strategy": "quick",
+            "legs": [{
+                "commodity": "silver", "units": 3,
+                "buy_system": "Piscium Sector DQ-Y b4",
+                "buy_station": "Bobs Charcoal Grill",
+            }],
+        })
+        center._powerplay_sale_result = {
+            "active": True,
+            "strategy": "Venta Powerplay",
+            "commodity": "Reliquias de Soontill",
+            "target": "Alfred Vincent Memorial Station · Trianguli Sector LS-T b3-1",
+            "units": 12,
+            "progress": "Destino de venta calculado (sin méritos confirmados)",
+            "unit_price": 38818,
+            "distance_ly": 180.1,
+            "powerplay_state": "Exploited · Li Yong-Rui",
+        }
+
+        trade = center._dashboard_trade()
+
+        self.assertTrue(trade["active"])
+        self.assertEqual(trade["strategy"], "Venta Powerplay")
+        self.assertEqual(trade["unit_price"], 38818)
+        self.assertEqual(trade["distance_ly"], 180.1)
+        self.assertIn("Alfred Vincent", trade["target"])
+        self.assertIn("Li Yong-Rui", trade["powerplay_state"])
+
+    def test_regular_trade_request_clears_powerplay_sale_result(self) -> None:
+        center = CommandCenter.__new__(CommandCenter)
+        center._manual_trade_requests = queue.Queue()
+        center._trade_calculation_busy = threading.Event()
+        center._trade_requested_strategy = "powerplay"
+        center._trade_requested_commodity = "Reliquias de Soontill"
+        center._powerplay_sale_result = {"active": True}
+
+        self.assertTrue(center.request_trade_calculation("quick", "silver"))
+
+        self.assertEqual(center._powerplay_sale_result, {})
+
     def test_freyja_gui_accepts_only_one_valid_trade_request(self) -> None:
         center = CommandCenter.__new__(CommandCenter)
         center._manual_trade_requests = queue.Queue()
@@ -260,7 +395,8 @@ class DesktopTests(unittest.TestCase):
 
         self.assertTrue(center.request_trade_calculation("three_station", " Gold "))
         self.assertEqual(
-            center._manual_trade_requests.get_nowait(), ("three_station", "gold")
+            center._manual_trade_requests.get_nowait(),
+            ("three_station", "gold", True),
         )
         self.assertEqual(center._trade_requested_strategy, "three_station")
         self.assertEqual(center._trade_requested_commodity, "gold")

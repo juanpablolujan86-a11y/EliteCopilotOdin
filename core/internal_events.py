@@ -52,3 +52,7 @@ class InternalEvent:
     EXPEDITION_BALANCE_UPDATED = "ExpeditionBalanceUpdated"
 
     DOCKING_REQUESTED = "DockingRequested"
+
+    MINING_DESTINATION_SELECTED = "MiningDestinationSelected"
+
+    MINING_CARGO_READY = "MiningCargoReady"

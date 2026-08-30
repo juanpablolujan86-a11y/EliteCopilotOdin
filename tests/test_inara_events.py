@@ -189,6 +189,10 @@ class InaraEventMapperTests(unittest.TestCase):
         })
 
     def test_powerplay_merits_and_leave_use_documented_values(self):
+        self.mapper.map({
+            "timestamp":self.timestamp,"event":"Powerplay",
+            "Power":"Aisling Duval","Rank":3,"Merits":490,
+        })
         merits=self.mapper.map({
             "timestamp":self.timestamp,"event":"PowerplayMerits",
             "Power":"Aisling Duval","MeritsGained":10,"TotalMerits":500,
@@ -198,6 +202,12 @@ class InaraEventMapperTests(unittest.TestCase):
             "timestamp":self.timestamp,"event":"PowerplayLeave","Power":"Aisling Duval"
         })[0]
         self.assertEqual(leave["eventData"]["rankValue"],-1)
+
+    def test_powerplay_merits_without_known_rank_are_not_sent(self):
+        self.assertEqual(self.mapper.map({
+            "timestamp":self.timestamp,"event":"PowerplayMerits",
+            "Power":"Aisling Duval","TotalMerits":500,
+        }),())
 
     def test_major_reputation_is_normalized_from_percent(self):
         mapped=self.mapper.map({

@@ -54,6 +54,30 @@ class InaraDeliveryService:
                 credentials, [item.event for item in batch],
                 is_being_developed=True,
             )
+            if result.event_results and len(result.event_results) == len(batch):
+                accepted = []
+                retryable = []
+                rejected = []
+                for item, event_result in zip(batch, result.event_results):
+                    if event_result.accepted:
+                        accepted.append(item)
+                    elif event_result.retryable:
+                        retryable.append((item, event_result.detail))
+                    else:
+                        rejected.append((item, event_result))
+                if accepted:
+                    outbox.mark_sent(accepted, now=now)
+                    self.logger.info("INARA_ACCEPTED | eventos=%s", len(accepted))
+                for item, detail in retryable:
+                    outbox.mark_failed((item,), detail or "Respuesta incompleta", now=now)
+                for item, event_result in rejected:
+                    detail = " ".join(str(event_result.detail).split())[:500]
+                    outbox.mark_rejected((item,), detail, now=now)
+                    self.logger.error(
+                        "INARA_REJECTED | evento=%s | codigo=%s | detalle=%s",
+                        item.event_name, event_result.status, detail,
+                    )
+                return len(batch)
             if result.accepted:
                 outbox.mark_sent(batch, now=now)
                 self.logger.info("INARA_ACCEPTED | eventos=%s", len(batch))
@@ -62,9 +86,10 @@ class InaraDeliveryService:
                 self.logger.warning("INARA_RETRY | eventos=%s", len(batch))
             else:
                 outbox.mark_rejected(batch, result.detail, now=now)
+                detail = " ".join(str(result.detail).split())[:500]
                 self.logger.error(
-                    "INARA_REJECTED | eventos=%s | codigo=%s",
-                    len(batch), result.status,
+                    "INARA_REJECTED | eventos=%s | codigo=%s | detalle=%s",
+                    len(batch), result.status, detail,
                 )
             return len(batch)
         finally:

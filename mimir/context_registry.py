@@ -5,12 +5,14 @@ from __future__ import annotations
 from models.events.voice_message_ready import VoiceMessageReady
 from models.officer_report import OfficerReport
 from core.body_names import body_designation
+from core.localization import normalize_language, text
 
 
 class ScientificContextRegistry:
     PRIORITY_SPECIES = ("Stratum Tectonicas", "Recepta Umbrux")
 
-    def __init__(self) -> None:
+    def __init__(self, language: str = "es-419") -> None:
+        self.language = normalize_language(language)
         self._systems: dict[str, dict[str, tuple[str, ...]]] = {}
         self._system_values: dict[str, dict[str, dict[str, int]]] = {}
         self._system_rewards: dict[str, dict[str, dict[str, tuple[int, int]]]] = {}
@@ -25,8 +27,8 @@ class ScientificContextRegistry:
     ) -> VoiceMessageReady | None:
         if not report.has_biological_signal or not report.probable_species:
             return None
-        system = system_name or "Sistema desconocido"
-        body = report.body_name or "Cuerpo desconocido"
+        system = system_name or text("mimir.unknown_system", self.language)
+        body = report.body_name or text("mimir.unknown_body_name", self.language)
         self._systems.setdefault(system, {})[body] = tuple(report.probable_species)
         self._system_values.setdefault(system, {})[body] = {
             name: int(base_value)
@@ -54,12 +56,12 @@ class ScientificContextRegistry:
             self._priority_announced.add(
                 (system.casefold(), body.casefold(), species.casefold())
             )
-        species_text = " y ".join(priority_candidates)
+        species_text = text("common.and_join", self.language).join(priority_candidates)
         return VoiceMessageReady(
             officer="MÍMIR",
-            message=(
-                f"Comandante, el planeta {body_designation(system, body)} podría contener "
-                f"{species_text}. Recomiendo revisarlo."
+            message=text(
+                "mimir.priority_alert", self.language,
+                body=body_designation(system, body), species=species_text,
             ),
             reason=f"Posible {species_text}",
             body_name=body,

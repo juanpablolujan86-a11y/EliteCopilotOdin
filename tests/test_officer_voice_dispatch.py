@@ -16,6 +16,34 @@ from models.events.voice_message_ready import VoiceMessageReady
 from voice.service import VoiceServiceError
 
 class OfficerVoiceDispatchTests(unittest.TestCase):
+    def test_processing_messages_follow_selected_language(self):
+        self.assertEqual(
+            CommandCenter._processing_message_for("biology samples", "en-US"),
+            "Checking the scientific records.",
+        )
+        self.assertEqual(
+            CommandCenter._processing_message_for("dados do sistema", "pt-BR"),
+            "Verificando o banco de dados.",
+        )
+
+    def test_wake_acknowledgements_follow_selected_language(self):
+        center = CommandCenter.__new__(CommandCenter)
+        center.config = SimpleNamespace(language="pt-BR")
+        center._wake_acknowledgement_lock = threading.Lock()
+        center._wake_acknowledgement_index = 0
+        self.assertEqual(center._next_wake_acknowledgement(), "Sim, comandante?")
+
+    def test_freyja_understands_powerplay_reinforcement_sale_request(self):
+        self.assertEqual(
+            CommandCenter._freyja_powerplay_sale_request(
+                "Quiero vender Reliquias de Soontill en un sistema reinforcement de mi Powerplay"
+            ),
+            "reliquias de soontill",
+        )
+        self.assertIsNone(CommandCenter._freyja_powerplay_sale_request(
+            "quiero vender oro"
+        ))
+
     def test_disabling_wake_word_applies_immediately_and_clears_pending_audio(self):
         center = CommandCenter.__new__(CommandCenter)
         center.wake_listener = Mock()
@@ -189,6 +217,29 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
         self.assertTrue(center._freyja_used_stale_cache)
         self.assertEqual(plan.opportunity.commodity,"silver")
 
+    def test_freyja_refreshes_external_markets_before_reading_cache(self):
+        center=CommandCenter.__new__(CommandCenter)
+        center._freyja_used_stale_cache=False
+        profile=TradeProfile(
+            "Lembava",10_000_000,500_000,24,0,30,
+            CommandCenter.BUBBLE_TRADE_CENTER,
+        )
+        current=MarketOpportunity(
+            "gold","A","Compra","B","Venta",10_000,20_000,
+            100,100,1,100,datetime.now(timezone.utc).isoformat(),
+        )
+        cache=Mock()
+        cache.opportunities.return_value=[current]
+
+        plan=center._refresh_and_recalculate_freyja("quick",profile,cache)
+
+        self.assertIsNotNone(plan)
+        self.assertFalse(center._freyja_used_stale_cache)
+        self.assertEqual(
+            [call[0] for call in cache.method_calls[:2]],
+            ["refresh_region", "opportunities"],
+        )
+
     def test_new_trade_mode_cannot_replace_cargo_pending_for_sale(self):
         center=CommandCenter.__new__(CommandCenter)
         center.active_trade_route=Mock()
@@ -315,6 +366,18 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
         learned=CommandCenter._command_from_text("quiero comerciar")
         self.assertEqual(learned.intent,"freyja_trade_menu")
 
+    def test_freyja_trade_request_accepts_english_and_portuguese(self):
+        for command in (
+            "I want to trade", "let's trade", "start trading",
+            "quero comerciar", "vamos comerciar", "fazer comercio",
+        ):
+            with self.subTest(command=command):
+                self.assertTrue(CommandCenter._is_freyja_trade_request(command))
+                self.assertEqual(
+                    CommandCenter._command_from_text(command).intent,
+                    "freyja_trade_menu",
+                )
+
     def test_freyja_recognizes_trade_progress_questions(self):
         self.assertTrue(CommandCenter._is_freyja_trade_status_request(
             "estado de la ruta comercial"
@@ -393,12 +456,34 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
         center.wake_listener.arm.assert_called_once()
         center.wake_listener.resume.assert_called_once()
 
+    def test_unclear_command_allows_only_one_retry(self):
+        center=CommandCenter.__new__(CommandCenter)
+        center._voice_retry_pending=False
+        center.wake_listener=Mock()
+        center._start_fixed_voice_response=Mock()
+
+        center._handle_unclear_voice_command()
+
+        self.assertTrue(center._voice_retry_pending)
+        center._start_fixed_voice_response.assert_called_once_with(
+            "No entendí la orden. Repítala, comandante.", arm_after=True
+        )
+
+        center._start_fixed_voice_response.reset_mock()
+        center._handle_unclear_voice_command()
+
+        self.assertFalse(center._voice_retry_pending)
+        center.wake_listener.armed.clear.assert_called_once_with()
+        center._start_fixed_voice_response.assert_called_once_with(
+            "No pude reconocer la orden. Cierro la escucha, comandante."
+        )
+
     def test_freyja_announces_selected_mode_before_calculating(self):
         expected = {
             "quick": ("Opción uno", "ruta rápida"),
             "three_station": ("Opción dos", "tres estaciones"),
             "expedition": ("Opción tres", "expedición comercial"),
-            "powerplay": ("Opción cuatro", "comercio Powerplay"),
+            "powerplay": ("Opción cuatro", "territorio Powerplay"),
         }
         for selection, phrases in expected.items():
             with self.subTest(selection=selection):
@@ -505,5 +590,46 @@ class OfficerVoiceDispatchTests(unittest.TestCase):
             "Estás en Synuefua QF-L d9-25.",
         )
         self.assertEqual(named, "Estás en Synuefua QF-L d9-25.")
+
+    def test_trade_mining_and_network_commands_support_english_and_portuguese(self):
+        self.assertTrue(CommandCenter._is_freyja_trade_request("I want to trade"))
+        self.assertTrue(CommandCenter._is_freyja_trade_request("Quero comerciar"))
+        self.assertEqual(CommandCenter._freyja_trade_selection("option two"), "three_station")
+        self.assertEqual(CommandCenter._freyja_trade_selection("opção três"), "expedition")
+        self.assertEqual(CommandCenter._brokk_mining_request("I want to mine painite"), "painite")
+        self.assertEqual(CommandCenter._brokk_mining_request("Quero minerar painita"), "painita")
+        self.assertTrue(CommandCenter._is_brokk_status_request("mining status"))
+        self.assertTrue(CommandCenter._is_brokk_sale_request("where to sell mining cargo"))
+        self.assertTrue(CommandCenter._is_eddn_status_request("EDDN transmission status"))
+        self.assertTrue(CommandCenter._is_freyja_trade_cancel_request("cancel trade route"))
+        self.assertTrue(CommandCenter._is_freyja_trade_recalculate_request("recalculate trade route"))
+        self.assertTrue(CommandCenter._is_fsd_injection_status_request("FSD injection status"))
+        self.assertTrue(CommandCenter._is_fsd_injection_status_request("síntese de salto FSD"))
+        self.assertEqual(CommandCenter._fsd_injection_distance_request("jump 85 light-years"), 85.0)
+        self.assertEqual(CommandCenter._fsd_injection_distance_request("alcançar 92 anos-luz"), 92.0)
+        self.assertTrue(CommandCenter._is_route_injection_status_request("route FSD synthesis"))
+        self.assertTrue(CommandCenter._is_route_injection_status_request("rota de injeção FSD"))
+        self.assertTrue(CommandCenter._is_fsd_injection_authorization("authorize FSD injection"))
+        self.assertTrue(CommandCenter._is_fsd_injection_authorization("aprovo a injeção FSD"))
+        self.assertTrue(CommandCenter._is_memory_confirmation("that is correct"))
+        self.assertTrue(CommandCenter._is_memory_confirmation("isso está certo"))
+        self.assertTrue(CommandCenter._is_memory_forget("forget that command"))
+        self.assertTrue(CommandCenter._is_memory_forget("esqueça essa ordem"))
+        self.assertEqual(CommandCenter._memory_correction("I meant request docking"), "request docking")
+        self.assertEqual(CommandCenter._memory_correction("eu quis dizer luz noturna"), "luz noturna")
+
+    def test_current_system_reference_uses_selected_language(self):
+        center = CommandCenter.__new__(CommandCenter)
+        center.config = SimpleNamespace(language="en-US")
+        center.commander_state = SimpleNamespace(current_system="Synuefua QF-L d9-25")
+        center.scientific_context = Mock()
+        center.scientific_context.system_predictions.return_value = {}
+
+        answer = center._sanitize_current_system_references(
+            "is there biology here",
+            "There is biology in Synuefua QF-L d9-25.",
+        )
+
+        self.assertEqual(answer, "There is biology in this system.")
 
 if __name__=="__main__": unittest.main()

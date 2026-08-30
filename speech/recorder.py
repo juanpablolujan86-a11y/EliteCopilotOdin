@@ -21,6 +21,18 @@ class MicrophoneRecorder:
     def __init__(self, sample_rate: int = 16_000, device: int | str | None = None) -> None:
         self.sample_rate = sample_rate
         self.device = device
+        self.threshold_multiplier = 3.5
+        self.command_silence_seconds = 1.0
+
+    def apply_acoustic_profile(self, profile: dict) -> None:
+        """Aplica límites conservadores derivados de muestras confirmadas."""
+
+        self.threshold_multiplier = max(
+            2.7, min(3.8, float(profile.get("threshold_multiplier", 3.5)))
+        )
+        self.command_silence_seconds = max(
+            0.8, min(1.25, float(profile.get("silence_seconds", 1.0)))
+        )
 
     def record_for(self, output: Path, seconds: float = 7.0) -> Path:
         if seconds <= 0:
@@ -101,7 +113,9 @@ class MicrophoneRecorder:
                     )
                     now = time.monotonic()
                     noise_floor = median(noise_levels) if noise_levels else 100.0
-                    start_threshold = max(180.0, min(1600.0, noise_floor * 3.5))
+                    start_threshold = max(
+                        180.0, min(1600.0, noise_floor * self.threshold_multiplier)
+                    )
                     if not speech_started:
                         pre_roll.append(chunk)
                         if rms >= start_threshold:

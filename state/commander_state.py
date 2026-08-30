@@ -25,6 +25,10 @@ class CommanderState:
     powerplay_power: str = ""
     powerplay_rank: int = 0
     powerplay_merits: int = 0
+    controlling_power: str = ""
+    powerplay_state: str = ""
+    powerplay_reinforcement: int = 0
+    powerplay_undermining: int = 0
 
     current_system: str = ""
     system_address: int = 0

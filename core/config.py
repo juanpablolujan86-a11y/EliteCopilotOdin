@@ -51,6 +51,12 @@ class Config:
             except (OSError, json.JSONDecodeError):
                 pass
 
+    @property
+    def public_beta_no_ai(self) -> bool:
+        """Indica el corte público estable que excluye la IA experimental."""
+
+        return self._enabled(os.environ.get("ODIN_PUBLIC_NO_AI"), False)
+
     def update_preferences(self, **values) -> None:
         """Guarda preferencias públicas del usuario fuera de la instalación."""
 
@@ -59,7 +65,15 @@ class Config:
             "edsm_capture_enabled", "edsm_upload_enabled",
             "inara_capture_enabled", "inara_upload_enabled",
             "push_to_talk_enabled", "wake_word_enabled",
+            "heimdall_auto_docking_enabled",
             "desktop_geometry",
+            "ai_provider", "openai_model", "ai_share_trade_data",
+            "ai_share_mining_data", "ai_share_navigation_data", "language",
+            "ai_share_science_data", "ai_share_progression_data",
+            "ai_share_powerplay_data",
+            "ai_share_commander_data",
+            "ai_share_station_search_data",
+            "canonn_poi_source",
         }
         updates = {key: value for key, value in values.items() if key in allowed}
         with self._preferences_lock:
@@ -200,8 +214,108 @@ class Config:
         return self._enabled(self.data.get("wake_word_enabled"), True)
 
     @property
+    def heimdall_auto_docking_enabled(self) -> bool:
+        """Autoriza la asistencia de atraque y tren, desactivada por defecto."""
+
+        return self._enabled(self.data.get("heimdall_auto_docking_enabled"))
+
+    @property
     def desktop_geometry(self) -> str:
         value = str(self.data.get("desktop_geometry", "")).strip()
         if re.fullmatch(r"\d+x\d+[+-]\d+[+-]\d+", value):
             return value
         return ""
+
+    @property
+    def ai_provider(self) -> str:
+        value = str(self.data.get("ai_provider", "automatic")).strip().casefold()
+        return value if value in {"automatic", "openai", "ollama"} else "automatic"
+
+    @property
+    def openai_model(self) -> str:
+        value = str(self.data.get("openai_model", "gpt-5-mini")).strip()
+        return value or "gpt-5-mini"
+
+    @property
+    def ai_share_trade_data(self) -> bool:
+        """Consentimiento para enviar informes comerciales a una IA remota."""
+
+        value = self.data.get("ai_share_trade_data", False)
+        if isinstance(value, str):
+            return value.strip().casefold() in {"1", "true", "yes", "si", "sí"}
+        return bool(value)
+
+    @property
+    def ai_share_mining_data(self) -> bool:
+        """Consentimiento para enviar informes mineros a una IA remota."""
+
+        value = self.data.get("ai_share_mining_data", False)
+        if isinstance(value, str):
+            return value.strip().casefold() in {"1", "true", "yes", "si", "sí"}
+        return bool(value)
+
+    @property
+    def ai_share_navigation_data(self) -> bool:
+        """Consentimiento para enviar informes de navegación a una IA remota."""
+
+        value = self.data.get("ai_share_navigation_data", False)
+        if isinstance(value, str):
+            return value.strip().casefold() in {"1", "true", "yes", "si", "sí"}
+        return bool(value)
+
+    @property
+    def ai_share_science_data(self) -> bool:
+        """Consentimiento para enviar informes científicos a una IA remota."""
+
+        value = self.data.get("ai_share_science_data", False)
+        if isinstance(value, str):
+            return value.strip().casefold() in {"1", "true", "yes", "si", "sí"}
+        return bool(value)
+
+    @property
+    def ai_share_progression_data(self) -> bool:
+        """Consentimiento para informes de Ingeniería y tecnología Guardian."""
+
+        value = self.data.get("ai_share_progression_data", False)
+        if isinstance(value, str):
+            return value.strip().casefold() in {"1", "true", "yes", "si", "sí"}
+        return bool(value)
+
+    @property
+    def ai_share_powerplay_data(self) -> bool:
+        """Consentimiento para enviar estado e informes Powerplay."""
+
+        value = self.data.get("ai_share_powerplay_data", False)
+        if isinstance(value, str):
+            return value.strip().casefold() in {"1", "true", "yes", "si", "sí"}
+        return bool(value)
+
+    @property
+    def ai_share_commander_data(self) -> bool:
+        """Consentimiento para el informe central del comandante y su nave."""
+
+        value = self.data.get("ai_share_commander_data", False)
+        if isinstance(value, str):
+            return value.strip().casefold() in {"1", "true", "yes", "si", "sí"}
+        return bool(value)
+
+    @property
+    def ai_share_station_search_data(self) -> bool:
+        """Consentimiento para resultados de búsquedas de estaciones solicitadas."""
+
+        value = self.data.get("ai_share_station_search_data", False)
+        if isinstance(value, str):
+            return value.strip().casefold() in {"1", "true", "yes", "si", "sí"}
+        return bool(value)
+
+    @property
+    def language(self) -> str:
+        from core.localization import normalize_language
+
+        return normalize_language(self.data.get("language"))
+
+    @property
+    def canonn_poi_source(self) -> str:
+        """Fuente POI elegida; ODIN nunca la consulta automáticamente."""
+
+        return str(self.data.get("canonn_poi_source", "") or "").strip()

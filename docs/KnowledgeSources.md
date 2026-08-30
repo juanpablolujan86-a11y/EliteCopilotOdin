@@ -48,7 +48,7 @@ Todo dato incorporado a la Biblioteca del Conocimiento deberá poder responder l
 
 ## EDMC BioScan
 
-Estado: Pendiente de integración.
+Estado: Integrado mediante HUGINN y catálogo científico local.
 
 Información aportada:
 
@@ -62,7 +62,21 @@ Información aportada:
 
 ## Canonn Research
 
-Estado: Pendiente de integración.
+Estado: Arquitectura de integración revisada en agosto de 2026.
+
+La API histórica `api.canonn.tech` no se utilizará: el propio plugin
+EDMC-Canonn retiró esas llamadas. Las fuentes mantenidas son catálogos POI,
+funciones específicas, Spansh y volcados comunitarios. El volcado Codex
+completo ronda los 286 MB comprimidos, por lo que ODIN no lo descargará al
+iniciar ni lo incorporará al instalador.
+
+Integración disponible:
+
+* Catálogos POI JSON/TSV pequeños configurables desde la interfaz.
+* URL HTTPS o archivo local, con límites de 5 MB y 10.000 registros.
+* Caché local atómica con actualización explícita, nunca durante un salto.
+* Importación manual opcional de volcados grandes.
+* Sin transmisión de datos del comandante sin consentimiento separado.
 
 Información aportada:
 

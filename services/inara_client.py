@@ -11,11 +11,20 @@ from services.inara_credentials import InaraCredentials
 
 
 @dataclass(frozen=True, slots=True)
+class InaraEventResult:
+    accepted: bool
+    retryable: bool
+    status: int | None
+    detail: str
+
+
+@dataclass(frozen=True, slots=True)
 class InaraSubmissionResult:
     accepted: bool
     retryable: bool
     status: int | None
     detail: str
+    event_results: tuple[InaraEventResult, ...] = ()
 
 
 class InaraClient:
@@ -72,15 +81,32 @@ class InaraClient:
         header_status = header.get("eventStatus")
         details = [str(header.get("eventStatusText", ""))]
         event_statuses = []
+        event_results = []
         for event in payload.get("events", []):
             if not isinstance(event, dict):
                 return InaraSubmissionResult(False, True, None, "Evento Inara inválido")
             event_statuses.append(event.get("eventStatus"))
-            if event.get("eventStatusText"):
-                details.append(str(event["eventStatusText"]))
+            event_detail = str(event.get("eventStatusText", "") or "")
+            if event_detail:
+                details.append(event_detail)
+            event_status = event.get("eventStatus")
+            event_results.append(InaraEventResult(
+                accepted=event_status in cls.SUCCESS_STATUSES,
+                retryable=not isinstance(event_status, int),
+                status=int(event_status) if isinstance(event_status, int) else None,
+                detail=event_detail,
+            ))
         statuses = [header_status, *event_statuses]
         detail = " | ".join(item for item in details if item)[:500]
         if statuses and all(status in cls.SUCCESS_STATUSES for status in statuses):
-            return InaraSubmissionResult(True, False, int(header_status), detail)
-        status = next((item for item in statuses if isinstance(item, int)), None)
-        return InaraSubmissionResult(False, False, status, detail or "Solicitud rechazada")
+            return InaraSubmissionResult(
+                True, False, int(header_status), detail, tuple(event_results)
+            )
+        status = next((
+            item for item in statuses
+            if isinstance(item, int) and item not in cls.SUCCESS_STATUSES
+        ), None)
+        return InaraSubmissionResult(
+            False, False, status, detail or "Solicitud rechazada",
+            tuple(event_results),
+        )

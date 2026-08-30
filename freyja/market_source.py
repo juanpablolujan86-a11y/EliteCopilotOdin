@@ -22,11 +22,18 @@ class SpanshMarketClient:
         record=payload.get("record")
         if not isinstance(record,dict): raise MarketSourceError("Spansh devolvió una estación inválida.")
         return record
-    def stations_near(self, coordinates, *, size: int = 75, page: int = 0) -> tuple[dict, ...]:
+    def stations_near(
+        self, coordinates, *, size: int = 75, page: int = 0,
+        sort_by: str = "distance", require_market: bool = True,
+    ) -> tuple[dict, ...]:
         x,y,z=coordinates
         payload={
-            "filters":{"has_market":{"value":True}},
-            "sort":[{"distance":{"direction":"asc"}}],
+            "filters":({"has_market":{"value":True}} if require_market else {}),
+            "sort":[{
+                str(sort_by): {
+                    "direction": "desc" if sort_by == "market_updated_at" else "asc"
+                }
+            }],
             "size":max(1,min(int(size),100)),"page":max(0,int(page)),
             "reference_coords":{"x":x,"y":y,"z":z},
         }
@@ -42,6 +49,33 @@ class SpanshMarketClient:
         records=result.get("results")
         if not isinstance(records,list):
             raise MarketSourceError("Spansh devolvi\u00f3 una b\u00fasqueda comercial inv\u00e1lida.")
+        return tuple(record for record in records if isinstance(record,dict))
+
+    def stations_near_power(
+        self, coordinates, power: str, *, size: int = 100, page: int = 0
+    ) -> tuple[dict, ...]:
+        x,y,z=coordinates
+        payload={
+            "filters":{
+                "has_market":{"value":True},
+                "system_controlling_power":{"value":str(power)},
+            },
+            "sort":[{"distance":{"direction":"asc"}}],
+            "size":max(1,min(int(size),100)),"page":max(0,int(page)),
+            "reference_coords":{"x":x,"y":y,"z":z},
+        }
+        try:
+            response=self.session.post(
+                f"{self.BASE_URL}/stations/search",json=payload,timeout=25
+            )
+            response.raise_for_status(); result=response.json()
+        except (requests.RequestException,ValueError,TypeError) as error:
+            raise MarketSourceError(
+                f"No se pudo consultar mercados Powerplay: {error}"
+            ) from error
+        records=result.get("results")
+        if not isinstance(records,list):
+            raise MarketSourceError("Spansh devolvió una búsqueda Powerplay inválida.")
         return tuple(record for record in records if isinstance(record,dict))
 
 class MarketCache:
@@ -70,11 +104,27 @@ class MarketCache:
         for item in commodities or ():
             self._commodity(market_id,item,updated); count+=1
         return count
-    def refresh_region(self,client: SpanshMarketClient,coordinates,*,size=75,pages=1) -> int:
+    def refresh_region(
+        self, client: SpanshMarketClient, coordinates, *, size=75, pages=1,
+        sort_by="distance",
+    ) -> int:
         stations=tuple(
             station
             for page in range(max(1,int(pages)))
-            for station in client.stations_near(coordinates,size=size,page=page)
+            for station in client.stations_near(
+                coordinates, size=size, page=page, sort_by=sort_by
+            )
+        )
+        with self.database.transaction():
+            for station in stations: self.ingest_spansh_station(station)
+        return len(stations)
+    def refresh_stations(self, client: SpanshMarketClient, coordinates, *, pages=3) -> int:
+        """Actualiza estaciones con o sin mercado para localizar servicios potenciales."""
+        stations=tuple(
+            station for page in range(max(1,int(pages)))
+            for station in client.stations_near(
+                coordinates,size=100,page=page,require_market=False
+            )
         )
         with self.database.transaction():
             for station in stations: self.ingest_spansh_station(station)
@@ -101,7 +151,10 @@ class MarketCache:
           WHERE buy.market_id<>sell.market_id AND buy.buy_price>0 AND buy.stock>0
           AND sell.sell_price>buy.buy_price AND sell.demand>0
           AND bm.x IS NOT NULL AND sm.x IS NOT NULL""" + power_filter + """
-          ORDER BY (sell.sell_price-buy.buy_price) DESC
+          ORDER BY (
+            (sell.sell_price-buy.buy_price)
+            * MIN(buy.stock, sell.demand)
+          ) DESC
           LIMIT 5000""", (sell_power,) if sell_power else ())
         result=[]
         for row in rows:
@@ -122,12 +175,74 @@ class MarketCache:
               str(row["sell_power"] or ""),str(row["sell_power_state"] or ""),
               str(row["buy_station_type"] or ""),str(row["sell_station_type"] or "")))
         return result
+
+    def sales_in_systems(
+        self, commodity: str, systems, *, requires_large_pad: bool = False,
+        limit: int = 20,
+    ) -> list[dict]:
+        """Lee ventas de la caché existente sin efectuar consultas externas."""
+
+        wanted = " ".join(str(commodity).casefold().split())
+        names = tuple(dict.fromkeys(
+            " ".join(str(system).split()) for system in systems if str(system).strip()
+        ))
+        if not wanted or not names:
+            return []
+        placeholders = ",".join("?" for _ in names)
+        pad_filter = " AND m.has_large_pad=1" if requires_large_pad else ""
+        rows = self.database.query(f"""SELECT
+            m.system_name,m.station_name,m.has_large_pad,m.is_planetary,
+            m.distance_to_arrival,m.updated_at,m.power_name,m.power_state,
+            c.commodity,c.sell_price,c.demand
+            FROM freyja_market_commodities c
+            JOIN freyja_markets m ON m.market_id=c.market_id
+            WHERE lower(c.commodity)=? AND c.sell_price>0 AND c.demand>0
+            AND m.system_name IN ({placeholders}){pad_filter}
+            ORDER BY c.sell_price DESC,c.demand DESC
+            LIMIT ?""", (wanted, *names, max(1, int(limit))))
+        return [dict(row) for row in rows]
+
+    def stations_in_systems(
+        self, systems, *, requires_large_pad: bool = False, limit: int = 30,
+    ) -> list[dict]:
+        """Lista estaciones conocidas; no presupone que tengan contacto Powerplay."""
+
+        names = tuple(dict.fromkeys(
+            " ".join(str(system).split()) for system in systems if str(system).strip()
+        ))
+        if not names:
+            return []
+        placeholders = ",".join("?" for _ in names)
+        pad_filter = " AND has_large_pad=1" if requires_large_pad else ""
+        rows = self.database.query(f"""SELECT system_name,station_name,
+            has_large_pad,is_planetary,distance_to_arrival,updated_at,
+            power_name,power_state,station_type,services_json
+            FROM freyja_markets WHERE system_name IN ({placeholders}){pad_filter}
+            ORDER BY is_planetary ASC,distance_to_arrival ASC
+            LIMIT ?""", (*names, max(1, int(limit))))
+        return [dict(row) for row in rows]
+    def stations_with_service(
+        self, systems, service: str, *, requires_large_pad: bool = False,
+        limit: int = 30,
+    ) -> list[dict]:
+        """Filtra servicios normalizados conservados en la caché comunitaria."""
+        wanted=" ".join(str(service).casefold().replace("_"," ").split())
+        stations=self.stations_in_systems(
+            systems,requires_large_pad=requires_large_pad,limit=max(limit*4,100)
+        )
+        result=[]
+        for station in stations:
+            try: services=json.loads(station.get("services_json") or "[]")
+            except (TypeError,ValueError): services=[]
+            normalized={" ".join(str(item).casefold().replace("_"," ").split()) for item in services}
+            if wanted in normalized: result.append(station)
+        return result[:max(1,int(limit))]
     def _station(self,market_id,system,station,updated,source,record=None):
         record=record or {}
         self.database.execute("""INSERT INTO freyja_markets
         (market_id,system_name,station_name,updated_at,source,x,y,z,distance_to_arrival,
-         has_large_pad,is_planetary,power_name,power_state,station_type)
-         VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+         has_large_pad,is_planetary,power_name,power_state,station_type,services_json)
+         VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(market_id) DO UPDATE SET system_name=excluded.system_name,
         station_name=excluded.station_name,updated_at=excluded.updated_at,source=excluded.source,
         x=COALESCE(excluded.x,freyja_markets.x),
@@ -145,11 +260,20 @@ class MarketCache:
         power_state=CASE WHEN excluded.source='local'
             THEN freyja_markets.power_state ELSE excluded.power_state END,
         station_type=CASE WHEN excluded.source='local'
-            THEN freyja_markets.station_type ELSE excluded.station_type END""",
+            THEN freyja_markets.station_type ELSE excluded.station_type END,
+        services_json=CASE WHEN excluded.source='local'
+            THEN freyja_markets.services_json ELSE excluded.services_json END""",
         (int(market_id),system,station,updated,source,record.get("system_x"),
          record.get("system_y"),record.get("system_z"),record.get("distance_to_arrival"),
          int(bool(record.get("has_large_pad"))),int(bool(record.get("is_planetary"))),
-         self._power_name(record),self._power_state(record),str(record.get("type","") or "")))
+         self._power_name(record),self._power_state(record),str(record.get("type","") or ""),
+         json.dumps(self._services(record),ensure_ascii=False)))
+
+    @staticmethod
+    def _services(record):
+        services=record.get("services",record.get("station_services",())) or ()
+        if isinstance(services,dict): services=services.get("services",services.keys())
+        return sorted({str(item).strip() for item in services if str(item).strip()})
 
     @staticmethod
     def _oldest_update(*values) -> str:

@@ -202,12 +202,17 @@ mínima mediante `ceil(distancia / alcance_actual)`. La presenta expresamente
 como límite inferior teórico, porque no considera densidad estelar, permisos ni
 la ruta concreta del mapa galáctico. Si la autopista no mejora siquiera esa
 referencia, HEIMDALL lo advierte en lugar de afirmar que la ruta de neutrones es
-más rápida. Galaxy Plotter seguirá siendo necesario para una comparación
-convencional exacta.
+más rápida.
 
-La segunda etapa integrará Galaxy Plotter (`generic/route`) cuando ODIN pueda
-extraer de forma fiable masa, constantes completas del FSD, depósitos y
-bonificaciones. No se enviarán parámetros estimados a ese calculador.
+La pestaña HEIMDALL ofrece además una acción independiente de **Ruta exacta**
+mediante Galaxy Plotter (`generic/route`). ODIN obtiene masa, depósitos y
+constantes del FSD de los datos locales reales de la nave, aplica la carga
+actual y rechaza el cálculo si falta algún parámetro físico. La ruta resultante
+se persiste, se recupera tras reiniciar ODIN y participa del mismo avance seguro
+por eventos `FSDJump`; también conserva los indicadores de combustible y
+repostaje de cada waypoint. La pestaña muestra en el próximo tramo la distancia,
+el combustible previsto, el consumo y si el punto exige repostaje o permite
+scoop. No se envían parámetros estimados.
 
 #### Seguimiento mediante portapapeles
 
@@ -220,6 +225,20 @@ evento `FSDJump` cuyo `StarSystem` coincida exactamente con el punto esperado
 incrementa el índice persistente y copia el siguiente sistema. Un evento
 repetido no puede saltar dos waypoints. Al llegar al destino final, la ruta se
 marca como completada y el portapapeles no se modifica nuevamente.
+
+#### Guía segura de sobrecarga
+
+HEIMDALL identifica objetivos de neutrones y enanas blancas desde la ruta y el
+Journal. Al aproximarse entrega una advertencia general; una enana blanca se
+trata siempre como el caso de mayor riesgo. La carga sólo se declara confirmada
+al recibir `JetConeBoost`, momento en que HEIMDALL indica abandonar por completo
+el cono y comprobar el destino antes del salto. Después, `FSDJump` con
+`BoostUsed` confirma que el salto potenciado se completó.
+
+Elite no expone por Journal la posición precisa dentro del cono ni la geometría
+de entrada. Por ese motivo ODIN no simula un vector de vuelo ni automatiza la
+maniobra. Los avisos incluyen la salud conocida del FSD y los eventos repetidos
+no generan exposiciones ni mensajes duplicados.
 
 #### Replanificación por desvío
 

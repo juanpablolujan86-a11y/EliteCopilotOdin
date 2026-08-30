@@ -67,7 +67,7 @@ definir el segundo oficial especializado de ODIN.
 
 ## Requisitos previos al lanzamiento 1.0
 
-- [ ] Incorporar adaptación acústica opcional por comandante para mejorar el
+- [x] Incorporar adaptación acústica opcional por comandante para mejorar el
   reconocimiento de su voz, pronunciación y ritmo sin contaminar el modelo con
   transcripciones de baja confianza.
 - [x] Mantener memoria semántica separada para expresiones, alias y correcciones

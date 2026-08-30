@@ -27,6 +27,40 @@ class FreyjaPlannerTests(unittest.TestCase):
             )
             self.assertTrue(profile.requires_large_pad)
 
+    def test_profile_detects_panther_clipper_mk_ii_as_large_ship(self):
+        with tempfile.TemporaryDirectory() as directory:
+            profile = TradeProfileBuilder.build(
+                SimpleNamespace(credits=1_000_000, current_system="Sol"),
+                SimpleNamespace(
+                    current_system="Sol", rebuy_cost=100_000,
+                    cargo_capacity=1044, max_jump_range=32,
+                    ship_type="panthermkii",
+                ),
+                Path(directory) / "Cargo.json",
+            )
+
+            self.assertTrue(profile.requires_large_pad)
+
+    def test_panther_rejects_powerplay_route_without_large_buy_pad(self):
+        with tempfile.TemporaryDirectory() as directory:
+            profile = TradeProfileBuilder.build(
+                SimpleNamespace(credits=100_000_000, current_system="Sol"),
+                SimpleNamespace(
+                    current_system="Sol", rebuy_cost=100_000,
+                    cargo_capacity=1044, max_jump_range=32,
+                    ship_type="panthermkii",
+                ),
+                Path(directory) / "Cargo.json",
+            )
+        opportunity = MarketOpportunity(
+            "silver", "A", "Puesto mediano", "B", "Puerto grande",
+            1_000, 2_000, 2_000, 2_000, 1, 500,
+            datetime.now(timezone.utc).isoformat(),
+            buy_has_large_pad=False, sell_has_large_pad=True,
+        )
+
+        self.assertIsNone(QuickRouteOptimizer().choose(profile, [opportunity]))
+
     def test_quick_route_prefers_profit_per_minute_and_respects_demand(self):
         now=datetime.now(timezone.utc).isoformat()
         profile=SimpleNamespace(cargo_free=100,available_capital=1_000_000)

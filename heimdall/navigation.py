@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import asdict, dataclass, field
 from math import dist
 from pathlib import Path
 
 from core.database import DatabaseManager
+from heimdall.fsd_specs import FSDModuleCatalog
 
 SCOOPABLE_STARS = frozenset({"O", "B", "A", "F", "G", "K", "M"})
 
@@ -68,6 +70,15 @@ class HighEnergyAssessment:
     fsd_health: float | None
 
 
+@dataclass(frozen=True, slots=True)
+class HighEnergyGuidance:
+    stage: str
+    star_type: str
+    charged: bool
+    fsd_health: float | None
+    warning: bool
+
+
 @dataclass(slots=True)
 class NavigationContext:
     ship_type: str = ""
@@ -90,6 +101,11 @@ class NavigationContext:
     fsd_blueprint: str = ""
     fsd_level: int | None = None
     max_fuel_per_jump: float = 0.0
+    fsd_optimal_mass: float = 0.0
+    fsd_fuel_power: float = 0.0
+    fsd_fuel_multiplier: float = 0.0
+    fsd_range_boost: float = 0.0
+    fsd_spec_source: str = ""
     current_system: str = ""
     current_address: int | None = None
     current_position: tuple[float, float, float] | None = None
@@ -212,6 +228,119 @@ class NavigationContext:
             fsd_health=self.fsd_health,
         )
 
+    def high_energy_guidance(self, event_name: str = "") -> HighEnergyGuidance:
+        """Describe sólo estados que Elite confirma; nunca infiere geometría."""
+
+        star_class = str(self.target_star_class or "").upper()
+        star_type = (
+            "neutron" if star_class == "N"
+            else "white_dwarf" if star_class.startswith("D")
+            else ""
+        )
+        if event_name == "JetConeBoost" and self.boost_charged:
+            stage = "charged"
+        elif event_name == "FSDJump" and self.last_boost_used:
+            stage = "boost_complete"
+        elif event_name == "FSDTarget" and star_type:
+            stage = "approach"
+        else:
+            stage = "idle"
+        return HighEnergyGuidance(
+            stage=stage, star_type=star_type, charged=self.boost_charged,
+            fsd_health=self.fsd_health,
+            warning=star_type == "white_dwarf" or (
+                self.fsd_health is not None and self.fsd_health <= 0.80
+            ),
+        )
+
+    def conventional_route_summary(self, destination: str = "") -> dict:
+        """Resume la ruta real trazada por Elite, no una aproximación geométrica."""
+
+        progress = self.route_progress()
+        if not self.route or progress.off_route or progress.current_index is None:
+            return {}
+        final = self.route[-1]
+        if destination and final.system.casefold() != destination.strip().casefold():
+            return {}
+        return {
+            "destination": final.system,
+            "total_jumps": len(self.route) - 1,
+            "completed_jumps": progress.completed_jumps,
+            "remaining_jumps": progress.remaining_jumps,
+            "remaining_distance_ly": progress.remaining_distance_ly,
+            "scoopable_remaining": sum(
+                waypoint.scoopable
+                for waypoint in self.route[progress.current_index + 1:]
+            ),
+            "source": "Elite NavRoute.json",
+        }
+
+    def exact_plotter_readiness(self) -> dict:
+        """Audita los parámetros físicos exigidos por Galaxy Plotter."""
+
+        required = {
+            "current_system": self.current_system,
+            "tank_size": self.fuel_capacity,
+            "reserve_size": self.reserve_capacity,
+            "unladen_mass": self.unladen_mass,
+            "optimal_mass": self.fsd_optimal_mass,
+            "max_fuel_per_jump": self.max_fuel_per_jump,
+            "fuel_power": self.fsd_fuel_power,
+            "fuel_multiplier": self.fsd_fuel_multiplier,
+        }
+        missing = tuple(name for name, value in required.items() if not value)
+        return {
+            "ready": not missing,
+            "missing": missing,
+            "parameters": {
+                **required,
+                "cargo_capacity": self.cargo_capacity,
+                "range_boost": self.fsd_range_boost,
+                "supercharge_multiplier": 4,
+                "injection_multiplier": 2,
+            },
+        }
+
+    def exact_plotter_parameters(
+        self, destination: str, *, cargo: int = 0,
+        use_supercharge: bool = True, use_injections: bool = False,
+    ) -> dict:
+        """Construye la solicitud física exacta o falla sin aproximar datos."""
+
+        destination = destination.strip()
+        if not destination:
+            raise ValueError("El destino exacto es obligatorio.")
+        if cargo < 0 or cargo > self.cargo_capacity:
+            raise ValueError("La carga indicada excede la capacidad de la nave.")
+        readiness = self.exact_plotter_readiness()
+        if not readiness["ready"]:
+            missing = ", ".join(readiness["missing"])
+            raise ValueError(f"Faltan parámetros físicos del FSD: {missing}.")
+        parameters = readiness["parameters"]
+        return {
+            "source": self.current_system,
+            "destination": destination,
+            "is_supercharged": 1 if self.boost_charged else 0,
+            "use_supercharge": 1 if use_supercharge else 0,
+            "use_injections": 1 if use_injections else 0,
+            "exclude_secondary": 1,
+            "refuel_every_scoopable": 0,
+            "algorithm": "optimistic",
+            "tank_size": parameters["tank_size"],
+            "cargo": int(cargo),
+            "optimal_mass": parameters["optimal_mass"],
+            "base_mass": parameters["unladen_mass"] + parameters["reserve_size"],
+            "internal_tank_size": parameters["reserve_size"],
+            "max_fuel_per_jump": parameters["max_fuel_per_jump"],
+            "range_boost": parameters["range_boost"],
+            "fuel_power": parameters["fuel_power"],
+            "fuel_multiplier": parameters["fuel_multiplier"],
+            "reserve_size": self.fuel_reservoir,
+            "supercharge_multiplier": 4,
+            "injection_multiplier": 2,
+            "max_time": 60,
+        }
+
     def _current_route_index(self) -> int | None:
         if self.current_address is not None:
             for index, waypoint in enumerate(self.route):
@@ -227,10 +356,14 @@ class NavigationContext:
 class NavigationContextManager:
     """Actualiza el contexto usando eventos oficiales y archivos auxiliares."""
 
-    def __init__(self, database: DatabaseManager, navroute_file: Path) -> None:
+    def __init__(
+        self, database: DatabaseManager, navroute_file: Path,
+        fsd_catalog: FSDModuleCatalog | None = None,
+    ) -> None:
         self.database = database
         self.navroute_file = navroute_file
         self.context = NavigationContext()
+        self.fsd_catalog = fsd_catalog or FSDModuleCatalog()
         self._route_mtime_ns = -1
 
     def restore(self, journal_file: Path) -> NavigationContext:
@@ -298,9 +431,11 @@ class NavigationContextManager:
                 event.get("FuelReservoir", self.context.fuel_reservoir)
             )
         elif name == "JetConeBoost":
+            already_charged = self.context.boost_charged
             self.context.boost_charged = True
             self.context.last_boost_value = float(event.get("BoostValue", 0) or 0)
-            self.context.cone_exposures_session += 1
+            if not already_charged:
+                self.context.cone_exposures_session += 1
         if persist:
             self.persist()
 
@@ -381,13 +516,38 @@ class NavigationContextManager:
                 continue
             context.fsd_item = module.get("Item", "")
             context.fsd_health = module.get("Health")
+            spec = self.fsd_catalog.resolve(context.fsd_item)
+            if spec is not None:
+                context.fsd_optimal_mass = spec.optimal_mass
+                context.max_fuel_per_jump = spec.max_fuel_per_jump
+                context.fsd_fuel_multiplier = spec.fuel_multiplier
+                context.fsd_fuel_power = spec.fuel_power
+                context.fsd_spec_source = str(spec.source)
             engineering = module.get("Engineering", {})
             context.fsd_engineer = engineering.get("Engineer", "")
             context.fsd_blueprint = engineering.get("BlueprintName", "")
             context.fsd_level = engineering.get("Level")
             for modifier in engineering.get("Modifiers", []):
-                if modifier.get("Label") == "MaxFuelPerJump":
+                label = modifier.get("Label")
+                if label == "MaxFuelPerJump":
                     context.max_fuel_per_jump = float(modifier.get("Value", 0) or 0)
+                elif label == "FSDOptimalMass":
+                    context.fsd_optimal_mass = float(modifier.get("Value", 0) or 0)
+            context.fsd_fuel_power = float(
+                engineering.get("FuelPower", context.fsd_fuel_power) or 0
+            )
+            context.fsd_fuel_multiplier = float(
+                engineering.get("FuelMultiplier", context.fsd_fuel_multiplier) or 0
+            )
+        context.fsd_range_boost = 0.0
+        boosts = {1: 4.0, 2: 6.0, 3: 7.75, 4: 9.25, 5: 10.5}
+        for module in event.get("Modules", []):
+            item = str(module.get("Item", "")).casefold()
+            if "fsdbooster" not in item and "fsd_booster" not in item:
+                continue
+            match = re.search(r"size(\d+)", item)
+            if match:
+                context.fsd_range_boost = boosts.get(int(match.group(1)), 0.0)
 
     def _load_saved(self, payload: dict) -> None:
         route = tuple(

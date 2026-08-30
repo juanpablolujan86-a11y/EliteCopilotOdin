@@ -54,14 +54,23 @@ class BindingAudit:
     snapshot_path: Path | None
 
 
+@dataclass(frozen=True, slots=True)
+class BindingRestoreResult:
+    restored_files: tuple[str, ...]
+    safety_snapshot: Path
+    source_snapshot: Path
+
+
 class BindingCustodian:
     """Nunca modifica los originales; sólo lee y crea snapshots externos."""
 
     IMPORTANT_ACTIONS = (
-        "ShipSpotLightToggle", "NightVisionToggle",
+        "ShipSpotLightToggle", "NightVisionToggle", "ToggleCargoScoop",
+        "LandingGearToggle", "HyperSuperCombination", "HeadlightsBuggyButton",
+        "ToggleCargoScoop_Buggy",
         "HumanoidToggleFlashlightButton", "HumanoidToggleNightVisionButton",
-        "OrderRequestDock", "UIFocus", "FocusLeftPanel",
-        "UI_Up", "UI_Down", "UI_Left", "UI_Right", "UI_Select",
+        "UIFocus", "FocusLeftPanel", "CycleNextPanel", "CyclePreviousPanel",
+        "UI_Up", "UI_Down", "UI_Left", "UI_Right", "UI_Select", "UI_Back",
     )
 
     def __init__(self, bindings_root: Path, data_root: Path) -> None:
@@ -76,6 +85,14 @@ class BindingCustodian:
         snapshot = self.create_snapshot(profiles) if create_snapshot and profiles else None
         return BindingAudit(
             profiles, self._active_presets(), self._loading_errors(), snapshot
+        )
+
+    def list_snapshots(self) -> tuple[Path, ...]:
+        if not self.backup_root.exists():
+            return ()
+        return tuple(
+            path for path in sorted(self.backup_root.iterdir(), reverse=True)
+            if path.is_dir() and (path / "manifest.json").is_file()
         )
 
     def parse_profile(self, path: Path) -> BindingProfile:
@@ -139,6 +156,49 @@ class BindingCustodian:
             json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         return destination
+
+    def restore_snapshot(
+        self, snapshot: Path, *, confirmation: str
+    ) -> BindingRestoreResult:
+        """Restaura un snapshot sólo con autorización literal y respaldo previo."""
+
+        if confirmation != "RESTORE_BINDINGS":
+            raise PermissionError("La restauración requiere autorización explícita.")
+        source = snapshot.resolve()
+        backup_root = self.backup_root.resolve()
+        if source.parent != backup_root or not source.is_dir():
+            raise ValueError("El snapshot no pertenece al almacén seguro de HEIMDALL.")
+        manifest_path = source / "manifest.json"
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            raise ValueError("El snapshot no tiene un manifiesto válido.") from error
+        names = tuple(str(name) for name in manifest.get("files", ()))
+        if not names or any(
+            Path(name).name != name
+            or not name.endswith((".binds", ".start", ".log"))
+            for name in names
+        ):
+            raise ValueError("El manifiesto contiene archivos no permitidos.")
+        for name in names:
+            candidate = source / name
+            if not candidate.is_file():
+                raise ValueError(f"Falta el archivo declarado: {name}")
+            if name.endswith(".binds"):
+                self.parse_profile(candidate)
+
+        current = self.audit(create_snapshot=True)
+        if current.snapshot_path is None:
+            raise RuntimeError("No pude crear el respaldo de seguridad actual.")
+        self.bindings_root.mkdir(parents=True, exist_ok=True)
+        restored: list[str] = []
+        for name in names:
+            destination = self.bindings_root / name
+            temporary = destination.with_name(f".{destination.name}.odin-restore")
+            shutil.copy2(source / name, temporary)
+            temporary.replace(destination)
+            restored.append(name)
+        return BindingRestoreResult(tuple(restored), current.snapshot_path, source)
 
     def _active_presets(self) -> tuple[str, ...]:
         values: list[str] = []
