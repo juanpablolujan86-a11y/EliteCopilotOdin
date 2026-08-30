@@ -3,7 +3,7 @@ import sys
 from core.command_center import CommandCenter
 from core.config import Config
 from core.diagnostics import configure_diagnostics, log_fatal_error
-from core.single_instance import SingleInstance
+from platform_adapters.single_instance import create_single_instance
 from intelligence.assistant import OdinLocalAssistant
 from intelligence.ollama import OllamaError
 from intelligence.openai_client import OpenAIClient, OpenAIError
@@ -45,7 +45,7 @@ def main() -> None:
     if not any(mode in sys.argv for mode in standalone_modes):
         # La exclusión debe ocurrir antes de tocar Ollama: un segundo acceso
         # directo no puede iniciar otro servidor ni mostrar otra consola.
-        instance = SingleInstance()
+        instance = create_single_instance()
         if not instance.acquire():
             print("\nODIN ya está ejecutándose. No se abrirá una segunda copia.")
             return
