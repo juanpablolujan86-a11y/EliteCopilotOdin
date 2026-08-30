@@ -4,14 +4,14 @@ import json
 from pathlib import Path
 
 from core.internal_events import InternalEvent
-from heimdall.clipboard import write_text
+from platform_adapters.clipboard import copy_text
 from models.events.voice_message_ready import VoiceMessageReady
 from core.localization import text as localized_text
 
 
 class ActiveTradeRoute:
     def __init__(
-        self, path: Path, event_bus, clipboard_writer=write_text, diagnostics=None,
+        self, path: Path, event_bus, clipboard_writer=copy_text, diagnostics=None,
         language: str = "es-419",
     ) -> None:
         self.path = path

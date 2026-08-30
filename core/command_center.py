@@ -88,7 +88,7 @@ from heimdall.bindings import BindingAudit, BindingCustodian
 from heimdall.cockpit import CockpitAdvisor, parse_cockpit_intent
 from heimdall.docking_assist import DockingAssist
 from heimdall.home_base import HomeBaseManager
-from heimdall.clipboard import write_text
+from platform_adapters.clipboard import copy_text
 from heimdall.navigation import NavigationContext, NavigationContextManager
 from heimdall.spansh import (
     ExactRoutePlan, HeimdallRoutePlanner, SpanshClient, SpanshRouteError,
@@ -107,7 +107,7 @@ from intelligence.intents import parse_home_route_intent, parse_neutron_route_in
 from intelligence.ollama import OllamaError
 from intelligence.openai_client import OpenAIError
 from speech.conversation import VoiceConversation
-from speech.hotkey import WindowsHotkey
+from platform_adapters.hotkey import VK_F7, create_hotkey
 from speech.wake_word import WakeWordListener
 from speech.recorder import MicrophoneError
 from speech.whisper import TranscriptionError
@@ -235,8 +235,8 @@ class CommandCenter:
         self._powerplay_market_client = SpanshMarketClient()
         self._freyja_station_finder = StationFinder(self._powerplay_market_client)
         self.powerplay_assignment_store = WeeklyAssignmentStore(self.config.data_root)
-        self.voice_hotkey = WindowsHotkey()
-        self.docking_hotkey = WindowsHotkey(WindowsHotkey.VK_F7)
+        self.voice_hotkey = create_hotkey()
+        self.docking_hotkey = create_hotkey(VK_F7)
         self._voice_busy = threading.Event()
         self._voice_questions: queue.Queue[str] = queue.Queue()
         self._wake_activations: queue.Queue[bool] = queue.Queue()
@@ -4180,7 +4180,7 @@ class CommandCenter:
                             power=profile.powerplay_power, commodity=commodity,
                         )
                     else:
-                        write_text(destination.system)
+                        copy_text(destination.system)
                         units = min(profile.cargo_used, destination.demand)
                         self._powerplay_sale_result.update({
                             "active": True,

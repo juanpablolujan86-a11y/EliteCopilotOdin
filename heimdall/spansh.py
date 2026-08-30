@@ -12,7 +12,7 @@ import requests
 
 from core.database import DatabaseManager
 from heimdall.navigation import NavigationContext
-from heimdall.clipboard import write_text
+from platform_adapters.clipboard import copy_text
 
 
 class SpanshRouteError(RuntimeError):
@@ -367,7 +367,7 @@ class HeimdallRoutePlanner:
         database: DatabaseManager,
         client: SpanshClient,
         *,
-        clipboard_writer: Callable[[str], None] = write_text,
+        clipboard_writer: Callable[[str], None] = copy_text,
     ) -> None:
         self.database = database
         self.client = client

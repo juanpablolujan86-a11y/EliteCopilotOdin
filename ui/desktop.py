@@ -13,7 +13,7 @@ from tkinter import messagebox, ttk
 from core.diagnostics import log_fatal_error
 from core.database import DatabaseManager
 from core.localization import SUPPORTED_LANGUAGES, text as localized_text
-from heimdall.clipboard import write_text
+from platform_adapters.clipboard import copy_text
 from guardian.unlocks import GUARDIAN_MODULE_RECIPES
 from core.officer_names import public_officer_name
 from engineering.planner import ENGINEERS, ENGINEERING_PLANS
@@ -25,7 +25,8 @@ from intelligence.voice_calibration import VoiceCalibrationManager, analyze_cali
 from intelligence.command_memory import VoiceCommandMemory
 from speech.recorder import MicrophoneError
 from speech.whisper import TranscriptionError
-from voice.credentials import WindowsCredentialStore
+from security.secret_store import create_secret_store
+from voice.credentials import ELEVENLABS_TARGET
 from voice.settings import VoiceSettingsRepository, apply_language_voice_preset
 from ui.voice_commands import voice_command_catalog
 
@@ -1592,7 +1593,7 @@ class OdinDesktopApp:
         )
         if not system:
             return
-        write_text(system)
+        copy_text(system)
         print(f"GUARDIAN: {system} copiado al portapapeles.")
 
     def _refresh_engineering(self, engineering: dict) -> None:
@@ -1672,7 +1673,7 @@ class OdinDesktopApp:
 
     def _copy_engineering_system(self) -> None:
         if self._engineering_system:
-            write_text(self._engineering_system)
+            copy_text(self._engineering_system)
             print(f"ODIN: {self._engineering_system} copiado al portapapeles.")
 
     def _request_ai_plan(self) -> None:
@@ -1771,7 +1772,7 @@ class OdinDesktopApp:
     def _copy_next_system(self) -> None:
         system = self.values["next_system"].get().strip()
         if system and system != self._t("heimdall.no_route"):
-            write_text(system)
+            copy_text(system)
 
     def _request_neutron_route(self) -> None:
         destination = self.values["route_destination_input"].get().strip()
@@ -1870,7 +1871,7 @@ class OdinDesktopApp:
     def _copy_powerplay_location(self) -> None:
         system = self._selected_powerplay_system()
         if system:
-            write_text(system)
+            copy_text(system)
             print(f"POWERPLAY: {system} copiado al portapapeles.")
 
     def _powerplay_location_to_heimdall(self) -> None:
@@ -1976,7 +1977,7 @@ class OdinDesktopApp:
     def _copy_mining_system(self, tier: str) -> None:
         system = self.mining_search_rows.get(tier, (None, None, ""))[2]
         if system:
-            write_text(system)
+            copy_text(system)
             print(f"BROKK: {system} copiado al portapapeles.")
 
     def _route_mining_system(self, tier: str) -> None:
@@ -2269,7 +2270,7 @@ class OdinDesktopApp:
             value=self.odin.config.ai_share_station_search_data
         )
         installed = {
-            "elevenlabs": WindowsCredentialStore().exists(),
+            "elevenlabs": create_secret_store(ELEVENLABS_TARGET).exists(),
             "edsm": EDSMCredentialStore().exists(),
             "inara": InaraCredentialStore().exists(),
             "openai": OpenAICredentialStore().exists(),
@@ -2550,7 +2551,7 @@ class OdinDesktopApp:
                 return
             try:
                 if eleven_key.get().strip():
-                    WindowsCredentialStore().set(eleven_key.get().strip())
+                    create_secret_store(ELEVENLABS_TARGET).set(eleven_key.get().strip())
                 if edsm_key.get().strip():
                     EDSMCredentialStore().set(name, edsm_key.get().strip())
                 if inara_key.get().strip():
