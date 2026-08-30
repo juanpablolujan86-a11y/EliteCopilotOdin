@@ -1,6 +1,7 @@
 """Seguimiento persistente de una ruta comercial calculada por FREYJA."""
 from __future__ import annotations
 import json
+import time
 from pathlib import Path
 
 from core.internal_events import InternalEvent
@@ -301,7 +302,14 @@ class ActiveTradeRoute:
         temporary_path.write_text(
             json.dumps(self.state, ensure_ascii=False, indent=2), encoding="utf-8"
         )
-        temporary_path.replace(self.path)
+        for attempt in range(4):
+            try:
+                temporary_path.replace(self.path)
+                return
+            except PermissionError:
+                if attempt == 3:
+                    raise
+                time.sleep(0.025 * (attempt + 1))
 
     def _load(self):
         try:
