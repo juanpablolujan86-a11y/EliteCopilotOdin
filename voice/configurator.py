@@ -5,7 +5,8 @@ from __future__ import annotations
 import getpass
 
 from core.config import Config
-from voice.credentials import WindowsCredentialStore
+from security.secret_store import create_secret_store
+from voice.credentials import ELEVENLABS_TARGET
 from voice.edge import EDGE_LATIN_VOICES
 from voice.elevenlabs import ElevenLabsClient, ElevenLabsError
 from voice.settings import VoiceSettingsRepository
@@ -14,7 +15,7 @@ from voice.windows_voices import list_windows_voices
 
 def run_voice_configuration(config: Config | None = None) -> None:
     config = config or Config()
-    credentials = WindowsCredentialStore()
+    credentials = create_secret_store(ELEVENLABS_TARGET)
     repository = VoiceSettingsRepository(config.data_root)
     settings = repository.load()
     voices = list_windows_voices()

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
-from voice.credentials import WindowsCredentialStore
+from security.secret_store import SecretStore, create_secret_store
 
 
 INARA_CREDENTIAL_TARGET = "ODIN/InaraApiCredentials"
@@ -19,8 +19,8 @@ class InaraCredentials:
 
 
 class InaraCredentialStore:
-    def __init__(self, store=None) -> None:
-        self.store = store or WindowsCredentialStore(INARA_CREDENTIAL_TARGET)
+    def __init__(self, store: SecretStore | None = None) -> None:
+        self.store = store or create_secret_store(INARA_CREDENTIAL_TARGET)
 
     def set(self, commander_name: str, api_key: str, frontier_id: str = "") -> None:
         commander = str(commander_name).strip()

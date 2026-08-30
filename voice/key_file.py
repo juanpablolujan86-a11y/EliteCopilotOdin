@@ -7,7 +7,8 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from voice.credentials import WindowsCredentialStore
+from security.secret_store import SecretStore, create_secret_store
+from voice.credentials import ELEVENLABS_TARGET
 from voice.elevenlabs import ElevenLabsClient, ElevenLabsError
 
 
@@ -63,7 +64,7 @@ def _read_candidate(path: Path) -> str | None:
 
 def import_key_file(
     directory: Path | None = None,
-    credentials: WindowsCredentialStore | None = None,
+    credentials: SecretStore | None = None,
     client: ElevenLabsClient | None = None,
 ) -> KeyImportResult:
     path = ensure_key_file(directory)
@@ -74,7 +75,7 @@ def import_key_file(
     if not secret:
         return KeyImportResult()
 
-    credentials = credentials or WindowsCredentialStore()
+    credentials = credentials or create_secret_store(ELEVENLABS_TARGET)
     client = client or ElevenLabsClient()
     try:
         client.list_voices(secret)

@@ -6,7 +6,8 @@ import hashlib
 from pathlib import Path
 
 from core.config import Config
-from voice.credentials import WindowsCredentialStore
+from security.secret_store import SecretStore, create_secret_store
+from voice.credentials import ELEVENLABS_TARGET
 from voice.edge import EdgeTtsClient, EdgeTtsError
 from voice.elevenlabs import ElevenLabsClient, ElevenLabsError
 from voice.playback import AudioPlaybackError, WindowsMp3Player, WindowsSpeechPlayer
@@ -29,14 +30,14 @@ class OfficerVoiceService:
     def __init__(
         self,
         config: Config | None = None,
-        credentials: WindowsCredentialStore | None = None,
+        credentials: SecretStore | None = None,
         client: ElevenLabsClient | None = None,
         player: WindowsMp3Player | None = None,
         windows_player: WindowsSpeechPlayer | None = None,
         edge_client: EdgeTtsClient | None = None,
     ) -> None:
         self.config = config or Config()
-        self.credentials = credentials or WindowsCredentialStore()
+        self.credentials = credentials or create_secret_store(ELEVENLABS_TARGET)
         self.client = client or ElevenLabsClient()
         self.player = player or WindowsMp3Player(self.config.data_root / "voice" / "cache")
         self.windows_player = windows_player or WindowsSpeechPlayer()

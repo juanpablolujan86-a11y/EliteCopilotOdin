@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 import requests
 
-from voice.credentials import WindowsCredentialStore
+from security.secret_store import SecretStore, create_secret_store
 
 
 OPENAI_CREDENTIAL_TARGET = "ODIN/OpenAIApiKey"
@@ -16,14 +16,23 @@ class OpenAIError(RuntimeError):
     pass
 
 
-class OpenAICredentialStore(WindowsCredentialStore):
-    def __init__(self) -> None:
-        super().__init__(OPENAI_CREDENTIAL_TARGET)
+class OpenAICredentialStore:
+    def __init__(self, store: SecretStore | None = None) -> None:
+        self.store = store or create_secret_store(OPENAI_CREDENTIAL_TARGET)
 
     def set(self, secret: str) -> None:
         if not secret.strip():
             raise ValueError("La clave de OpenAI no puede estar vacía.")
-        super().set(secret)
+        self.store.set(secret)
+
+    def get(self) -> str | None:
+        return self.store.get()
+
+    def delete(self) -> bool:
+        return self.store.delete()
+
+    def exists(self) -> bool:
+        return self.store.exists()
 
 
 @dataclass(frozen=True, slots=True)
