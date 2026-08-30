@@ -1,0 +1,67 @@
+name: Informe de error
+description: Informar un comportamiento reproducible de ODIN
+title: "[BUG] "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        No adjunte API keys, datos personales ni archivos Journal completos.
+  - type: input
+    id: version
+    attributes:
+      label: Versión de ODIN
+      placeholder: v0.8.0-beta
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Componente
+      options:
+        - ODIN / interfaz
+        - MÍMIR
+        - NJÖRÐR / navegación
+        - FREYJA
+        - BROKK
+        - HEIMDALL / Guardian
+        - VÖLUNDR / ingeniería
+        - Powerplay
+        - Voz y reconocimiento
+        - Instalador
+        - Servicios comunitarios
+        - Otro
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Pasos para reproducirlo
+      description: Indique qué hizo, en qué orden y cuántas veces ocurrió.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Resultado esperado
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Resultado observado
+    validations:
+      required: true
+  - type: textarea
+    id: sanitized_logs
+    attributes:
+      label: Registro anonimizado
+      description: Elimine nombres, FID, claves, rutas privadas y otros datos sensibles.
+      render: text
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Confirmación de privacidad
+      options:
+        - label: Revisé el contenido y no contiene credenciales ni datos personales.
+          required: true

@@ -284,6 +284,20 @@ Las pruebas no modifican la biblioteca de conocimiento.
 Las fuentes locales y sus condiciones de uso están documentadas en
 [`docs/THIRD_PARTY_DATA.md`](docs/THIRD_PARTY_DATA.md).
 
+## Colaboración y seguridad
+
+Antes de proponer cambios, consulte [`CONTRIBUTING.md`](CONTRIBUTING.md). Los
+problemas de seguridad deben seguir [`SECURITY.md`](SECURITY.md) y nunca deben
+incluir claves, Journal completos ni datos personales del comandante.
+
+Las decisiones sobre separación de plataforma, secretos y nombres públicos se
+documentan en
+[`docs/ARCHITECTURE_SECURITY.md`](docs/ARCHITECTURE_SECURITY.md).
+
+El repositorio todavía no declara una licencia pública. Hasta que se elija y
+añada una, la presencia del código en un repositorio no concede por sí sola
+permiso para copiarlo, redistribuirlo o crear derivados.
+
 ## Próximo objetivo
 
 **Siguiente etapa:** beta final para terceros y cierre de ODIN 1.0. La ruta
