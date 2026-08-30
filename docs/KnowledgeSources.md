@@ -89,7 +89,7 @@ Información aportada:
 
 ## ExploData
 
-Estado: Pendiente de evaluación.
+Estado: Integrado como referencia local versionada.
 
 Información aportada:
 
@@ -99,7 +99,7 @@ Información aportada:
 
 ## EDSM
 
-Estado: Integrado parcialmente.
+Estado: Integrado de forma opcional.
 
 Información aportada:
 
@@ -111,7 +111,7 @@ Información aportada:
 
 ## Spansh
 
-Estado: Pendiente de evaluación.
+Estado: Integrado como proveedor de planificación bajo demanda.
 
 Información aportada:
 
@@ -123,14 +123,15 @@ Información aportada:
 
 # Política de actualización
 
-Las fuentes externas nunca serán consultadas directamente por los oficiales.
-
-Toda información será importada previamente al formato interno de ODIN mediante el subsistema Knowledge Importer.
+Los oficiales no implementan clientes HTTP ni almacenan secretos. Las fuentes
+científicas estables se importan al formato interno mediante HUGINN. Los datos
+que pierden vigencia rápidamente —rutas y mercados, por ejemplo— se consultan
+bajo demanda mediante servicios aislados, con caché, límites y fallos seguros.
 
 Esto garantiza:
 
-* independencia de servicios externos;
-* funcionamiento offline;
+* degradación controlada cuando un servicio no responde;
+* funcionamiento offline para el conocimiento científico importado;
 * consistencia de la Biblioteca del Conocimiento;
 * trazabilidad de cada dato.
 

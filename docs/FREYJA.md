@@ -66,7 +66,7 @@ una ruta más corta ofrece mejor rendimiento o menor riesgo.
 
 - máximo de 30 saltos reales estimados;
 - múltiples compras y ventas;
-- repostaje y autonomía comprobados por HEIMDALL;
+- repostaje y autonomía comprobados por NJÖRÐR;
 - reserva de créditos protegida;
 - penalización por precios antiguos, baja demanda y estaciones lejanas;
 - recálculo cuando cambian el inventario, los precios o la ruta del juego;
@@ -102,7 +102,7 @@ que configurar manualmente todos los parámetros.
 - Journal y archivos de mercado locales: fuente primaria para operaciones e
   inventario propios.
 - Datos comunitarios con marca temporal: búsqueda de oportunidades externas.
-- HEIMDALL: factibilidad de saltos, combustible y progreso de navegación.
+- NJÖRÐR: factibilidad de saltos, combustible y progreso de navegación.
 
 Inara no se usará como buscador general de mercados mediante su API. La fuente
 comunitaria deberá permitir consultar o mantener datos de mercado con oferta,

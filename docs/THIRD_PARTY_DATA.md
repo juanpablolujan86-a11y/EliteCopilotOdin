@@ -7,7 +7,7 @@ titularidad ni lo relicencia como parte de ODIN.
 
 ## Constantes FSD de EDMarketConnector
 
-ODIN no redistribuye la base de módulos de Coriolis. HEIMDALL lee, cuando está
+ODIN no redistribuye la base de módulos de Coriolis. NJÖRÐR lee, cuando está
 disponible, el archivo local `modules.json` instalado por EDMarketConnector y
 utiliza exclusivamente las propiedades físicas necesarias para Galaxy Plotter.
 

@@ -6,13 +6,13 @@ comandante y coordina oficiales especializados mediante un EventBus.
 
 ## Estado actual
 
-Versión actual: **v0.8.0-beta — MÍMIR, HEIMDALL, FREYJA y BROKK beta**.
+Versión actual: **v0.8.0-beta — MÍMIR, NJÖRÐR, FREYJA y BROKK beta**.
 
 ## Instalación para comandantes de prueba
 
 El instalador de Windows copia ODIN en el perfil del usuario, crea accesos
 directos y deja configuradas por defecto voces Edge en español para ODIN,
-MÍMIR, HEIMDALL y FREYJA. Durante la instalación ofrece, como opción marcada
+MÍMIR, NJÖRÐR y FREYJA. Durante la instalación ofrece, como opción marcada
 pero no obligatoria, instalar Ollama desde su distribución oficial y descargar
 `gemma3:4b`.
 
@@ -22,12 +22,12 @@ transferido y cantidad restante; la instalación y `ollama pull` se ejecutan en
 segundo plano sin consola visible.
 
 Sin Ollama, la lectura del Journal, la interfaz, las voces, las predicciones de
-MÍMIR, las rutas de HEIMDALL, el comercio de FREYJA y las órdenes programadas
+MÍMIR, las rutas de NJÖRÐR, el comercio de FREYJA y las órdenes programadas
 siguen funcionando. Solamente queda indisponible la respuesta conversacional
 libre. El modelo requiere conexión durante la instalación y varios gigabytes de
 espacio. Si el equipo ya tiene Ollama, el asistente reutiliza esa instalación.
 
-HEIMDALL conserva el contexto de navegación de la nave, audita los controles,
+NJÖRÐR conserva el contexto de navegación de la nave, audita los controles,
 evalúa combustible y autonomía, reconoce cargas de cono y saltos potenciados,
 y sigue rutas convencionales o de neutrones. Puede solicitar rutas a Spansh,
 copiar el siguiente waypoint al portapapeles y avanzar al confirmarse cada
@@ -36,7 +36,7 @@ anterior para no mantener instrucciones obsoletas.
 Durante una autopista muestra saltos realizados, restantes y total real,
 incluidos los saltos convencionales entre puntos principales de Spansh.
 
-HEIMDALL analiza el evento `StoredShips` más reciente y registra como base el
+NJÖRÐR analiza el evento `StoredShips` más reciente y registra como base el
 sistema con más naves guardadas; en un empate prefiere la estación donde se
 consultó el inventario. La base persiste en `%LOCALAPPDATA%\ODIN\heimdall`.
 Las frases “vamos a la base”, “creá una ruta a la base” y “vamos a casa” calculan
@@ -104,9 +104,9 @@ El arranque normal abre el **Centro de Mando de ODIN**, una interfaz gráfica
 de escritorio con estética naranja inspirada en Elite Dangerous. La columna
 izquierda conserva el registro operativo completo; la derecha muestra
 comandante, nave, créditos, balance de expedición, biología, conexiones y la
-ruta activa de HEIMDALL. El siguiente sistema permanece visible y puede
+ruta activa de NJÖRÐR. El siguiente sistema permanece visible y puede
 copiarse manualmente si falla la actualización automática del portapapeles.
-El lateral de oficiales utiliza pestañas amplias para MÍMIR, HEIMDALL, FREYJA
+El lateral de oficiales utiliza pestañas amplias para MÍMIR, NJÖRÐR, FREYJA
 y RED. Freyja muestra la modalidad, el tramo comercial, producto, toneladas,
 destino, beneficio estimado y ganancia realizada.
 Sus cuatro botones permiten iniciar desde la interfaz una ruta rápida, un
@@ -169,7 +169,7 @@ procesamiento duplicado de eventos del Journal.
 
 ## Configuración segura de voces
 
-ODIN permite asignar una voz diferente a ODIN, MÍMIR y HEIMDALL. El
+ODIN permite asignar una voz diferente a ODIN, MÍMIR y NJÖRÐR. El
 configurador detecta las voces OneCore instaladas en Windows y también deja
 preparados identificadores de voz independientes para ElevenLabs:
 
@@ -178,7 +178,7 @@ python main.py --configure-voice
 ```
 
 El proveedor predeterminado es Edge TTS, sin API key ni consumo de créditos:
-ODIN utiliza Alonso latino de Estados Unidos, MÍMIR utiliza Dalia de México y HEIMDALL
+ODIN utiliza Alonso latino de Estados Unidos, MÍMIR utiliza Dalia de México y NJÖRÐR
 utiliza Jorge de México. No se seleccionan voces de España. Edge TTS
 necesita conexión a Internet; si no está disponible, ODIN utiliza las voces
 locales de Windows como respaldo.
@@ -242,13 +242,13 @@ El reconocimiento utiliza Whisper Small cuando está instalado y conserva Base
 como respaldo. La captura mantiene audio previo al umbral para no perder la
 primera sílaba, adapta el umbral al ruido ambiente y reconoce variantes acústicas
 observadas como “Olín”. Un vocabulario inicial favorece nombres propios de ODIN,
-MÍMIR, HEIMDALL y Elite Dangerous.
+MÍMIR, NJÖRÐR y Elite Dangerous.
 
 Las órdenes de navegación no dependen de una interpretación creativa del modelo.
 Al decir “ODIN, calculá una ruta de neutrones hasta NOMBRE DEL SISTEMA”, ODIN
-extrae el destino con reglas locales, entrega el cálculo a HEIMDALL y Spansh,
+extrae el destino con reglas locales, entrega el cálculo a NJÖRÐR y Spansh,
 reemplaza la ruta activa y copia el primer waypoint al portapapeles. Al arribar,
-HEIMDALL valida el sistema y copia el siguiente hasta completar el recorrido.
+NJÖRÐR valida el sistema y copia el siguiente hasta completar el recorrido.
 Si Spansh falla, ODIN pronuncia solamente un aviso breve; el detalle técnico se
 conserva en `heimdall.log` para diagnóstico.
 
@@ -286,7 +286,9 @@ Las fuentes locales y sus condiciones de uso están documentadas en
 
 ## Colaboración y seguridad
 
-Antes de proponer cambios, consulte [`CONTRIBUTING.md`](CONTRIBUTING.md). Los
+La entrada completa para desarrolladores está en
+[`docs/README.md`](docs/README.md). Antes de proponer cambios, consulte
+[`CONTRIBUTING.md`](CONTRIBUTING.md). Los
 problemas de seguridad deben seguir [`SECURITY.md`](SECURITY.md) y nunca deben
 incluir claves, Journal completos ni datos personales del comandante.
 
@@ -303,7 +305,7 @@ y titularidades; consulte [`NOTICE`](NOTICE) y la documentación de fuentes.
 ## Próximo objetivo
 
 **Siguiente etapa:** beta final para terceros y cierre de ODIN 1.0. La ruta
-larga de HEIMDALL, la calibración acústica local, los cinco idiomas y la
+larga de NJÖRÐR, la calibración acústica local, los cinco idiomas y la
 sincronización de Inara ya están implementados y validados. Quedan pruebas
 reales de la síntesis FSD autorizada, los modos avanzados de BROKK y la
 instalación/voz en otros equipos. Las comprobaciones de méritos Powerplay

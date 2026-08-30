@@ -30,14 +30,14 @@ prueba dentro de Elite sigue siendo necesaria para validar los eventos reales.
    inglés de Estados Unidos, inglés del Reino Unido o portugués de Brasil.
 5. Inicie Elite Dangerous y después ODIN.
 
-Sin Ollama continúan funcionando el Journal, las voces, MÍMIR, HEIMDALL,
+Sin Ollama continúan funcionando el Journal, las voces, MÍMIR, NJÖRÐR,
 FREYJA y todas las órdenes operativas programadas.
 
 ## Pruebas prioritarias
 
 - MÍMIR: salto, detección biológica, predicción, DSS, filtrado por planeta y
   recolección 1/3–3/3 con distancia.
-- HEIMDALL: síntesis FSD básica con autorización explícita. Compruebe que
+- NJÖRÐR: síntesis FSD básica con autorización explícita. Compruebe que
   proponga el grado mínimo, no consuma materiales por sí solo y detecte el
   evento de síntesis del Journal. Las rutas de neutrones, el portapapeles, el
   progreso y el recálculo ya superaron pruebas reales prolongadas.
@@ -67,7 +67,7 @@ archivos con API keys ni capturas que muestren credenciales.
 
 - El instalador todavía no está firmado y Windows SmartScreen puede advertirlo.
 - Las rutas comerciales reales dependen de datos comunitarios recientes.
-- La fabricación de inyecciones FSD sigue siendo manual: HEIMDALL propone y
+- La fabricación de inyecciones FSD sigue siendo manual: NJÖRÐR propone y
   registra la autorización, pero no envía pulsaciones al panel de inventario.
 - Las pruebas controladas de comercio Powerplay no produjeron méritos; ODIN no
   promete méritos y muestra únicamente los confirmados por el Journal.

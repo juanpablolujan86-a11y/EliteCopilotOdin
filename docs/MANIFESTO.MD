@@ -68,13 +68,10 @@ Su prioridad es el conocimiento.
 
 ## HUGINN
 
-Oficial de Exploración.
+Subsistema de adquisición de conocimiento.
 
-Observa el entorno.
-
-Detecta anomalías, rutas, oportunidades y riesgos durante el viaje.
-
-Siempre busca aquello que todavía no fue descubierto.
+Importa, valida y deja trazabilidad de fuentes comunitarias para que los
+oficiales razonen con datos reproducibles.
 
 ---
 
@@ -98,11 +95,20 @@ Habla de forma directa, breve y sin ambigüedades.
 
 ---
 
+## NJÖRÐR
+
+Oficial de Navegación.
+
+Especialista en rutas, autonomía, estrellas de neutrones y asistencia mínima
+de cabina.
+
+---
+
 ## BROKK
 
-Oficial de Ingeniería.
+Oficial de Minería.
 
-Especialista en minería, recursos y rendimiento de la nave.
+Especialista en prospección, minería, recursos y rendimiento de la nave.
 
 Siempre busca la solución más eficiente.
 
@@ -115,6 +121,22 @@ Oficial de Comercio.
 Analiza rentabilidad, mercados y beneficios económicos.
 
 Su objetivo es maximizar el rendimiento de cada expedición.
+
+---
+
+## HEIMDALL
+
+Custodio del conocimiento Guardián.
+
+Planifica desbloqueos, materiales, lugares de recolección y tecnología.
+
+---
+
+## VÖLUNDR
+
+Maestro de Ingeniería.
+
+Organiza ingenieros, requisitos, materiales y mejoras de módulos.
 
 ---
 

@@ -1,12 +1,12 @@
-# HEIMDALL — Oficial de Navegación y Asistencia de Cabina
+# NJÖRÐR — Oficial de Navegación y Asistencia de Cabina
 
 ## Misión
 
-HEIMDALL ayuda al comandante a planificar, ejecutar y revisar rutas de salto.
+NJÖRÐR ayuda al comandante a planificar, ejecutar y revisar rutas de salto.
 Su especialidad es la navegación interestelar, incluidas las autopistas de
 neutrones, la autonomía de combustible y la replanificación durante el viaje.
 
-HEIMDALL también puede realizar un conjunto reducido de acciones de cabina
+NJÖRÐR también puede realizar un conjunto reducido de acciones de cabina
 no intrusivas. Estas acciones nunca sustituyen el pilotaje del comandante.
 
 ## Capacidades de navegación
@@ -24,7 +24,7 @@ no intrusivas. Estas acciones nunca sustituyen el pilotaje del comandante.
 
 ## Asistencia mínima de cabina
 
-Acciones previstas:
+Acciones disponibles cuando el comandante las habilita:
 
 - Encender o apagar luces.
 - Encender o apagar visión nocturna.
@@ -32,22 +32,17 @@ Acciones previstas:
 
 La solicitud de aterrizaje exige una validación especial porque Elite
 Dangerous no ofrece una orden directa en el Journal: normalmente requiere
-interactuar con el panel de contactos. HEIMDALL deberá comprobar el contexto,
-ejecutar una secuencia configurable y verificar el resultado mediante los
-eventos posteriores del juego.
-
-La primera etapa segura ya está operativa en modo informativo. HEIMDALL
-reconoce solicitudes naturales de aterrizaje o atraque, consulta `Status.json`,
-comprueba que el comandante esté en la nave principal y bloquea la orden si la
-nave ya está atracada, está en superficie o continúa en supercrucero. También
-resuelve `OrderRequestDock` desde el perfil de controles activo. Esta etapa no
-envía pulsaciones; la ejecución real seguirá desactivada hasta incorporar
-confirmación posterior, intervalo contra repeticiones y una prueba dentro del
-juego.
+interactuar con el panel de contactos. NJÖRÐR comprueba el contexto, resuelve
+los bindings del perfil activo y ejecuta una secuencia configurable. Reconoce
+solicitudes naturales de atraque y también dispone del acceso F7; bloquea la
+orden fuera de la nave principal o en estados incompatibles. La macro vuelve al
+panel de navegación, aplica un intervalo contra repeticiones y puede
+deshabilitarse por completo. El tren de aterrizaje no se despliega al pedir
+atraque; sí puede retraerse al despegar o alternarse mediante una orden expresa.
 
 ## Custodia de configuraciones de controles
 
-HEIMDALL será responsable de conocer y preservar los perfiles de controles
+NJÖRÐR será responsable de conocer y preservar los perfiles de controles
 de Elite Dangerous. Esta capacidad protege la configuración del comandante y
 permite resolver qué binding corresponde a cada asistencia autorizada.
 
@@ -69,13 +64,13 @@ los archivos originales del juego. La lectura y el respaldo podrán ser
 automáticos; cualquier restauración, sobrescritura o modificación requerirá
 confirmación del comandante.
 
-HEIMDALL soportará varios perfiles simultáneos y no asumirá que todos usan
+NJÖRÐR soportará varios perfiles simultáneos y no asumirá que todos usan
 el mismo teclado o los mismos periféricos. En la instalación de prueba se
 observaron perfiles `Custom` (`es-AR`) y `GameGlass` (`en-US`).
 
 ## Límites de seguridad
 
-HEIMDALL no podrá:
+NJÖRÐR no podrá:
 
 - Controlar rumbo, cabeceo, alabeo o aceleración.
 - Activar supercrucero o iniciar un salto sin una orden explícita.
@@ -99,7 +94,7 @@ Todas las automatizaciones serán:
 Journal + Status.json + configuración de nave
                     |
                     v
-             HEIMDALL Context
+             NJÖRÐR Context
                     |
         +-----------+-----------+
         |                       |
@@ -111,13 +106,18 @@ Journal + Status.json + configuración de nave
         |                       |
         +-----------+-----------+
                     v
-            Informe de HEIMDALL
+            Informe de NJÖRÐR
 ```
 
-HEIMDALL se comunicará mediante el EventBus y no accederá directamente a
+NJÖRÐR se comunicará mediante el EventBus y no accederá directamente a
 MÍMIR ni a otros oficiales.
 
-## Etapas hasta el 80–90 % operativo
+## Estado de implementación
+
+Las rutas, el portapapeles, el seguimiento, la replanificación y las acciones
+de cabina principales superaron pruebas reales prolongadas. Las listas de fases
+siguientes se conservan como alcance técnico; los pendientes vigentes están en
+`ROADMAP.MD`.
 
 ### Fase 1 — Contexto de navegación
 
@@ -153,13 +153,13 @@ MÍMIR ni a otros oficiales.
 
 #### Inyecciones FSD
 
-HEIMDALL mantiene un inventario persistente de las materias primas necesarias
+NJÖRÐR mantiene un inventario persistente de las materias primas necesarias
 para las inyecciones FSD básica (+25%), estándar (+50%) y premium (+100%). Se
 reconstruye desde `Materials` y se actualiza con recolecciones, descartes,
 intercambios, recompensas de misión y eventos de síntesis. Ante una consulta por
 voz informa cuántas inyecciones de cada grado pueden fabricarse.
 
-El inventario es informativo: HEIMDALL no fabrica ni consume una inyección y no
+El inventario es informativo: NJÖRÐR no fabrica ni consume una inyección y no
 la agrega a una ruta sin autorización explícita del comandante.
 
 También puede evaluar un salto indicado por voz, por ejemplo: «¿puedo saltar
@@ -168,14 +168,14 @@ el grado mínimo suficiente, comprueba la disponibilidad de materiales y avisa
 si el salto excede incluso el alcance premium. La evaluación no consume los
 materiales ni activa la síntesis.
 
-Cuando existe una ruta en `NavRoute.json`, HEIMDALL puede revisar todos los
+Cuando existe una ruta en `NavRoute.json`, NJÖRÐR puede revisar todos los
 tramos futuros desde el sistema actual. Omite los segmentos que parten de una
 estrella de neutrones o enana blanca, porque pertenecen a la supercarga por
 cono, y sólo marca los saltos convencionales que exceden el alcance normal. La
 consulta «¿necesito alguna inyección en esta ruta?» informa el primer tramo
 problemático, su distancia, el grado mínimo y si existen materiales.
 
-Si la inyección es factible, HEIMDALL abre una propuesta temporal de 60
+Si la inyección es factible, NJÖRÐR abre una propuesta temporal de 60
 segundos. La frase exacta «autorizo la inyección FSD» registra una autorización
 de un solo uso vinculada a esa propuesta; una confirmación sin propuesta,
 vencida o sin materiales es rechazada. En esta etapa la autorización habilita
@@ -185,7 +185,7 @@ el inventario conocido.
 
 #### Fuente comunitaria de rutas
 
-HEIMDALL utiliza Spansh como proveedor externo de rutas rápidas. No mantiene
+NJÖRÐR utiliza Spansh como proveedor externo de rutas rápidas. No mantiene
 una lista fija de “autopistas”: solicita una ruta nueva desde el sistema real
 del comandante, usando el alcance actual de la nave y el destino indicado.
 
@@ -197,14 +197,14 @@ del comandante, usando el alcance actual de la nave y el destino indicado.
   necesarios para alcanzarlo; un waypoint lejano no se interpreta como salto
   directo.
 
-Al recibir una ruta, HEIMDALL también calcula una referencia convencional
+Al recibir una ruta, NJÖRÐR también calcula una referencia convencional
 mínima mediante `ceil(distancia / alcance_actual)`. La presenta expresamente
 como límite inferior teórico, porque no considera densidad estelar, permisos ni
 la ruta concreta del mapa galáctico. Si la autopista no mejora siquiera esa
-referencia, HEIMDALL lo advierte en lugar de afirmar que la ruta de neutrones es
+referencia, NJÖRÐR lo advierte en lugar de afirmar que la ruta de neutrones es
 más rápida.
 
-La pestaña HEIMDALL ofrece además una acción independiente de **Ruta exacta**
+La pestaña NJÖRÐR ofrece además una acción independiente de **Ruta exacta**
 mediante Galaxy Plotter (`generic/route`). ODIN obtiene masa, depósitos y
 constantes del FSD de los datos locales reales de la nave, aplica la carga
 actual y rechaza el cálculo si falta algún parámetro físico. La ruta resultante
@@ -216,7 +216,7 @@ scoop. No se envían parámetros estimados.
 
 #### Seguimiento mediante portapapeles
 
-Al crear una ruta, HEIMDALL copia el primer punto de control como texto Unicode
+Al crear una ruta, NJÖRÐR copia el primer punto de control como texto Unicode
 en el portapapeles de Windows. No abre el mapa ni simula teclas: el comandante
 decide cuándo pegar el nombre y trazar el recorrido.
 
@@ -228,10 +228,10 @@ marca como completada y el portapapeles no se modifica nuevamente.
 
 #### Guía segura de sobrecarga
 
-HEIMDALL identifica objetivos de neutrones y enanas blancas desde la ruta y el
+NJÖRÐR identifica objetivos de neutrones y enanas blancas desde la ruta y el
 Journal. Al aproximarse entrega una advertencia general; una enana blanca se
 trata siempre como el caso de mayor riesgo. La carga sólo se declara confirmada
-al recibir `JetConeBoost`, momento en que HEIMDALL indica abandonar por completo
+al recibir `JetConeBoost`, momento en que NJÖRÐR indica abandonar por completo
 el cono y comprobar el destino antes del salto. Después, `FSDJump` con
 `BoostUsed` confirma que el salto potenciado se completó.
 
@@ -243,7 +243,7 @@ no generan exposiciones ni mensajes duplicados.
 #### Replanificación por desvío
 
 Cuando la ruta trazada por el juego ya no contiene el siguiente punto de
-control de Spansh, HEIMDALL archiva el plan anterior y conserva su destino
+control de Spansh, NJÖRÐR archiva el plan anterior y conserva su destino
 final. Si `heimdall_auto_replan_enabled` está activo, calcula en segundo plano
 una nueva ruta desde el sistema real de llegada. El Journal continúa
 procesándose durante la consulta; la activación y la copia del nuevo waypoint
@@ -266,5 +266,6 @@ y conserva el detalle técnico en `heimdall.log`.
 - Acciones de cabina en condiciones seguras.
 - Pruebas de recuperación ante interfaz inesperada.
 
-No se generará una nueva distribución de ODIN hasta que HEIMDALL alcance
-como mínimo un 80 % de estas capacidades operativas y verificadas.
+NJÖRÐR superó el umbral previsto para su inclusión en la beta. Las pruebas de
+regresión permanecen en `tests/test_heimdall_*.py` por compatibilidad con el
+identificador interno histórico.

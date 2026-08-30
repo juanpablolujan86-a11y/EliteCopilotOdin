@@ -32,7 +32,7 @@ desde la ubicación actual. La selección debe considerar:
 - antigüedad y procedencia de los datos comunitarios.
 
 BROKK presentará varias alternativas ordenadas, indicará la fuente y la fecha
-de los datos y entregará el destino elegido a HEIMDALL mediante un evento. No
+de los datos y entregará el destino elegido a NJÖRÐR mediante un evento. No
 afirmará que un mineral está garantizado: los hotspots comunitarios son datos
 conocidos y pueden estar incompletos o desactualizados.
 

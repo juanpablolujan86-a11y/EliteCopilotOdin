@@ -1,8 +1,8 @@
-# Solicitud de autorización de ODIN para Inara
+# Integración de ODIN con Inara
 
 Inara requiere que el nombre de cada aplicación sea autorizado antes de usar la
-API. La clave incluida en `INARA_API_KEY.txt` es la clave personal del comandante;
-no reemplaza esta autorización de la aplicación.
+API. Cada comandante aporta su propia clave desde Configuración y ODIN la guarda
+mediante el almacén seguro del sistema operativo.
 
 ## Texto sugerido para enviar a Inara
 
@@ -54,12 +54,9 @@ Events currently implemented:
 
 ## Estado de activación
 
-La solicitud de autorización para el nombre de aplicación `ODIN` fue enviada
-manualmente por el comandante en el hilo oficial de la API de Inara el
-9 de agosto de 2026. El proyecto se encuentra a la espera de la respuesta de
-Inara.
+El nombre de aplicación `ODIN` está autorizado por Inara. Captura y envío siguen
+siendo voluntarios y se habilitan por separado en Configuración. Los fallos de
+red quedan en la cola local y nunca deben bloquear el Journal.
 
-Mantener `inara_capture_enabled` e `inara_upload_enabled` desactivados hasta que
-Inara confirme que `ODIN` fue agregado a su lista autorizada. Después de la
-confirmación se debe realizar primero una prueba controlada con una cuenta y
-revisar las respuestas antes de habilitar la distribución general.
+No use credenciales reales en fixtures, commits, informes o capturas. Consulte
+`SECURITY.md` y las pruebas `tests/test_inara_*.py`.

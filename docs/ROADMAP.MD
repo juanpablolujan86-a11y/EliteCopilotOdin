@@ -1,4 +1,28 @@
-# ROADMAP
+# Roadmap de ODIN
+
+> Estado actualizado para colaboradores. El detalle de sprints antiguos se
+> conserva debajo como historial; no representa la lista vigente de pendientes.
+
+## Beta de estabilización y camino a 1.0
+
+- [x] Núcleo dirigido por eventos, Journal incremental y memoria SQLite.
+- [x] MÍMIR, NJÖRÐR, FREYJA y BROKK operativos en sus flujos principales.
+- [x] HEIMDALL para contenido Guardian y VÖLUNDR para ingeniería.
+- [x] EDDN, EDSM e Inara opcionales con colas persistentes y consentimiento.
+- [x] Interfaz, voces, wake word, push-to-talk y calibración local.
+- [x] Proveedores de IA local y remoto con permisos separados por dominio.
+- [ ] Validar instalación, actualización y desinstalación en equipos de terceros.
+- [ ] Completar pruebas auditivas de todos los idiomas ofrecidos.
+- [ ] Validar minería avanzada y síntesis FSD con eventos reales.
+- [ ] Medir memoria, latencia y cierre en sesiones prolongadas.
+- [ ] Terminar respuestas intermedias y evaluaciones contra órdenes ambiguas.
+- [ ] Automatizar pruebas, auditoría de secretos y builds reproducibles en CI.
+- [ ] Publicar checksums y completar el candidato 1.0.
+
+Powerplay comercial continúa aplazado: las ventas controladas no confirmaron
+méritos. El OCR de tareas semanales fue retirado por baja fiabilidad.
+
+## Historial de hitos
 
 ## Sprint 3.0 — Exploration Capability
 

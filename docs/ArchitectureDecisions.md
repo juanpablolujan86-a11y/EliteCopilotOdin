@@ -238,7 +238,9 @@ Los oficiales compartirán una Biblioteca del Conocimiento común y una Memoria 
 * BROKK — Mining Officer
 * FREYJA — Commerce Officer
 * TYR — Tactical Officer
-* HEIMDALL — Navigation and Minimal Cockpit Assistance Officer
+* NJÖRÐR — Navigation and Minimal Cockpit Assistance Officer
+* HEIMDALL — Guardian Technology Custodian
+* VÖLUNDR — Engineering Guide
 
 ---
 
@@ -284,3 +286,13 @@ MÍMIR será responsable de evaluar las reglas utilizando la información obteni
 - Las reglas podrán evolucionar sin modificar las especies.
 - Será posible incorporar nuevas fuentes de conocimiento sin cambiar el razonamiento.
 - El sistema permitirá asignar una puntuación de coincidencia a cada especie para construir recomendaciones probabilísticas.
+
+## AD-015 — Nombres públicos sin migrar identificadores internos
+
+**Estado:** Aceptada.
+
+La navegación se presenta como **NJÖRÐR**, la tecnología Guardian como
+**HEIMDALL** y la ingeniería como **VÖLUNDR**. Los identificadores históricos
+(`heimdall`, `guardian`, `engineering`) permanecen en eventos, configuración y
+persistencia para conservar compatibilidad. Toda presentación nueva resuelve el
+nombre mediante `core/officer_names.py`.
