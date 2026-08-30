@@ -29,7 +29,7 @@ if (-not $compiler) { throw "Inno Setup no está instalado." }
 & $compiler $innoSpec
 if ($LASTEXITCODE -ne 0) { throw "La creación del instalador público falló." }
 
-$installer = Join-Path $projectRoot "dist\public-pre-IA\ODIN-v0.8.0-beta-pre-IA-Setup-win64.exe"
+$installer = Join-Path $projectRoot "dist\public-pre-IA\ODIN-v0.8.1-beta-pre-IA-Setup-win64.exe"
 if (-not (Test-Path -LiteralPath $installer)) {
     throw "No se generó el instalador esperado: $installer"
 }

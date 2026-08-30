@@ -6,7 +6,7 @@ comandante y coordina oficiales especializados mediante un EventBus.
 
 ## Estado actual
 
-Versión actual: **v0.8.0-beta — MÍMIR, NJÖRÐR, FREYJA y BROKK beta**.
+Versión pública actual: **v0.8.1-beta-pre-IA — MÍMIR, NJÖRÐR, FREYJA y BROKK beta**.
 
 ## Instalación para comandantes de prueba
 

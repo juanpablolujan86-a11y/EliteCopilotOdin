@@ -1,4 +1,4 @@
-# ODIN v0.8.0-beta — Guía para comandantes de prueba
+# ODIN v0.8.1-beta-pre-IA — Guía para comandantes de prueba
 
 Esta beta incorpora BROKK. Para una prueba minera por láser:
 
@@ -22,7 +22,7 @@ prueba dentro de Elite sigue siendo necesaria para validar los eventos reales.
 ## Instalación
 
 1. Cierre cualquier copia anterior de ODIN.
-2. Ejecute `ODIN-v0.8.0-beta-Setup-win64.exe`.
+2. Ejecute `ODIN-v0.8.1-beta-pre-IA-Setup-win64.exe`.
 3. Mantenga marcada la opción de Ollama si desea conversación libre local.
    La descarga de `gemma3:4b` requiere Internet y varios gigabytes.
    Si Ollama ya está instalado, ODIN reutiliza la instalación existente.

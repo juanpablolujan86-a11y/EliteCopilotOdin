@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## v0.8.1-beta-pre-IA — Beta pública para la flota
+
+- Repositorio depurado y documentación reorganizada para colaboradores.
+- Nombres públicos normalizados: NJÖRÐR para navegación, HEIMDALL para
+  tecnología Guardian y VÖLUNDR para ingeniería.
+- Eliminados prototipos sin consumidores, pruebas manuales reemplazadas y
+  artefactos generados accidentalmente.
+- Distribución pública basada en las capacidades estables anteriores al cierre
+  de la inteligencia coordinadora.
+- Suite completa validada con 581 pruebas automáticas.
+
 ## En desarrollo — cierre hacia 1.0
 
 - La cabecera de la interfaz incorpora «Comandos de voz» junto a Configuración.
