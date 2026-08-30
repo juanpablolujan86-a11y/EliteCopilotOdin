@@ -1,0 +1,18 @@
+ODIN — Orbital Data Intelligence Nexus
+Copyright (C) 2026 ODIN contributors
+
+The original ODIN source code is licensed under GPL-3.0-only. See LICENSE.
+
+ODIN is an independent community project. It is not affiliated with, endorsed
+by, or sponsored by Frontier Developments. Elite Dangerous and all third-party
+names, data sets, applications, services, and trademarks remain the property of
+their respective owners and are subject to their own terms and licenses.
+
+Third-party sources and runtime integrations are documented in:
+
+- docs/THIRD_PARTY_DATA.md
+- docs/KnowledgeSources.md
+- knowledge/external/sources.md
+- license files stored alongside redistributed third-party material
+
+The GPL license applied to ODIN does not relicense third-party data or software.

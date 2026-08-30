@@ -1,5 +1,10 @@
 # Datos externos utilizados en tiempo de ejecución
 
+La licencia GPL-3.0-only de ODIN cubre únicamente el código propio del proyecto.
+Los catálogos, herramientas y datos externos conservan sus licencias originales.
+Incluir una referencia o permitir que ODIN lea un archivo local no cambia su
+titularidad ni lo relicencia como parte de ODIN.
+
 ## Constantes FSD de EDMarketConnector
 
 ODIN no redistribuye la base de módulos de Coriolis. HEIMDALL lee, cuando está

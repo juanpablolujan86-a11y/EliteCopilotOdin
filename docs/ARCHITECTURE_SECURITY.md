@@ -40,6 +40,6 @@ Antes de hacer público el repositorio se debe:
 
 1. ejecutar la suite completa;
 2. revisar secretos en el árbol y el historial;
-3. elegir y añadir una licencia;
+3. verificar que `GPL-3.0-only` y los avisos de terceros estén incluidos;
 4. habilitar informes privados de vulnerabilidades;
 5. publicar binarios únicamente mediante Releases verificables.

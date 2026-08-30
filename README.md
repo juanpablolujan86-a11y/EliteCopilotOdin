@@ -294,9 +294,11 @@ Las decisiones sobre separación de plataforma, secretos y nombres públicos se
 documentan en
 [`docs/ARCHITECTURE_SECURITY.md`](docs/ARCHITECTURE_SECURITY.md).
 
-El repositorio todavía no declara una licencia pública. Hasta que se elija y
-añada una, la presencia del código en un repositorio no concede por sí sola
-permiso para copiarlo, redistribuirlo o crear derivados.
+El código propio de ODIN se distribuye bajo
+[`GPL-3.0-only`](LICENSE). Las copias y versiones derivadas que se distribuyan
+deben conservar las libertades y obligaciones establecidas por esa licencia.
+Los datos, marcas y componentes de terceros mantienen sus respectivas licencias
+y titularidades; consulte [`NOTICE`](NOTICE) y la documentación de fuentes.
 
 ## Próximo objetivo
 

@@ -34,6 +34,7 @@ y controles de cabina se acceden mediante `platform_adapters/`.
 - No cambie identificadores internos de oficiales sin una migración. Los nombres
   públicos pueden diferir mediante `core/officer_names.py`.
 - No agregue telemetría ni transmisión de datos sin consentimiento explícito.
+- Al contribuir, declara que puede aportar el cambio bajo `GPL-3.0-only`.
 
 ## Credenciales
 
