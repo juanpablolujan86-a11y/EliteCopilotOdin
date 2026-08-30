@@ -25,7 +25,7 @@ _SPANISH = (
         "¿Ya puedo tomar la siguiente muestra?",
         "¿Cuál es el valor estimado de la expedición?",
     )),
-    ("HEIMDALL · NAVEGACIÓN", (
+    ("NJÖRÐR · NAVEGACIÓN", (
         "Llévame a casa",
         "Calcula una ruta de neutrones a [sistema]",
         "¿Cuántos saltos faltan?",
@@ -74,7 +74,7 @@ _ENGLISH = (
         "How many samples remain?", "Can I take the next sample?",
         "What is the estimated expedition value?",
     )),
-    ("HEIMDALL · NAVIGATION", (
+    ("NJÖRÐR · NAVIGATION", (
         "Take me home", "Calculate a neutron route to [system]", "How many jumps remain?",
         "Request docking", "Turn on the lights", "Turn on night vision", "Cargo scoop",
         "Landing gear", "Hyperspace jump", "Turn on the SRV lights",
@@ -107,7 +107,7 @@ _PORTUGUESE = (
         "Quantas amostras faltam?", "Já posso coletar a próxima amostra?",
         "Qual é o valor estimado da expedição?",
     )),
-    ("HEIMDALL · NAVEGAÇÃO", (
+    ("NJÖRÐR · NAVEGAÇÃO", (
         "Leve-me para casa", "Calcule uma rota de nêutrons para [sistema]",
         "Quantos saltos faltam?", "Solicite atracação", "Acenda as luzes",
         "Ative a visão noturna", "Coletor de carga", "Trem de pouso", "Hipersalto",

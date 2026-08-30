@@ -15,6 +15,7 @@ from core.database import DatabaseManager
 from core.localization import SUPPORTED_LANGUAGES, text as localized_text
 from heimdall.clipboard import write_text
 from guardian.unlocks import GUARDIAN_MODULE_RECIPES
+from core.officer_names import public_officer_name
 from engineering.planner import ENGINEERS, ENGINEERING_PLANS
 from services.edsm_credentials import EDSMCredentialStore
 from services.inara_credentials import InaraCredentialStore
@@ -442,7 +443,7 @@ class OdinDesktopApp:
             self._detail_row(mimir, label, self.values[key])
 
         heimdall = tk.Frame(notebook, bg=ELITE["surface"])
-        notebook.add(heimdall, text="HEIMDALL")
+        notebook.add(heimdall, text=public_officer_name("HEIMDALL"))
         self._build_route_panel(heimdall)
         for key in ("destination", "route_comparison", "route_leg", "exact_plotter", "high_energy", "fuel", "injections"):
             self.values[key] = tk.StringVar(value="—")
@@ -795,7 +796,7 @@ class OdinDesktopApp:
         ).pack(fill="x", pady=(0, 7))
 
         guardian_tab = tk.Frame(notebook, bg=ELITE["surface"])
-        notebook.add(guardian_tab, text="GUARDIAN")
+        notebook.add(guardian_tab, text=public_officer_name("GUARDIAN"))
         guardian = self._scrollable_tab(guardian_tab)
         tk.Label(
             guardian, text=self._t("guardian.unlock"), anchor="w",
@@ -890,7 +891,7 @@ class OdinDesktopApp:
         self.guardian_broker_copy_button.pack(fill="x", pady=(0, 7))
 
         engineering_tab = tk.Frame(notebook, bg=ELITE["surface"])
-        notebook.add(engineering_tab, text=self._t("engineering.tab"))
+        notebook.add(engineering_tab, text=public_officer_name("INGENIERÍA"))
         engineering = self._scrollable_tab(engineering_tab)
         tk.Label(
             engineering, text=self._t("engineering.unlocks"), anchor="w",
@@ -2114,7 +2115,7 @@ class OdinDesktopApp:
         heimdall_page = tk.Frame(notebook, bg=ELITE["surface"])
         notebook.add(general_page, text=self._t("settings.general_tab"))
         notebook.add(credentials_page, text=self._t("settings.credentials_tab"))
-        notebook.add(heimdall_page, text="HEIMDALL")
+        notebook.add(heimdall_page, text=public_officer_name("HEIMDALL"))
         general_tab = self._scrollable_tab(general_page)
         credentials_tab = self._scrollable_tab(credentials_page)
         heimdall_tab = self._scrollable_tab(heimdall_page)

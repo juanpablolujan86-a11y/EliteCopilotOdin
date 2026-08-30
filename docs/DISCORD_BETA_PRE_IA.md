@@ -12,7 +12,7 @@ Ollama.
   predicciones y géneros confirmados tras el DSS, valores aproximados,
   bonificación por primera pisada y seguimiento de las tres muestras con sus
   distancias mínimas.
-- **HEIMDALL — Navegación y cabina:** calcula rutas de neutrones, mantiene el
+- **NJÖRÐR — Navegación y cabina:** calcula rutas de neutrones, mantiene el
   siguiente salto visible y en el portapapeles, controla el progreso del viaje,
   conserva la base del comandante y ofrece órdenes configuradas de cabina y
   atraque mediante los bindings del juego.
@@ -22,7 +22,9 @@ Ollama.
 - **BROKK — Minería:** busca lugares de minería, sigue la carga refinada,
   registra el comienzo y cierre de la operación, estima rendimiento y propone
   destinos de venta por distancia.
-- **Guardian e Ingeniería:** muestra materiales disponibles y faltantes,
+- **HEIMDALL — Tecnología Guardian:** muestra materiales disponibles y faltantes
+  para desbloqueos Guardian, sus lugares de recolección y agentes tecnológicos.
+- **VÖLUNDR — Ingeniería:** reúne ingenieros, requisitos de desbloqueo,
   conserva el objetivo elegido y ayuda a localizar lugares de recolección,
   brokers e ingenieros.
 - **Powerplay:** ofrece actividades de combate, comercio, minería, transporte,
