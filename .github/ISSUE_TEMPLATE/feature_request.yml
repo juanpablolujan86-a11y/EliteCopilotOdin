@@ -1,0 +1,50 @@
+name: Propuesta de mejora
+description: Proponer una capacidad o cambio para ODIN
+title: "[MEJORA] "
+labels: ["enhancement", "triage"]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: Necesidad del comandante
+      description: Explique el problema durante el juego, sin presuponer una implementación.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Comportamiento propuesto
+      description: Indique qué debería mostrar, decir o hacer ODIN.
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Área relacionada
+      options:
+        - ODIN / interfaz
+        - MÍMIR
+        - NJÖRÐR / navegación
+        - FREYJA
+        - BROKK
+        - HEIMDALL / Guardian
+        - VÖLUNDR / ingeniería
+        - Powerplay
+        - Voz e inteligencia
+        - Servicios comunitarios
+        - Instalador y distribución
+        - Otra
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Riesgos y control del comandante
+      description: Señale acciones automáticas, datos compartidos o posibles efectos durante el vuelo.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacidad
+      options:
+        - label: No incluí claves, Journal completos ni datos personales.
+          required: true

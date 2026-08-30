@@ -11,7 +11,7 @@ body:
     id: version
     attributes:
       label: Versión de ODIN
-      placeholder: v0.8.0-beta
+      placeholder: v0.8.1-beta-pre-IA
     validations:
       required: true
   - type: dropdown

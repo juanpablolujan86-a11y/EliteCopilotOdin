@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Avisos de seguridad privados
+    url: https://github.com/juanpablolujan86-a11y/EliteCopilotOdin/security/advisories/new
+    about: No publique vulnerabilidades ni credenciales en un issue abierto.

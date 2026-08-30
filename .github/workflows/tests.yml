@@ -1,0 +1,39 @@
+name: Tests
+
+on:
+  pull_request:
+    branches: [develop]
+  push:
+    branches: [develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unittest:
+    name: unittest
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Obtener el código
+        uses: actions/checkout@v4
+
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: requirements-ci.txt
+
+      - name: Instalar dependencias de pruebas
+        run: python -m pip install --disable-pip-version-check -r requirements-ci.txt
+
+      - name: Ejecutar suite
+        env:
+          PYTHONUTF8: "1"
+        run: python -m unittest discover -s tests -p "test_*.py" -q

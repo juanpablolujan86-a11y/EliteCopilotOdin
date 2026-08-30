@@ -27,14 +27,21 @@ y controles de cabina se acceden mediante `platform_adapters/`.
 
 ## Pull requests
 
+- Cree un fork del repositorio y una rama descriptiva dentro de ese fork.
 - Parta de `develop` y limite cada cambio a un objetivo concreto.
 - Añada o actualice pruebas.
 - Ejecute toda la suite antes de enviar el cambio.
+- Abra un Pull Request hacia `develop`; no solicite acceso de escritura para
+  una contribución ocasional.
 - Explique cualquier cambio visible, migración o riesgo de compatibilidad.
 - No cambie identificadores internos de oficiales sin una migración. Los nombres
   públicos pueden diferir mediante `core/officer_names.py`.
 - No agregue telemetría ni transmisión de datos sin consentimiento explícito.
 - Al contribuir, declara que puede aportar el cambio bajo `GPL-3.0-only`.
+
+GitHub ejecuta automáticamente la suite en cada Pull Request. El cambio sólo
+puede integrarse cuando las pruebas aprueban, las conversaciones están resueltas
+y el propietario o un revisor autorizado lo aprueba.
 
 ## Credenciales
 
