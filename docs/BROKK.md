@@ -16,6 +16,28 @@ confundir una estimación de mercado con una recompensa garantizada.
 2. Depósitos subsuperficiales.
 3. Abrasión de superficie.
 4. Núcleo profundo.
+5. Minería planetaria con Rhino (compatibilidad anticipada).
+
+## Preparación para Rhino y minería planetaria
+
+Frontier anunció el Rhino como un SRV pesado de seis ruedas, con tres plazas,
+hangar específico y minería de superficie alrededor de sitios geológicos. La
+primera versión llegará mediante acceso anticipado con ARX. Mientras Frontier
+no publique los eventos definitivos del Journal, ODIN no inventará rendimientos,
+minerales ni precios.
+
+BROKK ya queda preparado para:
+
+- reconocer el despliegue y atraque del Rhino mediante eventos de vehículo;
+- cambiar la operación a entorno `surface` sin mezclarla con asteroides;
+- registrar el cuerpo y la cantidad de señales geológicas detectadas por DSS;
+- conservar hasta 100 eventos candidatos de minería planetaria, excluyendo
+  identidad del comandante, para adaptar rápidamente el parser tras el parche;
+- exponer el vehículo, entorno y telemetría pendiente en el estado del panel.
+
+Después del lanzamiento se validarán los nombres reales del Journal, la carga
+del Rhino, su escáner mineral, los depósitos, la extracción, la transferencia a
+la nave y la venta. Hasta entonces esos campos se consideran desconocidos.
 
 El comandante podrá pedir un material concreto o permitir que BROKK priorice
 valor, disponibilidad o una prueba de Powerplay.

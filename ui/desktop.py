@@ -733,6 +733,9 @@ class OdinDesktopApp:
             ("mining_target", self._t("brokk.target")),
             ("mining_location", self._t("brokk.location")),
             ("mining_technique", self._t("brokk.technique")),
+            ("mining_environment", self._t("brokk.environment")),
+            ("mining_surface_vehicle", self._t("brokk.surface_vehicle")),
+            ("mining_geology", self._t("brokk.geology")),
             ("mining_prospected", self._t("brokk.prospected")),
             ("mining_cargo", self._t("brokk.cargo")),
             ("mining_revenue", self._t("brokk.performance")),
@@ -1382,6 +1385,7 @@ class OdinDesktopApp:
             "core": self._t("brokk.technique.core"),
             "subsurface": self._t("brokk.technique.subsurface"),
             "abrasion": self._t("brokk.technique.abrasion"),
+            "surface": self._t("brokk.technique.surface"),
         }
         technique_text = technique_labels.get(
             mining.get("technique"), mining.get("technique") or "—"
@@ -1391,6 +1395,21 @@ class OdinDesktopApp:
         elif mining.get("technique_source") == "commander":
             technique_text += f" · {self._t('brokk.commander_selected')}"
         self.values["mining_technique"].set(technique_text)
+        environment = str(mining.get("environment", "space") or "space")
+        self.values["mining_environment"].set(
+            self._t(f"brokk.environment.{environment}")
+        )
+        vehicle = str(mining.get("surface_vehicle", "") or "")
+        if vehicle and mining.get("surface_vehicle_active"):
+            vehicle += f" · {self._t('network.active')}"
+        self.values["mining_surface_vehicle"].set(
+            vehicle or self._t("brokk.no_surface_vehicle")
+        )
+        geological = int(mining.get("geological_signals", 0) or 0)
+        pending = int(mining.get("surface_event_count", 0) or 0)
+        self.values["mining_geology"].set(
+            self._t("brokk.geology_summary", signals=geological, pending=pending)
+        )
         self.values["mining_prospected"].set(str(int(mining.get("prospected", 0) or 0)))
         cargo_count = int(mining.get("cargo_count", 0) or 0)
         capacity = int(mining.get("cargo_capacity", 0) or 0)

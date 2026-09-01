@@ -43,6 +43,11 @@ class MiningSession:
     valuation: dict = field(default_factory=dict)
     equipment: dict = field(default_factory=dict)
     announced_fill_levels: list[int] = field(default_factory=list)
+    mining_environment: str = "space"
+    surface_vehicle: str = ""
+    surface_vehicle_active: bool = False
+    geological_signals: int = 0
+    surface_mining_events: list[dict] = field(default_factory=list)
 
     @property
     def refined_total(self) -> int:

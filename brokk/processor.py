@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections import deque
 
 from brokk.session import MiningSessionStore
 from brokk.equipment import audit_mining_loadout
@@ -13,7 +14,8 @@ class MiningProcessor:
         "Loadout", "Cargo", "CargoTransfer", "Location", "FSDJump",
         "SupercruiseEntry", "SupercruiseExit", "ProspectedAsteroid",
         "MiningRefined", "AsteroidCracked", "MaterialCollected",
-        "MarketSell", "EjectCargo",
+        "MarketSell", "EjectCargo", "LaunchSRV", "DockSRV",
+        "SAASignalsFound",
     )
 
     def __init__(self, store: MiningSessionStore) -> None:
@@ -27,6 +29,32 @@ class MiningProcessor:
             return
         handler(event)
         self.store.save(self.session)
+
+    def observe_unknown(self, event: dict) -> bool:
+        """Conserva telemetría candidata hasta conocer el Journal del Rhino.
+
+        Frontier todavía no publicó los nombres definitivos de los eventos de
+        minería de superficie. Sólo se guardan eventos con vocabulario minero
+        y se limita el historial para evitar crecimiento sin control.
+        """
+        name = str(event.get("event", "") or "")
+        if not name or name in self.EVENTS:
+            return False
+        searchable = " ".join((name, str(event.get("Type", "")),
+                               str(event.get("Name", "")),
+                               str(event.get("Vehicle", ""))))
+        if not re.search(r"rhino|mining|mineral|deposit|drill|extract", searchable,
+                         flags=re.IGNORECASE):
+            return False
+        safe = {key: value for key, value in event.items()
+                if key not in {"Commander", "FID"}}
+        history = deque(self.session.surface_mining_events, maxlen=100)
+        history.append(safe)
+        self.session.surface_mining_events = list(history)
+        self.session.mining_environment = "surface"
+        self.session.touch()
+        self.store.save(self.session)
+        return True
 
     def start(
         self, *, system: str = "", body: str = "", technique: str = "laser",
@@ -208,6 +236,37 @@ class MiningProcessor:
         if material and count:
             current = self.session.engineering_materials.get(material, 0)
             self.session.engineering_materials[material] = current + count
+            self.session.touch()
+
+    def _handle_launchsrv(self, event: dict) -> None:
+        vehicle = self._clean_name(event.get(
+            "SRVType_Localised", event.get("SRVType", event.get("Vehicle", ""))
+        ))
+        self.session.surface_vehicle = vehicle
+        self.session.surface_vehicle_active = True
+        if "rhino" in vehicle.casefold():
+            self.session.mining_environment = "surface"
+            self.session.technique = "surface"
+            self.session.technique_source = "journal"
+            self.session.technique_confirmed = True
+        self.session.touch()
+
+    def _handle_docksrv(self, _event: dict) -> None:
+        self.session.surface_vehicle_active = False
+        if self.session.active and self.session.mining_environment == "surface":
+            self.session.close()
+        else:
+            self.session.touch()
+
+    def _handle_saasignalsfound(self, event: dict) -> None:
+        geological = 0
+        for signal in event.get("Signals", ()) or ():
+            signal_type = str(signal.get("Type_Localised", signal.get("Type", "")))
+            if "geolog" in signal_type.casefold():
+                geological += max(0, int(signal.get("Count", 0) or 0))
+        if geological:
+            self.session.body = str(event.get("BodyName", self.session.body) or "")
+            self.session.geological_signals = geological
             self.session.touch()
 
     def _handle_marketsell(self, event: dict) -> None:

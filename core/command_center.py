@@ -1226,6 +1226,8 @@ class CommandCenter:
             events = self.watcher.poll()
 
             for event in events:
+                if self.brokk_processor is not None:
+                    self.brokk_processor.observe_unknown(event)
                 docking_action = self.docking_assist.handle_journal(event)
                 if docking_action:
                     print(f"HEIMDALL: {docking_action} automaticamente.")
@@ -1458,6 +1460,11 @@ class CommandCenter:
                 )
             ),
             "materials": dict(session.engineering_materials),
+            "environment": session.mining_environment,
+            "surface_vehicle": session.surface_vehicle,
+            "surface_vehicle_active": session.surface_vehicle_active,
+            "geological_signals": session.geological_signals,
+            "surface_event_count": len(session.surface_mining_events),
             "sale_revenue": session.sale_revenue,
             "equipment": dict(session.equipment),
             "valuation": dict(session.valuation),

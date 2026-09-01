@@ -147,6 +147,40 @@ class BrokkMiningTests(unittest.TestCase):
                                "Name": "irrelevant", "Count": 2})
         self.assertEqual(self.processor.session.engineering_materials, {"Hierro": 3})
 
+    def test_rhino_launch_selects_confirmed_surface_mining(self):
+        self.processor.handle({
+            "event": "LaunchSRV", "SRVType": "Rhino",
+            "SRVType_Localised": "Rhino",
+        })
+        state = self.processor.session
+        self.assertTrue(state.surface_vehicle_active)
+        self.assertEqual(state.surface_vehicle, "Rhino")
+        self.assertEqual(state.mining_environment, "surface")
+        self.assertEqual(state.technique, "surface")
+        self.assertTrue(state.technique_confirmed)
+
+    def test_geological_signals_prepare_surface_context(self):
+        self.processor.handle({
+            "event": "SAASignalsFound", "BodyName": "Sol A 1",
+            "Signals": [
+                {"Type": "$SAA_SignalType_Geological;", "Type_Localised": "Geología", "Count": 4},
+                {"Type_Localised": "Biología", "Count": 2},
+            ],
+        })
+        self.assertEqual(self.processor.session.body, "Sol A 1")
+        self.assertEqual(self.processor.session.geological_signals, 4)
+
+    def test_unknown_surface_mining_event_is_retained_without_identity(self):
+        captured = self.processor.observe_unknown({
+            "event": "SurfaceMiningDeposit", "Type": "MineralDeposit",
+            "Commander": "Private", "FID": "F123", "Yield": 7,
+        })
+        self.assertTrue(captured)
+        saved = self.processor.session.surface_mining_events[-1]
+        self.assertEqual(saved["Yield"], 7)
+        self.assertNotIn("Commander", saved)
+        self.assertNotIn("FID", saved)
+
     def test_session_can_pause_resume_and_keep_target(self):
         self.processor.start(system="Sol", technique="laser", target_mineral="Platino")
         self.assertFalse(self.processor.session.active)
