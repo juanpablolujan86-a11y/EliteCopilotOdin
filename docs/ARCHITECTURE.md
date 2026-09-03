@@ -93,3 +93,14 @@ python -m unittest discover -s tests -v
 
 Consulte [`../CONTRIBUTING.md`](../CONTRIBUTING.md) para el flujo de ramas,
 seguridad y pull requests.
+# Reflejos conversacionales locales
+
+Las órdenes inequívocas se clasifican primero mediante
+`intelligence.reflexes.ReflexResolver`. El motor no usa OpenAI ni Ollama, no
+ejecuta acciones y no conserva el texto pronunciado: devuelve únicamente una
+intención tipada, el oficial responsable y parámetros validados. `CommandCenter`
+mantiene la autorización y ejecución final.
+
+Este nivel cubre inicialmente controles de cabina, atraque, regreso a la base,
+rutas de neutrones y apertura del flujo comercial de FREYJA. Las consultas que
+no coinciden continúan hacia los oficiales o la conversación con IA.

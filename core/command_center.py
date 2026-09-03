@@ -103,7 +103,7 @@ from intelligence.assistant import OdinLocalAssistant
 from intelligence.officer_broker import OfficerKnowledgeBroker
 from intelligence.command_memory import LearnedCommand, VoiceCommandMemory
 from intelligence.voice_calibration import VoiceCalibrationManager
-from intelligence.intents import parse_home_route_intent, parse_neutron_route_intent
+from intelligence.reflexes import ReflexResolver, is_trade_menu_request
 from intelligence.ollama import OllamaError
 from intelligence.openai_client import OpenAIError
 from speech.conversation import VoiceConversation
@@ -190,6 +190,7 @@ class CommandCenter:
             self.config.data_root / "intelligence" / "last_plan.json",
         )
         self.officer_broker = OfficerKnowledgeBroker()
+        self.reflex_resolver = ReflexResolver()
         self._ai_plan_busy = threading.Event()
         self._ai_plan_error = ""
         self._ai_answer_busy = threading.Event()
@@ -1397,6 +1398,7 @@ class CommandCenter:
                     **dict(self._ai_answer_state),
                     "calculating": self._ai_answer_busy.is_set(),
                 },
+                "reflexes": self._reflex_engine().snapshot(),
             },
             "network": {
                 "eddn": self.eddn_delivery_service is not None,
@@ -2117,6 +2119,7 @@ class CommandCenter:
             return
 
         if self._is_freyja_trade_request(question):
+            self._reflex_engine().resolve(question)
             self.command_memory.remember(
                 commander, question, "freyja_trade_menu", {}
             )
@@ -2218,6 +2221,7 @@ class CommandCenter:
 
         cockpit_intent = parse_cockpit_intent(question)
         if cockpit_intent is not None:
+            self._reflex_engine().resolve(question)
             self._refresh_cockpit_state_now()
             if cockpit_intent.feature == "docking_request":
                 self.command_memory.remember(
@@ -2310,7 +2314,7 @@ class CommandCenter:
 
         corrected = self._memory_correction(question)
         if corrected and previous_question:
-            learned = self._command_from_text(corrected)
+            learned = self._resolve_reflex_command(corrected)
             if learned is not None:
                 self.command_memory.remember(
                     commander, previous_question, learned.intent, learned.payload
@@ -2327,7 +2331,7 @@ class CommandCenter:
 
         learned = self.command_memory.resolve(commander, question)
         if learned is None:
-            learned = self._command_from_text(question)
+            learned = self._resolve_reflex_command(question)
             if learned is not None:
                 self.command_memory.remember(
                     commander, question, learned.intent, learned.payload
@@ -2424,30 +2428,23 @@ class CommandCenter:
 
     @staticmethod
     def _command_from_text(text: str) -> LearnedCommand | None:
-        cockpit_intent = parse_cockpit_intent(text)
-        if cockpit_intent is not None:
-            if cockpit_intent.feature == "docking_request":
-                return LearnedCommand("docking_request", {})
-            if cockpit_intent.feature in {
-                "night_vision", "cargo_scoop", "landing_gear", "hyperspace",
-                "srv_lights", "srv_night_vision",
-                "srv_cargo_scoop",
-            }:
-                state_name = (
-                    "toggle" if cockpit_intent.requested_state is None
-                    else "on" if cockpit_intent.requested_state else "off"
-                )
-                return LearnedCommand(
-                    f"cockpit_{cockpit_intent.feature}", {"state": state_name}
-                )
-        if CommandCenter._is_freyja_trade_request(text):
-            return LearnedCommand("freyja_trade_menu", {})
-        if parse_home_route_intent(text) is not None:
-            return LearnedCommand("home_route", {})
-        route = parse_neutron_route_intent(text)
-        if route is not None:
-            return LearnedCommand("neutron_route", {"destination": route.destination})
-        return None
+        match = ReflexResolver().resolve(text, record=False)
+        if match is None:
+            return None
+        return LearnedCommand(match.intent, dict(match.payload))
+
+    def _resolve_reflex_command(self, text: str) -> LearnedCommand | None:
+        match = self._reflex_engine().resolve(text)
+        if match is None:
+            return None
+        return LearnedCommand(match.intent, dict(match.payload))
+
+    def _reflex_engine(self) -> ReflexResolver:
+        resolver = getattr(self, "reflex_resolver", None)
+        if resolver is None:
+            resolver = ReflexResolver()
+            self.reflex_resolver = resolver
+        return resolver
 
     @staticmethod
     def _is_memory_confirmation(text: str) -> bool:
@@ -2934,33 +2931,7 @@ class CommandCenter:
 
     @staticmethod
     def _is_freyja_trade_request(text: str) -> bool:
-        lowered = text.casefold()
-        normalized = re.sub(r"[^a-z0-9\u00e1\u00e9\u00ed\u00f3\u00fa\u00fc\u00f1]+", " ", lowered).strip()
-        normalized = re.sub(r"\bgase+r\b", "hacer", normalized)
-        explicit_trade = "comerci" in normalized and any(
-            word in normalized
-            for word in (
-                "freyja", "freya", "quiero", "hacer", "vamos", "deseo",
-                "quero", "fazer", "want", "trade", "trading", "start",
-            )
-        )
-        explicit_trade = explicit_trade or bool(re.search(
-            r"\b(?:i\s+want\s+to\s+trade|let(?:\s+s|s)?\s+trade|start\s+trading|"
-            r"quero\s+comerciar|vamos\s+comerciar|fazer\s+comercio)\b",
-            normalized,
-        ))
-        buy_and_sell = (
-            re.search(r"\bcompr(?:ar|o|amos)?\b", normalized)
-            and re.search(r"\bvend(?:er|o|emos)?\b", normalized)
-        )
-        # Confusi\u00f3n ac\u00fastica real observada con Whisper Base al decir
-        # "quiero comerciar". S\u00f3lo se interpreta dentro de una orden activada.
-        observed_whisper_alias = bool(
-            re.search(r"\b(?:el\s+)?fin\s+de\s+la\s+proxima\s+vez\b", normalized)
-            or re.search(r"\b(?:el\s+)?fin\s+de\s+la\s+pr\u00f3xima\s+vez\b", normalized)
-            or normalized in {"vale bien", "y vale bien"}
-        )
-        return bool(explicit_trade or buy_and_sell or observed_whisper_alias)
+        return is_trade_menu_request(text)
 
     @staticmethod
     def _brokk_mining_request(text: str) -> str | None:
