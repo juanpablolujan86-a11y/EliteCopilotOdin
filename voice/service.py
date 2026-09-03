@@ -16,6 +16,7 @@ from security.secret_store import SecretStore, create_secret_store
 from voice.credentials import ELEVENLABS_TARGET
 from voice.edge import EdgeTtsClient, EdgeTtsError
 from voice.elevenlabs import ElevenLabsClient, ElevenLabsError
+from voice.kokoro import KokoroTtsClient, KokoroTtsError
 from voice.playback import AudioPlaybackError
 from voice.settings import VoiceSettingsRepository
 
@@ -41,6 +42,7 @@ class OfficerVoiceService:
         player: AudioPlayer | None = None,
         windows_player: SpeechPlayer | None = None,
         edge_client: EdgeTtsClient | None = None,
+        kokoro_client: KokoroTtsClient | None = None,
     ) -> None:
         self.config = config or Config()
         self.credentials = credentials or create_secret_store(ELEVENLABS_TARGET)
@@ -48,6 +50,12 @@ class OfficerVoiceService:
         self.player = player or create_audio_player(self.config.data_root / "voice" / "cache")
         self.windows_player = windows_player or create_speech_player()
         self.edge_client = edge_client or EdgeTtsClient()
+        kokoro_root = getattr(
+            self.config,
+            "kokoro_model_root",
+            self.config.data_root / "voice" / "models" / "kokoro-int8-multi-lang-v1_0",
+        )
+        self.kokoro_client = kokoro_client or KokoroTtsClient(kokoro_root)
         self.repository = VoiceSettingsRepository(self.config.data_root)
 
     def _edge_cache_path(self, officer: str, text: str, assignment) -> Path:
@@ -59,6 +67,11 @@ class OfficerVoiceService:
         )
         digest = hashlib.sha256(cache_key.encode("utf-8")).hexdigest()
         return self.config.data_root / "voice" / "cache" / f"edge-{digest}.mp3"
+
+    def _kokoro_cache_path(self, officer: str, text: str, assignment) -> Path:
+        cache_key = "|".join((officer.upper(), assignment.voice, str(assignment.rate), text))
+        digest = hashlib.sha256(cache_key.encode("utf-8")).hexdigest()
+        return self.config.data_root / "voice" / "cache" / f"kokoro-{digest}.wav"
 
     def prepare(self, officer: str, text: str) -> None:
         """Genera anticipadamente una frase Edge repetitiva sin reproducirla."""
@@ -107,6 +120,33 @@ class OfficerVoiceService:
                 self.player.play(audio)
                 return
             except (EdgeTtsError, AudioPlaybackError, OSError) as error:
+                if settings.fallback_to_windows:
+                    fallback_voice, fallback_rate = WINDOWS_FALLBACKS.get(
+                        officer.upper(), WINDOWS_FALLBACKS["ODIN"]
+                    )
+                    try:
+                        self.windows_player.speak(
+                            text, fallback_voice, fallback_rate, assignment.volume
+                        )
+                        return
+                    except AudioPlaybackError:
+                        pass
+                raise VoiceServiceError(str(error)) from error
+        if assignment.provider == "kokoro":
+            try:
+                cache_path = self._kokoro_cache_path(officer, text, assignment)
+                if cache_path.exists():
+                    audio = cache_path.read_bytes()
+                else:
+                    speed = max(0.5, min(2.0, 1.0 + assignment.rate * 0.05))
+                    audio = self.kokoro_client.synthesize(
+                        text, assignment.voice, speed=speed
+                    )
+                    cache_path.parent.mkdir(parents=True, exist_ok=True)
+                    cache_path.write_bytes(audio)
+                self.player.play(audio)
+                return
+            except (KokoroTtsError, AudioPlaybackError, OSError) as error:
                 if settings.fallback_to_windows:
                     fallback_voice, fallback_rate = WINDOWS_FALLBACKS.get(
                         officer.upper(), WINDOWS_FALLBACKS["ODIN"]

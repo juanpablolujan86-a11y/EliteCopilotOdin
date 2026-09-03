@@ -36,11 +36,14 @@ class WindowsMp3Player:
 
     def play(self, audio: bytes) -> None:
         self.cache_directory.mkdir(parents=True, exist_ok=True)
-        path = self.cache_directory / f"voice-{uuid.uuid4().hex}.mp3"
+        is_wav = audio.startswith(b"RIFF") and audio[8:12] == b"WAVE"
+        suffix = ".wav" if is_wav else ".mp3"
+        media_type = "waveaudio" if is_wav else "mpegvideo"
+        path = self.cache_directory / f"voice-{uuid.uuid4().hex}{suffix}"
         alias = f"odinvoice{uuid.uuid4().hex}"
         path.write_bytes(audio)
         try:
-            self._command(f'open "{path}" type mpegvideo alias {alias}')
+            self._command(f'open "{path}" type {media_type} alias {alias}')
             try:
                 self._command(f"play {alias} wait")
             finally:

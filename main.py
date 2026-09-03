@@ -20,6 +20,7 @@ from voice.service import OfficerVoiceService, VoiceServiceError
 from voice.settings import VoiceSettingsRepository, apply_language_voice_preset
 from ui.desktop import run_desktop
 from installer.ollama_gui import run_ollama_setup
+from installer.local_speech_gui import run_local_speech_setup
 
 
 def configure_language(config: Config, language: str) -> str:
@@ -36,10 +37,13 @@ def configure_language(config: Config, language: str) -> str:
 def main() -> None:
     if "--install-ollama" in sys.argv:
         raise SystemExit(run_ollama_setup())
+    if "--install-local-speech" in sys.argv:
+        raise SystemExit(run_local_speech_setup())
 
     standalone_modes = {
         "--configure-voice", "--test-ai", "--test-openai", "--test-voice",
         "--ask-odin", "--talk", "--set-language",
+        "--install-local-speech",
     }
     instance = None
     if not any(mode in sys.argv for mode in standalone_modes):

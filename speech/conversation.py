@@ -5,7 +5,7 @@ from __future__ import annotations
 from core.config import Config
 from intelligence.assistant import OdinLocalAssistant
 from speech.recorder import MicrophoneRecorder
-from speech.whisper import WhisperTranscriber
+from speech.transcriber import create_command_transcriber
 from voice.service import OfficerVoiceService
 
 
@@ -14,15 +14,13 @@ class VoiceConversation:
         self,
         config: Config | None = None,
         recorder: MicrophoneRecorder | None = None,
-        transcriber: WhisperTranscriber | None = None,
+        transcriber=None,
         assistant: OdinLocalAssistant | None = None,
         voice: OfficerVoiceService | None = None,
     ) -> None:
         self.config = config or Config()
         self.recorder = recorder or MicrophoneRecorder()
-        self.transcriber = transcriber or WhisperTranscriber(
-            language=self.config.language.split("-", 1)[0]
-        )
+        self.transcriber = transcriber or create_command_transcriber(self.config)
         self.assistant = assistant or OdinLocalAssistant(config=self.config)
         self.voice = voice or OfficerVoiceService(self.config)
 

@@ -104,3 +104,15 @@ mantiene la autorización y ejecución final.
 Este nivel cubre inicialmente controles de cabina, atraque, regreso a la base,
 rutas de neutrones y apertura del flujo comercial de FREYJA. Las consultas que
 no coinciden continúan hacia los oficiales o la conversación con IA.
+
+## Voz local
+
+El reconocimiento de órdenes se obtiene mediante `speech.transcriber`. En modo
+`auto`, ODIN prefiere Parakeet TDT 0.6B V3 INT8 y recupera automáticamente con
+Faster-Whisper/whisper.cpp cuando el paquete local no está instalado o falla.
+Los modelos se mantienen residentes para evitar recargas entre órdenes.
+
+La síntesis admite Kokoro multilingüe INT8 mediante sherpa-onnx. Cada frase se
+guarda como WAV en la caché local y la reproducción acepta WAV o MP3. Edge,
+Windows y ElevenLabs permanecen disponibles como proveedores alternativos.
+Los modelos descargados viven en `%LOCALAPPDATA%\ODIN` y nunca se versionan.

@@ -5,6 +5,8 @@ shiboken6==6.11.1
 watchdog==6.0.0
 edge-tts==7.2.8
 sounddevice==0.5.5
+sherpa-onnx==1.13.7
+sherpa-onnx-bin==1.13.7
 vosk==0.3.45
 faster-whisper==1.2.1
 nvidia-cublas-cu12==12.9.2.10

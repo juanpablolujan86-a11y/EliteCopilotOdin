@@ -1,0 +1,3 @@
+# Motor local opcional. El instalador lo incorporará junto con los modelos.
+sherpa-onnx==1.13.7
+sherpa-onnx-bin==1.13.7

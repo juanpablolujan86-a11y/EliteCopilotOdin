@@ -74,6 +74,7 @@ class Config:
             "ai_share_commander_data",
             "ai_share_station_search_data",
             "canonn_poi_source",
+            "speech_recognition_provider",
         }
         updates = {key: value for key, value in values.items() if key in allowed}
         with self._preferences_lock:
@@ -147,6 +148,27 @@ class Config:
             if runtime.exists():
                 return runtime
         return self.data_root / "speech" / "models"
+
+    @property
+    def parakeet_model_root(self) -> Path:
+        """Ubicación del paquete Parakeet instalado junto a los datos de ODIN."""
+
+        configured = self.data.get("parakeet_model_root")
+        if configured:
+            return Path(configured)
+        return (
+            self.data_root / "speech" / "models"
+            / "sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8"
+        )
+
+    @property
+    def kokoro_model_root(self) -> Path:
+        return self.data_root / "voice" / "models" / "kokoro-int8-multi-lang-v1_0"
+
+    @property
+    def speech_recognition_provider(self) -> str:
+        provider = str(self.data.get("speech_recognition_provider", "auto")).casefold()
+        return provider if provider in {"auto", "parakeet", "whisper"} else "auto"
 
     @property
     def eddn_capture_enabled(self) -> bool:

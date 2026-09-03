@@ -1,13 +1,15 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 from pathlib import Path
+from PyInstaller.utils.hooks import collect_all
 
 root = Path(SPECPATH)
+sherpa_datas, sherpa_binaries, sherpa_hiddenimports = collect_all("sherpa_onnx")
 
 a = Analysis(
     [str(root / "main.py")],
     pathex=[str(root)],
-    binaries=[],
+    binaries=sherpa_binaries,
     datas=[
         (str(root / "assets" / "odin_raven.ico"), "assets"),
         (str(root / "knowledge" / "biology" / "species.json"), "knowledge/biology"),
@@ -19,8 +21,8 @@ a = Analysis(
         (str(root / "API_KEYS_README.txt"), "."),
         (str(root / "README.md"), "."),
         (str(root / "docs" / "BETA_TESTING.md"), "docs"),
-    ],
-    hiddenimports=["tkinter", "tkinter.ttk"],
+    ] + sherpa_datas,
+    hiddenimports=["tkinter", "tkinter.ttk"] + sherpa_hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[str(root / "installer" / "runtime_pre_brokk.py")],

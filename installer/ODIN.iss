@@ -33,6 +33,7 @@ Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortugue
 [Tasks]
 Name: "desktopicon"; Description: "Crear un acceso directo en el escritorio"; GroupDescription: "Accesos directos:"; Flags: checkedonce
 Name: "ollama"; Description: "Instalar Ollama y descargar gemma3:4b (requiere Internet y varios GB)"; GroupDescription: "Asistente local de inteligencia artificial:"; Flags: checkedonce
+Name: "localvoice"; Description: "Instalar voz local de alta calidad: Parakeet + Kokoro (aprox. 1 GB)"; GroupDescription: "Voz y reconocimiento sin conexión:"; Flags: checkedonce
 
 [Files]
 Source: "..\dist\ODIN\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -44,6 +45,7 @@ Name: "{autodesktop}\ODIN"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Parameters: "--set-language {code:GetOdinLanguage}"; WorkingDir: "{app}"; StatusMsg: "Configurando idioma y voces..."; Flags: runhidden waituntilterminated
 Filename: "{app}\{#MyAppExeName}"; Parameters: "--install-ollama"; WorkingDir: "{app}"; StatusMsg: "Abriendo el asistente gráfico de Ollama..."; Flags: waituntilterminated; Tasks: ollama
+Filename: "{app}\{#MyAppExeName}"; Parameters: "--install-local-speech"; WorkingDir: "{app}"; StatusMsg: "Abriendo el asistente de voz local..."; Flags: waituntilterminated; Tasks: localvoice
 Filename: "{app}\{#MyAppExeName}"; Description: "Iniciar ODIN"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent
 
 [Code]
