@@ -1,6 +1,8 @@
 import unittest
 
-from intelligence.reflexes import ReflexResolver, is_trade_menu_request
+from intelligence.reflexes import (
+    ReflexResolver, is_trade_menu_request, normalize_command_transcription,
+)
 
 
 class ReflexResolverTests(unittest.TestCase):
@@ -41,6 +43,24 @@ class ReflexResolverTests(unittest.TestCase):
     def test_trade_aliases_remain_compatible(self):
         for phrase in ("quiero comerciar", "y gaseer comercio", "vale bien"):
             self.assertTrue(is_trade_menu_request(phrase))
+
+    def test_observed_transcription_errors_resolve_safe_commands(self):
+        examples = {
+            "Odin solicita traque.": "docking_request",
+            "o de intren de aterrizaje.": "cockpit_landing_gear",
+            "Odin activó la visión nocturna.": "cockpit_night_vision",
+            "Odin calculó una ruta de neutrones hasta Colonia.": "neutron_route",
+        }
+        resolver = ReflexResolver()
+        for phrase, intent in examples.items():
+            with self.subTest(phrase=phrase):
+                self.assertEqual(resolver.resolve(phrase).intent, intent)
+
+    def test_normalizer_does_not_rewrite_unrelated_words(self):
+        self.assertEqual(
+            normalize_command_transcription("contame algo interesante"),
+            "contame algo interesante",
+        )
 
 
 if __name__ == "__main__":

@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import threading
 import logging
+import time
 from numbers import Real
 from pathlib import Path
 from typing import Callable
@@ -38,7 +39,7 @@ def interpret_wake_phrase(
     # Whisper Base confundía a veces ODIN con "Olín"; ambas formas son
     # acústicamente cercanas y sólo activan una orden completa.
     match = re.search(
-        r"\b(?:od[ií]n|ol[ií]n|odim|odyn)\b",
+        r"\b(?:od[ií]n|odi+n|ol[ií]n|odim|odyn|aline|all\s+in)\b",
         text,
         flags=re.IGNORECASE,
     )
@@ -87,6 +88,10 @@ class WakeWordListener:
                 )
             except WakeRecognitionError:
                 self.wake_transcriber = self.transcriber
+        logger.info(
+            "VOICE_ENGINES | command=%s | wake=%s",
+            type(self.transcriber).__name__, type(self.wake_transcriber).__name__,
+        )
         self.stop_event = threading.Event()
         self.armed = threading.Event()
         self.paused = threading.Event()
@@ -146,6 +151,7 @@ class WakeWordListener:
                     if waiting_for_question or self.armed.is_set()
                     else self.wake_transcriber
                 )
+                transcription_started = time.perf_counter()
                 if recognizer is self.transcriber:
                     text, confidence = recognizer.transcribe_with_confidence(audio)
                     if confidence < 0.35:
@@ -156,8 +162,10 @@ class WakeWordListener:
                     text = recognizer.transcribe(audio)
                 text = text.strip()
                 logger.info(
-                    "VOICE_RECOGNIZED | mode=%s | text=%r",
+                    "VOICE_RECOGNIZED | mode=%s | engine=%s | seconds=%.3f | text=%r",
                     "command" if waiting_for_question or self.armed.is_set() else "wake",
+                    type(recognizer).__name__,
+                    time.perf_counter() - transcription_started,
                     text,
                 )
             except (

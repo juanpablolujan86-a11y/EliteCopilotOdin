@@ -59,6 +59,7 @@ class ReflexResolver:
         self._by_intent: Counter[str] = Counter()
 
     def resolve(self, text: str, *, record: bool = True) -> ReflexMatch | None:
+        text = normalize_command_transcription(text)
         cockpit = parse_cockpit_intent(text)
         if cockpit is not None:
             if cockpit.feature == "docking_request":
@@ -107,3 +108,19 @@ class ReflexResolver:
                 "missed": self._missed,
                 "by_intent": dict(self._by_intent),
             }
+def normalize_command_transcription(text: str) -> str:
+    """Corrige sólo deformaciones acústicas observadas en órdenes confirmadas."""
+
+    normalized = str(text or "")
+    replacements = (
+        (r"\bodi+n\b", "ODIN"),
+        (r"\btraque\b", "atraque"),
+        (r"\bintren\b", "tren"),
+        (r"\bactiv[oó]\b", "activa"),
+        (r"\bcalcul[oó]\b", "calcula"),
+        (r"\brecalcul[oó]\b", "recalcula"),
+    )
+    for pattern, replacement in replacements:
+        normalized = re.sub(pattern, replacement, normalized, flags=re.IGNORECASE)
+    return normalized
+
