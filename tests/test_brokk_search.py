@@ -1,7 +1,10 @@
 import unittest
 from unittest.mock import Mock
 
-from brokk.search import SpanshMiningSearchClient, select_mining_distance_tiers
+from brokk.search import (
+    SpanshMiningSearchClient, normalize_mineral_query,
+    select_mining_distance_tiers,
+)
 
 
 class Session:
@@ -18,6 +21,11 @@ class Session:
 
 
 class BrokkSearchTests(unittest.TestCase):
+    def test_normalizes_spanish_mineral_names_for_community_sources(self):
+        self.assertEqual(normalize_mineral_query("platino"), "Platinum")
+        self.assertEqual(normalize_mineral_query("  ópalos del vacío "), "Void Opal")
+        self.assertEqual(normalize_mineral_query("Samarium"), "Samarium")
+
     def test_filters_hotspot_reserves_and_reference_system(self):
         session = Session({"results": []})
         SpanshMiningSearchClient(session).locations("Sol", "Platinum")

@@ -11,6 +11,22 @@ class MiningSearchError(RuntimeError):
     pass
 
 
+MINERAL_ALIASES = {
+    "platino": "Platinum", "painita": "Painite", "tritio": "Tritium",
+    "osmio": "Osmium", "monacita": "Monazite",
+    "alejandrita": "Alexandrite", "musgravita": "Musgravite",
+    "benitoita": "Benitoite", "benitoíta": "Benitoite",
+    "bromelita": "Bromellite", "serendibita": "Serendibite",
+    "ópalo del vacío": "Void Opal", "ópalos del vacío": "Void Opal",
+    "diamantes de baja temperatura": "Low Temperature Diamonds",
+}
+
+
+def normalize_mineral_query(mineral: str) -> str:
+    normalized = " ".join(str(mineral).split())
+    return MINERAL_ALIASES.get(normalized.casefold(), normalized)
+
+
 @dataclass(frozen=True, slots=True)
 class MiningLocation:
     mineral: str

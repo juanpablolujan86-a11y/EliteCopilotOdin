@@ -209,6 +209,55 @@ def match_mining_locations(territories, mining_locations) -> list[dict]:
     return matches
 
 
+def build_powerplay_mining_plan(territories, mining_locations, sales) -> list[dict]:
+    """Construye los dos tramos de la operación: extracción y entrega.
+
+    Un hotspot no necesita estar dentro del territorio Powerplay. La carga debe
+    conservar su procedencia desde la refinería y venderse después en una
+    estación elegible del territorio indicado por Actividades locales.
+    """
+
+    plan = []
+    seen_hotspots = set()
+    for hotspot in mining_locations:
+        key = (hotspot.system.casefold(), hotspot.ring.casefold())
+        if key in seen_hotspots:
+            continue
+        seen_hotspots.add(key)
+        record = hotspot.to_dict()
+        record.update({
+            "operation": "mine",
+            "power_state": "Extracción",
+            "instructions": "Extraé y refiná el mineral; no lo transfieras a un carrier.",
+        })
+        plan.append(record)
+        if len(seen_hotspots) >= 3:
+            break
+
+    territory_by_system = {item.system.casefold(): item for item in territories}
+    for sale in sales:
+        territory = territory_by_system.get(str(sale.get("system_name", "")).casefold())
+        if territory is None:
+            continue
+        record = territory.to_dict()
+        record.update({
+            "station": str(sale.get("station_name", "")),
+            "sell_price": int(sale.get("sell_price", 0) or 0),
+            "demand": int(sale.get("demand", 0) or 0),
+            "has_large_pad": bool(sale.get("has_large_pad", False)),
+            "market_updated_at": str(sale.get("updated_at", "") or ""),
+            "power_state": territory.power_state or "Entrega Powerplay",
+            "instructions": (
+                "Vendé aquí sólo si Actividades locales confirma minería como "
+                "actividad válida; los méritos se confirman por el Journal."
+            ),
+        })
+        plan.append(record)
+        if len(plan) >= 6:
+            break
+    return plan
+
+
 def match_station_locations(territories, stations, purpose: str) -> list[dict]:
     """Cruza territorios con servicios conservados en la caché de estaciones."""
 

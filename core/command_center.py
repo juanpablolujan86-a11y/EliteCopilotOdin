@@ -28,7 +28,8 @@ from brokk.valuation import (
 from brokk.session import MiningSessionStore
 from brokk.performance import calculate_mining_performance
 from brokk.search import (
-    MiningSearchError, SpanshMiningSearchClient, select_mining_distance_tiers,
+    MiningSearchError, SpanshMiningSearchClient, normalize_mineral_query,
+    select_mining_distance_tiers,
 )
 from core.config import Config
 from core.body_names import planet_reference
@@ -114,7 +115,7 @@ from speech.whisper import TranscriptionError
 from voice.service import OfficerVoiceService, VoiceServiceError
 from powerplay.advisor import (
     ACTIVITIES, SpanshPowerplaySearchClient, PowerplaySearchError,
-    activity_snapshot, match_mining_locations, match_station_locations,
+    activity_snapshot, build_powerplay_mining_plan, match_station_locations,
 )
 from powerplay.assignments import SOLUTION_STEPS, WeeklyAssignmentStore
 
@@ -3453,16 +3454,7 @@ class CommandCenter:
         origin = " ".join(str(self.commander_state.current_system).split())
         if not mineral or not origin or self._mining_search_busy.is_set():
             return False
-        aliases = {
-            "platino": "Platinum", "painita": "Painite", "tritio": "Tritium",
-            "osmio": "Osmium", "monacita": "Monazite",
-            "alejandrita": "Alexandrite", "musgravita": "Musgravite",
-            "benitoita": "Benitoite", "benitoíta": "Benitoite",
-            "bromelita": "Bromellite", "serendibita": "Serendibite",
-            "ópalo del vacío": "Void Opal", "ópalos del vacío": "Void Opal",
-            "diamantes de baja temperatura": "Low Temperature Diamonds",
-        }
-        query = aliases.get(mineral.casefold(), mineral)
+        query = normalize_mineral_query(mineral)
         self._mining_search_busy.set()
         self._mining_search_result = {
             "mineral": mineral, "query": query, "status": "Consultando Spansh",
@@ -3931,16 +3923,37 @@ class CommandCenter:
                 position, power, activity
             )
             if activity == "mining":
+                query = normalize_mineral_query(subject)
                 hotspots = self._mining_search_client.locations(
-                    self.commander_state.current_system, subject,
-                    max_distance_ly=250.0,
+                    self.commander_state.current_system, query,
+                    max_distance_ly=900.0,
                 )
-                matched = match_mining_locations(locations, hotspots)
-                self._powerplay_activity["locations"] = matched[:6]
-                if not matched:
+                try:
+                    if self.market_cache:
+                        self.market_cache.refresh_region(
+                            self._powerplay_market_client, position,
+                            size=100, pages=3,
+                        )
+                except MarketSourceError as error:
+                    self._powerplay_activity["source_warning"] = str(error)
+                systems = [item.system for item in locations]
+                requires_large_pad = bool(
+                    getattr(self.trade_profile, "requires_large_pad", False)
+                )
+                sales = self.market_cache.sales_in_systems(
+                    query, systems, requires_large_pad=requires_large_pad
+                ) if self.market_cache else []
+                plan = build_powerplay_mining_plan(locations, hotspots, sales)
+                self._powerplay_activity["locations"] = plan
+                if not hotspots:
                     self._powerplay_activity["error"] = (
-                        f"No encontré hotspots de {subject} dentro de los "
-                        "territorios Powerplay candidatos."
+                        f"No encontré hotspots comunitarios de {subject} dentro "
+                        "de 900 años luz."
+                    )
+                elif not sales:
+                    self._powerplay_activity["source_warning"] = (
+                        f"Encontré dónde extraer {subject}, pero no una estación "
+                        "Powerplay con mercado actualizado para entregarlo."
                     )
             elif activity == "trade":
                 try:

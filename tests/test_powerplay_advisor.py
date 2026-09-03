@@ -3,7 +3,8 @@ from types import SimpleNamespace
 
 from powerplay.advisor import (
     ACTIVITIES, ACTIVITY_GUIDANCE, CombatLocation,
-    SpanshPowerplaySearchClient, activity_snapshot, match_mining_locations,
+    SpanshPowerplaySearchClient, activity_snapshot, build_powerplay_mining_plan,
+    match_mining_locations,
     match_station_locations,
 )
 from brokk.search import MiningLocation
@@ -55,6 +56,28 @@ class PowerplayAdvisorTests(unittest.TestCase):
         snapshot = activity_snapshot(state, {"key": "combat", "start_merits": 204886})
         self.assertEqual(snapshot["earned"], 234)
         self.assertEqual(snapshot["system_state"], "Stronghold")
+
+    def test_mining_plan_separates_nearby_hotspots_from_powerplay_sale(self):
+        territory = CombatLocation(
+            "Sistema Venta", 40, "Li Yong-Rui", "Reinforcement",
+            "reinforce", "", "",
+        )
+        hotspot = MiningLocation(
+            "Platinum", "Sistema Mina", "A 1", "A Ring", "Metallic",
+            "Pristine", 2, 12, 500, "",
+        )
+        sales = [{
+            "system_name": "Sistema Venta", "station_name": "Puerto Grande",
+            "sell_price": 250000, "demand": 5000, "has_large_pad": True,
+            "updated_at": "2026-09-03",
+        }]
+
+        result = build_powerplay_mining_plan((territory,), (hotspot,), sales)
+
+        self.assertEqual(result[0]["operation"], "mine")
+        self.assertEqual(result[0]["system"], "Sistema Mina")
+        self.assertEqual(result[1]["operation"], "reinforce")
+        self.assertEqual(result[1]["station"], "Puerto Grande")
 
     def test_matches_cached_services_for_exploration_salvage_and_on_foot(self):
         territory = CombatLocation(
