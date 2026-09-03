@@ -2491,6 +2491,29 @@ class OdinDesktopApp:
             bg=ELITE["surface"], fg=ELITE["amber"],
             font=("Segoe UI", 10, "bold"),
         ).pack(side="right")
+        recognition_labels = {
+            self._t("settings.recognition_auto"): "auto",
+            self._t("settings.recognition_parakeet"): "parakeet",
+            self._t("settings.recognition_whisper"): "whisper",
+        }
+        recognition_by_provider = {
+            provider: label for label, provider in recognition_labels.items()
+        }
+        recognition = tk.StringVar(value=recognition_by_provider.get(
+            self.odin.config.speech_recognition_provider,
+            self._t("settings.recognition_auto"),
+        ))
+        recognition_row = tk.Frame(sound, bg=ELITE["surface"])
+        recognition_row.pack(fill="x", pady=(8, 0))
+        tk.Label(
+            recognition_row, text=self._t("settings.recognition"),
+            bg=ELITE["surface"], fg=ELITE["muted"],
+            font=("Segoe UI", 8, "bold"),
+        ).pack(side="left")
+        ttk.Combobox(
+            recognition_row, textvariable=recognition, state="readonly", width=27,
+            values=tuple(recognition_labels),
+        ).pack(side="right")
         current_mode = (
             "both" if self.odin.config.push_to_talk_enabled and self.odin.config.wake_word_enabled
             else "ptt" if self.odin.config.push_to_talk_enabled else "wake"
@@ -2588,6 +2611,9 @@ class OdinDesktopApp:
                     inara_upload_enabled=network_vars["inara"].get(),
                     push_to_talk_enabled=voice_mode.get() in {"ptt", "both"},
                     wake_word_enabled=voice_mode.get() in {"wake", "both"},
+                    speech_recognition_provider=recognition_labels.get(
+                        recognition.get(), "auto"
+                    ),
                     heimdall_auto_docking_enabled=auto_docking.get(),
                     ai_provider=ai_provider.get(),
                     openai_model=openai_model.get().strip() or "gpt-5-mini",

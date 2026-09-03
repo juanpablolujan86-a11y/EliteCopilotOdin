@@ -133,6 +133,8 @@ class LocalizationTestCase(unittest.TestCase):
             "settings.ai_share_commander_data",
             "settings.ai_share_station_search_data",
             "settings.activation", "settings.ptt", "settings.wake",
+            "settings.recognition", "settings.recognition_auto",
+            "settings.recognition_parakeet", "settings.recognition_whisper",
             "settings.both", "settings.calibrate", "settings.delete_profile",
             "settings.no_commander", "settings.profile_count",
             "settings.no_profile", "common.cancel", "common.accept",
