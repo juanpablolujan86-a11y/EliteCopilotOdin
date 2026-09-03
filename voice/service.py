@@ -55,7 +55,11 @@ class OfficerVoiceService:
             "kokoro_model_root",
             self.config.data_root / "voice" / "models" / "kokoro-int8-multi-lang-v1_0",
         )
-        self.kokoro_client = kokoro_client or KokoroTtsClient(kokoro_root)
+        kokoro_language = str(getattr(self.config, "language", "es")).casefold()
+        kokoro_language = kokoro_language.replace("-419", "")
+        self.kokoro_client = kokoro_client or KokoroTtsClient(
+            kokoro_root, language=kokoro_language
+        )
         self.repository = VoiceSettingsRepository(self.config.data_root)
 
     def _edge_cache_path(self, officer: str, text: str, assignment) -> Path:

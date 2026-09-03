@@ -16,9 +16,12 @@ class KokoroTtsError(RuntimeError):
 class KokoroTtsClient:
     REQUIRED_FILES = ("model.int8.onnx", "voices.bin", "tokens.txt")
 
-    def __init__(self, model_root: Path, *, threads: int = 4) -> None:
+    def __init__(
+        self, model_root: Path, *, threads: int = 4, language: str = "es"
+    ) -> None:
         self.model_root = Path(model_root)
         self.threads = max(1, int(threads))
+        self.language = language
         self._engine = None
         self._lock = threading.Lock()
 
@@ -63,6 +66,7 @@ class KokoroTtsClient:
                 voices=str(self.model_root / "voices.bin"),
                 tokens=str(self.model_root / "tokens.txt"),
                 data_dir=str(self.model_root / "espeak-ng-data"),
+                lang=self.language,
             )
             model = sherpa_onnx.OfflineTtsModelConfig(
                 kokoro=kokoro, num_threads=self.threads, provider="cpu", debug=False
