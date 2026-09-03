@@ -25,7 +25,9 @@ a = Analysis(
     hiddenimports=["tkinter", "tkinter.ttk"] + sherpa_hiddenimports,
     hookspath=[],
     hooksconfig={},
-    runtime_hooks=[str(root / "installer" / "runtime_pre_brokk.py")],
+    # La distribución principal incluye BROKK. El gancho histórico
+    # runtime_pre_brokk.py pertenece únicamente a cortes anteriores.
+    runtime_hooks=[],
     excludes=["PySide6", "watchdog"],
     noarchive=False,
 )
