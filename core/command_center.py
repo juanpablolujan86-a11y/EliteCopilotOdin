@@ -2001,6 +2001,7 @@ class CommandCenter:
 
     def _start_voice_response(self, question: str) -> None:
         """Responde en segundo plano sin detener el seguimiento del Journal."""
+        print("\n" + self._t("voice.commander_dictation", text=question))
         if self._is_voice_listening_cancel(question):
             self._voice_retry_pending = False
             self.wake_listener.armed.clear()
@@ -2579,7 +2580,6 @@ class CommandCenter:
             answer = conversation.answer(question, context)
             answer = self._sanitize_current_system_references(question, answer)
             acknowledgement_done.wait()
-            print(f"\nVos: {question}")
             print(f"ODIN: {answer}\n")
             conversation.voice.speak("ODIN", answer)
         except (
@@ -3294,7 +3294,6 @@ class CommandCenter:
                 answer = conversation.answer(question, context)
                 acknowledgement_done.wait()
                 print(
-                    f"\nVos: {question}\n"
                     f"FREYJA → IA DE ODIN: {len(stations)} estaciones compatibles.\n"
                     f"ODIN: {answer}\n"
                 )

@@ -135,6 +135,7 @@ class LocalizationTestCase(unittest.TestCase):
             "settings.activation", "settings.ptt", "settings.wake",
             "settings.recognition", "settings.recognition_auto",
             "settings.recognition_parakeet", "settings.recognition_whisper",
+            "voice.commander_dictation",
             "settings.both", "settings.calibrate", "settings.delete_profile",
             "settings.no_commander", "settings.profile_count",
             "settings.no_profile", "common.cancel", "common.accept",
