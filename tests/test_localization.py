@@ -82,6 +82,7 @@ class LocalizationTestCase(unittest.TestCase):
             "powerplay.guidance.salvage",
             "powerplay.subject",
             "powerplay.soontill_relics",
+            "powerplay.open_inara", "powerplay.sources",
             "powerplay.contact_unverified",
             "powerplay.open_weekly_guide", "powerplay.weekly_guide_title",
             "powerplay.weekly_guide_intro",

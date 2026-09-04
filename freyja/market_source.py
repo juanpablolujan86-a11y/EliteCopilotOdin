@@ -129,6 +129,19 @@ class MarketCache:
         with self.database.transaction():
             for station in stations: self.ingest_spansh_station(station)
         return len(stations)
+    def refresh_power_markets(
+        self, client: SpanshMarketClient, coordinates, power: str, *, pages=5,
+    ) -> int:
+        """Consulta Spansh en línea para mercados de la potencia solicitada."""
+        stations=tuple(
+            station for page in range(max(1,int(pages)))
+            for station in client.stations_near_power(
+                coordinates,str(power),size=100,page=page
+            )
+        )
+        with self.database.transaction():
+            for station in stations: self.ingest_spansh_station(station)
+        return len(stations)
     def opportunities(self,profile,*,sell_power: str = "") -> list[MarketOpportunity]:
         if profile.position is None or profile.jump_range <= 0:
             return []

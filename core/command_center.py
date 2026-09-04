@@ -3894,7 +3894,7 @@ class CommandCenter:
             "key": selected.key,
             "start_merits": int(self.commander_state.powerplay_merits or 0),
             "calculating": True,
-            "locations": [], "error": "", "subject": subject,
+            "locations": [], "error": "", "subject": subject, "sources": [],
         }
         print(
             f"POWERPLAY: {selected.label} seleccionada. "
@@ -3957,10 +3957,17 @@ class CommandCenter:
             elif activity == "trade":
                 try:
                     if self.market_cache:
-                        self.market_cache.refresh_region(
+                        nearby = self.market_cache.refresh_region(
                             self._powerplay_market_client, position,
-                            size=100, pages=3,
+                            size=100, pages=5,
                         )
+                        power_markets = self.market_cache.refresh_power_markets(
+                            self._powerplay_market_client, position, power, pages=5,
+                        )
+                        self._powerplay_activity["sources"] = [
+                            f"Spansh online ({nearby + power_markets} mercados)",
+                            "Inara (verificación web)",
+                        ]
                 except MarketSourceError as error:
                     self._powerplay_activity["source_warning"] = str(error)
                 systems = [item.system for item in locations]
@@ -3990,6 +3997,9 @@ class CommandCenter:
                             "demand": int(sale["demand"] or 0),
                             "has_large_pad": bool(sale["has_large_pad"]),
                             "market_updated_at": str(sale["updated_at"] or ""),
+                            "inara_search": (
+                                f"{sale['station_name']} [{sale['system_name']}]"
+                            ),
                         })
                         matched.append(record)
                 elif self.market_cache and self.navigation_manager is not None:
@@ -4018,6 +4028,9 @@ class CommandCenter:
                             "units": plan.units,
                             "estimated_profit": plan.estimated_profit,
                             "market_updated_at": item.updated_at,
+                            "inara_search": (
+                                f"{item.sell_station} [{item.sell_system}]"
+                            ),
                             "instructions": (
                                 f"Comprá {plan.units} t en {item.buy_station}, "
                                 f"{item.buy_system}; vendé en {item.sell_station}."

@@ -184,6 +184,7 @@ def activity_snapshot(state, selected: dict | None = None) -> dict:
         "locations": list(selected.get("locations", ())),
         "subject": str(selected.get("subject", "")),
         "source_warning": str(selected.get("source_warning", "")),
+        "sources": list(selected.get("sources", ())),
         "error": str(selected.get("error", "")),
     }
 

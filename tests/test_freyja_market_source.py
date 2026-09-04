@@ -62,6 +62,17 @@ class FreyjaMarketSourceTests(unittest.TestCase):
             "Li Yong-Rui",
         )
         self.assertEqual(payload["page"],2)
+
+    def test_refresh_power_markets_queries_spansh_instead_of_cache_only(self):
+        client = Mock()
+        client.stations_near_power.return_value = ()
+
+        refreshed = self.cache.refresh_power_markets(
+            client, (1, 2, 3), "Li Yong-Rui", pages=2
+        )
+
+        self.assertEqual(refreshed, 0)
+        self.assertEqual(client.stations_near_power.call_count, 2)
     def test_builds_realistic_opportunity_between_cached_markets(self):
         current=datetime.now(timezone.utc).isoformat()
         self.cache.ingest_spansh_station({"market_id":1,"system_name":"A","name":"Uno",

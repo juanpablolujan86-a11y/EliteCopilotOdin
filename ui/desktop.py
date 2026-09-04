@@ -7,6 +7,8 @@ import ctypes
 import logging
 import sys
 import threading
+import webbrowser
+from urllib.parse import quote
 import tkinter as tk
 from tkinter import messagebox, ttk
 
@@ -614,6 +616,7 @@ class OdinDesktopApp:
         )
         self.powerplay_location_list.pack(fill="x", pady=(0, 6))
         self.powerplay_location_systems = []
+        self.powerplay_location_inara_searches = []
         self._powerplay_location_signature = ()
         powerplay_actions = tk.Frame(powerplay, bg=ELITE["surface"])
         powerplay_actions.pack(fill="x")
@@ -626,6 +629,12 @@ class OdinDesktopApp:
             powerplay_actions, text=self._t("powerplay.use_heimdall"),
             command=self._powerplay_location_to_heimdall,
             bg=ELITE["orange_soft"], fg=ELITE["background"], relief="flat",
+            padx=7, pady=5,
+        ).pack(side="left", fill="x", expand=True, padx=(6, 0))
+        tk.Button(
+            powerplay_actions, text=self._t("powerplay.open_inara"),
+            command=self._open_powerplay_location_inara,
+            bg=ELITE["surface_alt"], fg=ELITE["amber"], relief="flat",
             padx=7, pady=5,
         ).pack(side="left", fill="x", expand=True, padx=(6, 0))
         tk.Button(
@@ -1267,6 +1276,9 @@ class OdinDesktopApp:
             objective = f"{objective}\n\n{guidance}"
         if powerplay.get("source_warning"):
             objective = f"{objective}\n\n{powerplay['source_warning']}"
+        sources = powerplay.get("sources", ()) or ()
+        if sources:
+            objective = f"{objective}\n\n{self._t('powerplay.sources')}: {' · '.join(sources)}"
         if powerplay.get("calculating"):
             objective = self._t("powerplay.searching_combat")
         self.values["powerplay_objective"].set(objective)
@@ -1284,17 +1296,19 @@ class OdinDesktopApp:
              item.get("power_state", ""), item.get("instructions", ""),
              item.get("commodity", ""), item.get("buy_system", ""),
              item.get("buy_station", ""), int(item.get("units", 0) or 0),
-             int(item.get("estimated_profit", 0) or 0))
+             int(item.get("estimated_profit", 0) or 0),
+             item.get("inara_search", ""))
             for item in powerplay.get("locations", ())
         )
         if locations != self._powerplay_location_signature:
             self._powerplay_location_signature = locations
             self.powerplay_location_systems = [item[0] for item in locations]
+            self.powerplay_location_inara_searches = [item[-1] for item in locations]
             self.powerplay_location_list.delete(0, "end")
             for (system, operation, distance, conflict, body, ring, reserve,
                  hotspots, station, sell_price, demand, contact_unverified,
                  distance_ls, category, instructions, commodity, buy_system,
-                 buy_station, units, estimated_profit) in locations:
+                 buy_station, units, estimated_profit, inara_search) in locations:
                 suffix = f" · {conflict}" if conflict else ""
                 if commodity:
                     suffix += f" · {commodity}"
@@ -1922,6 +1936,21 @@ class OdinDesktopApp:
             return
         self.values["route_destination_input"].set(system)
         print(f"POWERPLAY: {system} preparado como destino de HEIMDALL.")
+
+    def _open_powerplay_location_inara(self) -> None:
+        selection = self.powerplay_location_list.curselection()
+        if not selection:
+            return
+        index = int(selection[0])
+        if index >= len(self.powerplay_location_inara_searches):
+            return
+        search = self.powerplay_location_inara_searches[index]
+        if search:
+            url = f"https://inara.cz/elite/station/?search={quote(search)}"
+        else:
+            system = self.powerplay_location_systems[index]
+            url = f"https://inara.cz/elite/starsystem/?search={quote(system)}"
+        webbrowser.open(url)
 
     def _request_powerplay_sale(self) -> None:
         commodity = self.values["trade_commodity_input"].get().strip()
