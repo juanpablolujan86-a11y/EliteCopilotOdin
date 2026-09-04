@@ -198,7 +198,15 @@ class SpanshPowerplaySearchClient:
             opponents = [
                 value for power, value in progress.items() if power != wanted
             ]
-            explicitly_contested = state.casefold() in {"contested", "disputed"}
+            powers = row.get("powers", row.get("power", ())) or ()
+            if isinstance(powers, str):
+                powers = (powers,)
+            participates = wanted in progress or any(
+                str(power).strip().casefold() == wanted for power in powers
+            )
+            explicitly_contested = (
+                state.casefold() in {"contested", "disputed"} and participates
+            )
             inferred_contested = bool(
                 pledged_progress is not None
                 # En expansiones ordinarias puede aparecer una potencia rival

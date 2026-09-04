@@ -14,7 +14,7 @@ if (-not (Test-Path -LiteralPath $pyInstallerSpec)) {
 Write-Host "Construyendo ODIN.exe desde el código actual..."
 Push-Location $projectRoot
 try {
-    & $pyInstaller --noconfirm --clean $pyInstallerSpec
+    & $pyInstaller --noconfirm --clean --distpath (Join-Path $projectRoot "dist\review-beta") --workpath (Join-Path $projectRoot "build\review-beta") $pyInstallerSpec
     if ($LASTEXITCODE -ne 0) { throw "La creación de ODIN.exe falló." }
 }
 finally {
@@ -35,7 +35,7 @@ Write-Host "Construyendo el instalador de ODIN..."
 & $compiler $spec
 if ($LASTEXITCODE -ne 0) { throw "La creación del instalador falló." }
 
-$installer = Join-Path $projectRoot "dist\installer\ODIN-v0.8.0-beta-Setup-win64.exe"
+$installer = Join-Path $projectRoot "dist\installer\ODIN-v0.8.2-beta-Setup-win64.exe"
 if (-not (Test-Path -LiteralPath $installer)) {
     throw "El compilador terminó sin generar el instalador esperado: $installer"
 }

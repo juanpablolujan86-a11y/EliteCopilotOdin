@@ -50,7 +50,7 @@ def interpret_wake_phrase(
     # Whisper Base confundía a veces ODIN con "Olín"; ambas formas son
     # acústicamente cercanas y sólo activan una orden completa.
     match = re.search(
-        r"\b(?:od[ií]n|odi+n|ol[ií]n|odim|odyn|aline|all\s+in)\b",
+        r"\b(?:od[ií]n|odi+n|ol[ií]n|odim|odyn)\b",
         text,
         flags=re.IGNORECASE,
     )

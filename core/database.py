@@ -62,14 +62,14 @@ class DatabaseManager:
             self._transaction_depth += 1
             try:
                 yield
-                self._transaction_depth -= 1
                 if outermost:
                     self.connection.commit()
             except Exception:
-                self._transaction_depth -= 1
                 if outermost:
                     self.connection.rollback()
                 raise
+            finally:
+                self._transaction_depth -= 1
 
     def query(self, sql: str, parameters: tuple = ()) -> list:
         with self._lock:

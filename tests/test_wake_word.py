@@ -49,10 +49,12 @@ class WakeWordTests(unittest.TestCase):
         )
 
     def test_accepts_observed_parakeet_wake_aliases_only_as_complete_words(self):
-        for phrase in ("ODIIN", "Aline", "All in"):
+        for phrase in ("ODIIN",):
             with self.subTest(phrase=phrase):
                 self.assertEqual(interpret_wake_phrase(phrase), (None, True))
         self.assertEqual(interpret_wake_phrase("alineado"), (None, False))
+        for phrase in ("All in", "Aline", "vamos all in esta noche"):
+            self.assertEqual(interpret_wake_phrase(phrase), (None, False))
 
     def test_recovers_observed_landing_gear_wake_transcriptions(self) -> None:
         for phrase in (

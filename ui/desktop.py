@@ -15,6 +15,8 @@ from tkinter import messagebox, ttk
 
 from core.diagnostics import log_fatal_error
 from core.database import DatabaseManager
+from core.version import VERSION
+from services.updates import check_for_update
 from core.localization import SUPPORTED_LANGUAGES, text as localized_text
 from platform_adapters.clipboard import copy_text
 from guardian.unlocks import GUARDIAN_MODULE_RECIPES
@@ -121,6 +123,38 @@ class OdinDesktopApp:
         self._build_window()
         self.root.protocol("WM_DELETE_WINDOW", self.close)
         self.root.bind("<Configure>", self._schedule_geometry_save, add="+")
+        self._update_results = queue.Queue()
+        self.root.after(3000, self._start_update_check)
+
+    def _start_update_check(self):
+        def check():
+            try:
+                self._update_results.put((check_for_update(), None))
+            except Exception as error:
+                self._update_results.put((None, type(error).__name__))
+        threading.Thread(target=check, name="odin-updates", daemon=True).start()
+        self.root.after(250, self._poll_update_check)
+
+    def _poll_update_check(self):
+        if self._closing:
+            return
+        try:
+            update, error = self._update_results.get_nowait()
+        except queue.Empty:
+            self.root.after(250, self._poll_update_check)
+            return
+        if error:
+            logging.getLogger("odin").info("UPDATE_CHECK_UNAVAILABLE | %s", error)
+        elif update:
+            language = self.odin.config.language
+            if language.startswith("en"):
+                prompt = f"ODIN {update.version} is available (installed: {VERSION}). Open the download page?"
+            elif language.startswith("pt"):
+                prompt = f"ODIN {update.version} disponível (instalada: {VERSION}). Abrir a página de download?"
+            else:
+                prompt = f"Hay una nueva versión de ODIN: {update.version} (instalada: {VERSION}). ¿Abrir la página de descarga?"
+            if messagebox.askyesno("ODIN", prompt, parent=self.root):
+                webbrowser.open(update.url)
 
     def _t(self, key: str, **values) -> str:
         return localized_text(key, self.odin.config.language, **values)

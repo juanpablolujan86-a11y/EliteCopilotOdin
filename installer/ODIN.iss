@@ -1,5 +1,5 @@
 #define MyAppName "ODIN"
-#define MyAppVersion "0.8.0-beta"
+#define MyAppVersion "0.8.2-beta"
 #define MyAppPublisher "ODIN Project"
 #define MyAppExeName "ODIN.exe"
 
@@ -36,7 +36,7 @@ Name: "ollama"; Description: "Instalar Ollama y descargar gemma3:4b (requiere In
 Name: "localvoice"; Description: "Instalar voz local de alta calidad: Parakeet + Kokoro (aprox. 1 GB)"; GroupDescription: "Voz y reconocimiento sin conexión:"; Flags: checkedonce
 
 [Files]
-Source: "..\dist\ODIN\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\dist\review-beta\ODIN\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\ODIN"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"
