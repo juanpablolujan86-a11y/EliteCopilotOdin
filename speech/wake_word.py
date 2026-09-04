@@ -36,6 +36,17 @@ class _RecordingStopSignal:
 def interpret_wake_phrase(
     text: str, *, forced: bool = False, waiting_for_question: bool = False
 ) -> tuple[str | None, bool]:
+    # Deformaciones observadas de la orden completa "ODIN, tren de
+    # aterrizaje". Se aceptan sólo cuando la frase contiene también
+    # "aterrizaje" para no convertir "o de..." en una palabra de activación
+    # genérica y provocar escuchas accidentales.
+    if re.fullmatch(
+        r"\s*o\s+de\s+(?:(?:in|inter)\s*)?(?:tren[d]?|tres?)?\s*"
+        r"(?:de\s+)?(?:aterrizaje|interrizaje)\s*[.,;:!?]*\s*",
+        text,
+        flags=re.IGNORECASE,
+    ):
+        return "tren de aterrizaje", False
     # Whisper Base confundía a veces ODIN con "Olín"; ambas formas son
     # acústicamente cercanas y sólo activan una orden completa.
     match = re.search(

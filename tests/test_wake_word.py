@@ -54,6 +54,21 @@ class WakeWordTests(unittest.TestCase):
                 self.assertEqual(interpret_wake_phrase(phrase), (None, True))
         self.assertEqual(interpret_wake_phrase("alineado"), (None, False))
 
+    def test_recovers_observed_landing_gear_wake_transcriptions(self) -> None:
+        for phrase in (
+            "O de in tren de aterrizaje.",
+            "O de intrend aterrizaje.",
+            "O de interrizaje.",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertEqual(
+                    interpret_wake_phrase(phrase),
+                    ("tren de aterrizaje", False),
+                )
+
+        # La sílaba acústica aislada nunca debe activar ODIN.
+        self.assertEqual(interpret_wake_phrase("o de la estación"), (None, False))
+
     def test_f8_accepts_phrase_without_wake_word(self) -> None:
         self.assertEqual(
             interpret_wake_phrase("estado general", forced=True),

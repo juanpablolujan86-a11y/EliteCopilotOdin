@@ -88,7 +88,11 @@ def parse_cockpit_intent(text: str) -> CockpitIntent | None:
         lowered,
     ):
         feature = "cargo_scoop"
-    elif re.search(r"\b(?:tren(?:\s+de\s+aterrizaje)?|landing\s+gear|trem\s+de\s+pouso)\b", lowered):
+    elif re.search(
+        r"\b(?:tren[d]?|tres?)\s+(?:(?:de\s+)?aterrizaje)|"
+        r"\btren\b|\blanding\s+gear\b|\btrem\s+de\s+pouso\b",
+        lowered,
+    ):
         feature = "landing_gear"
     elif re.search(
         r"\b(?:hipersalto|hiper\s+salto|salto\s+hiperespacial|"

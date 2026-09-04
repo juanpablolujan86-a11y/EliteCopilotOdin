@@ -116,6 +116,8 @@ def normalize_command_transcription(text: str) -> str:
         (r"\bodi+n\b", "ODIN"),
         (r"\btraque\b", "atraque"),
         (r"\bintren\b", "tren"),
+        (r"\btren[d]?\s+(?:de\s+)?aterrizaje\b", "tren de aterrizaje"),
+        (r"\btres?\s+(?:de\s+)?aterrizaje\b", "tren de aterrizaje"),
         (r"\bactiv[oó]\b", "activa"),
         (r"\bcalcul[oó]\b", "calcula"),
         (r"\brecalcul[oó]\b", "recalcula"),
@@ -123,4 +125,3 @@ def normalize_command_transcription(text: str) -> str:
     for pattern, replacement in replacements:
         normalized = re.sub(pattern, replacement, normalized, flags=re.IGNORECASE)
     return normalized
-

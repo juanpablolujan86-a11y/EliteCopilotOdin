@@ -122,6 +122,17 @@ class CockpitAdvisorTests(unittest.TestCase):
             False,
         )
 
+    def test_recognizes_observed_landing_gear_transcription_variants(self) -> None:
+        for phrase in (
+            "Odin tres de aterrizaje",
+            "trend aterrizaje",
+            "tren aterrizaje",
+        ):
+            with self.subTest(phrase=phrase):
+                intent = parse_cockpit_intent(phrase)
+                self.assertIsNotNone(intent)
+                self.assertEqual(intent.feature, "landing_gear")
+
     def test_recognizes_srv_lights_and_night_vision(self) -> None:
         lights = parse_cockpit_intent("ODIN, encendé las luces del Scarab")
         night = parse_cockpit_intent("ODIN, visión nocturna del SRV")
