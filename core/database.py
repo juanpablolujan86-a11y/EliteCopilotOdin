@@ -10,6 +10,7 @@ from pathlib import Path
 import sqlite3
 from sqlite3 import Connection
 from contextlib import contextmanager
+import threading
 
 
 class DatabaseManager:
@@ -24,53 +25,59 @@ class DatabaseManager:
         self.database_file = self.database_folder / "odin.db"
         self.connection: Connection | None = None
         self._transaction_depth = 0
+        self._lock = threading.RLock()
 
     def connect(self) -> None:
-        if self.connection is None:
-            self.connection = sqlite3.connect(self.database_file, timeout=30.0)
-            self.connection.row_factory = sqlite3.Row
-            self.connection.execute("PRAGMA busy_timeout = 30000")
-            self.connection.execute("PRAGMA journal_mode = WAL")
-            self.connection.execute("PRAGMA synchronous = NORMAL")
+        with self._lock:
+            if self.connection is None:
+                self.connection = sqlite3.connect(
+                    self.database_file, timeout=30.0, check_same_thread=False,
+                )
+                self.connection.row_factory = sqlite3.Row
+                self.connection.execute("PRAGMA busy_timeout = 30000")
+                self.connection.execute("PRAGMA journal_mode = WAL")
+                self.connection.execute("PRAGMA synchronous = NORMAL")
 
     def disconnect(self) -> None:
-        if self.connection is not None:
-            self.connection.close()
-            self.connection = None
+        with self._lock:
+            if self.connection is not None:
+                self.connection.close()
+                self.connection = None
 
     def execute(self, sql: str, parameters: tuple = ()) -> None:
-        if self.connection is None:
-            raise RuntimeError("La base de datos no está conectada.")
-
-        cursor = self.connection.cursor()
-        cursor.execute(sql, parameters)
-        if self._transaction_depth == 0:
-            self.connection.commit()
+        with self._lock:
+            if self.connection is None:
+                raise RuntimeError("La base de datos no está conectada.")
+            cursor = self.connection.cursor()
+            cursor.execute(sql, parameters)
+            if self._transaction_depth == 0:
+                self.connection.commit()
 
     @contextmanager
     def transaction(self):
-        if self.connection is None:
-            raise RuntimeError("La base de datos no est\u00e1 conectada.")
-        outermost = self._transaction_depth == 0
-        self._transaction_depth += 1
-        try:
-            yield
-            self._transaction_depth -= 1
-            if outermost:
-                self.connection.commit()
-        except Exception:
-            self._transaction_depth -= 1
-            if outermost:
-                self.connection.rollback()
-            raise
+        with self._lock:
+            if self.connection is None:
+                raise RuntimeError("La base de datos no est\u00e1 conectada.")
+            outermost = self._transaction_depth == 0
+            self._transaction_depth += 1
+            try:
+                yield
+                self._transaction_depth -= 1
+                if outermost:
+                    self.connection.commit()
+            except Exception:
+                self._transaction_depth -= 1
+                if outermost:
+                    self.connection.rollback()
+                raise
 
     def query(self, sql: str, parameters: tuple = ()) -> list:
-        if self.connection is None:
-            raise RuntimeError("La base de datos no está conectada.")
-
-        cursor = self.connection.cursor()
-        cursor.execute(sql, parameters)
-        return cursor.fetchall()
+        with self._lock:
+            if self.connection is None:
+                raise RuntimeError("La base de datos no está conectada.")
+            cursor = self.connection.cursor()
+            cursor.execute(sql, parameters)
+            return cursor.fetchall()
 
     def create_tables(self) -> None:
         """
