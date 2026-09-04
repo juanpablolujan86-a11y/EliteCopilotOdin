@@ -105,19 +105,34 @@ class PowerplayAdvisorTests(unittest.TestCase):
         self.assertEqual(on_foot[0]["station"], "Asentamiento")
         self.assertTrue(on_foot[0]["contact_unverified"])
 
-    def test_combat_search_prioritizes_acquisition_and_active_conflict(self) -> None:
+    def test_combat_search_returns_only_powerplay_disputes(self) -> None:
         rows = [
             {"name": "Propio", "distance": 10, "controlling_power": "Li Yong-Rui",
              "power_state": "Stronghold"},
-            {"name": "Rival", "distance": 30, "controlling_power": "Aisling Duval",
-             "power_state": "Contested", "powers": ["Li Yong-Rui"],
+            {"name": "HR 858", "distance": 30, "power_state": "Unoccupied",
+             "power_conflict_progress": [
+                 {"power": "Li Yong-Rui", "progress": 0.605},
+                 {"power": "Pranav Antal", "progress": 1.264},
+             ]},
+            {"name": "Expansión", "distance": 20, "power_state": "Unoccupied",
+             "power_conflict_progress": [
+                 {"power": "Li Yong-Rui", "progress": 0.19},
+                 {"power": "Pranav Antal", "progress": 0.03},
+             ]},
+            {"name": "Rival dominante", "distance": 15,
+             "power_state": "Unoccupied", "power_conflict_progress": [
+                 {"power": "Li Yong-Rui", "progress": 0.02},
+                 {"power": "Felicia Winters", "progress": 0.81},
+             ]},
+            {"name": "Guerra BGS", "distance": 5,
              "conflicts": [{"status": "active", "war_type": "war"}]},
             {"name": "Irrelevante", "distance": 2},
         ]
         result = SpanshPowerplaySearchClient._records(rows, "Li Yong-Rui", 250)
-        self.assertEqual([item.system for item in result], ["Rival", "Propio"])
+        self.assertEqual([item.system for item in result], ["HR 858"])
         self.assertEqual(result[0].operation, "undermine")
-        self.assertEqual(result[0].conflict, "war")
+        self.assertEqual(result[0].conflict, "Disputa Powerplay")
+        self.assertEqual(result[0].power_state, "Unoccupied")
 
 
 if __name__ == "__main__":

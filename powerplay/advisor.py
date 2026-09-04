@@ -73,33 +73,54 @@ class SpanshPowerplaySearchClient:
 
     def combat_locations(
         self, coordinates: tuple[float, float, float], pledged_power: str,
-        *, max_distance_ly: float = 250.0,
+        *, max_distance_ly: float = 250.0, disputed_only: bool = True,
     ) -> tuple[CombatLocation, ...]:
         if len(coordinates) != 3 or not pledged_power.strip():
             raise ValueError("La posición y la potencia son obligatorias.")
         payload = {
-            "filters": {"distance": {"min": 0, "max": max_distance_ly}},
-            "sort": [{"distance": {"direction": "asc"}}],
+            "filters": {
+                "distance": {"min": 0, "max": max_distance_ly},
+                "power": {"value": pledged_power.strip()},
+            },
+            # Las disputas cambian durante el ciclo. Consultar primero los
+            # registros recientes evita que queden enterradas entre miles de
+            # sistemas explotados cercanos.
+            "sort": [{
+                "updated_at" if disputed_only else "distance": {
+                    "direction": "desc" if disputed_only else "asc"
+                }
+            }],
             "size": 100, "page": 0,
             "reference_coords": {
                 "x": coordinates[0], "y": coordinates[1], "z": coordinates[2],
             },
         }
+        rows = []
+        # Spansh limita cada página aunque se solicite un tamaño mayor. Cinco
+        # páginas recientes cubren el ciclo activo sin recorrer su catálogo
+        # histórico completo. Para el resto de actividades basta la más cercana.
+        pages = range(5) if disputed_only else range(1)
         try:
-            response = self.session.post(
-                self.URL, json=payload, timeout=35,
-                headers={"User-Agent": "ODIN Elite Copilot"},
-            )
-            response.raise_for_status()
-            result = response.json()
+            for page in pages:
+                payload["page"] = page
+                response = self.session.post(
+                    self.URL, json=payload, timeout=35,
+                    headers={"User-Agent": "ODIN Elite Copilot"},
+                )
+                response.raise_for_status()
+                result = response.json()
+                page_rows = result.get("results")
+                if not isinstance(page_rows, list):
+                    raise PowerplaySearchError(
+                        "Spansh devolvió una búsqueda Powerplay inválida."
+                    )
+                rows.extend(page_rows)
         except (requests.RequestException, ValueError, TypeError) as error:
             raise PowerplaySearchError(
                 "No se pudieron consultar ubicaciones de combate Powerplay."
             ) from error
-        rows = result.get("results")
-        if not isinstance(rows, list):
-            raise PowerplaySearchError("Spansh devolvió una búsqueda Powerplay inválida.")
-        return self._records(rows, pledged_power, max_distance_ly)
+        parser = self._records if disputed_only else self._territory_records
+        return parser(rows, pledged_power, max_distance_ly)
 
     def activity_locations(
         self, coordinates: tuple[float, float, float], pledged_power: str,
@@ -110,11 +131,14 @@ class SpanshPowerplaySearchClient:
         if activity not in ACTIVITIES:
             raise ValueError("Actividad Powerplay desconocida.")
         return self.combat_locations(
-            coordinates, pledged_power, max_distance_ly=max_distance_ly
+            coordinates, pledged_power, max_distance_ly=max_distance_ly,
+            disputed_only=activity == "combat",
         )
 
     @staticmethod
-    def _records(rows, pledged_power: str, maximum: float):
+    def _territory_records(rows, pledged_power: str, maximum: float):
+        """Conserva territorios de la potencia para actividades no bélicas."""
+
         wanted = pledged_power.casefold()
         locations = []
         for row in rows:
@@ -129,17 +153,11 @@ class SpanshPowerplaySearchClient:
             if isinstance(powers, str):
                 powers = (powers,)
             state = str(row.get("power_state", row.get("powerplay_state", "")) or "")
-            conflicts = row.get("conflicts", ()) or ()
-            active = next((item for item in conflicts if str(
-                item.get("status", "")
-            ).casefold() in {"active", "war", "civilwar"}), None)
-            relevant = (
+            if not (
                 controlling.casefold() == wanted
                 or any(str(power).casefold() == wanted for power in powers)
-                or bool(active)
-                or state.casefold() in {"contested", "acquisition", "reinforcement"}
-            )
-            if not relevant:
+                or wanted in SpanshPowerplaySearchClient._power_conflict_progress(row)
+            ):
                 continue
             if controlling.casefold() == wanted:
                 operation = "reinforce"
@@ -147,17 +165,80 @@ class SpanshPowerplaySearchClient:
                 operation = "undermine"
             else:
                 operation = "acquire"
-            conflict = ""
-            if active:
-                conflict = str(active.get("war_type", active.get("type", "Conflicto")))
             locations.append(CombatLocation(
-                system, distance, controlling, state, operation, conflict,
+                system, distance, controlling, state, operation, "",
                 str(row.get("updated_at", "") or ""),
             ))
-        priority = {"acquire": 0, "undermine": 1, "reinforce": 2}
-        return tuple(sorted(locations, key=lambda item: (
-            priority.get(item.operation, 9), not bool(item.conflict), item.distance_ly,
-        )))
+        return tuple(sorted(locations, key=lambda item: item.distance_ly))
+
+    @staticmethod
+    def _records(rows, pledged_power: str, maximum: float):
+        """Devuelve sólo disputas Powerplay reales de la potencia indicada.
+
+        Spansh no siempre publica ``power_state=Contested`` (HR 858, por
+        ejemplo, puede llegar como ``Unoccupied``).  La señal estable es
+        ``power_conflict_progress``: la potencia jurada y al menos un rival
+        deben tener progreso registrado. Las guerras BGS de ``conflicts`` no
+        son actividad Powerplay y se ignoran deliberadamente.
+        """
+
+        wanted = pledged_power.casefold()
+        locations = []
+        for row in rows:
+            system = str(row.get("name", row.get("system_name", "")) or "")
+            distance = float(row.get("distance", 0) or 0)
+            if not system or distance > maximum:
+                continue
+            controlling = str(row.get(
+                "controlling_power", row.get("system_controlling_power", "")
+            ) or "")
+            state = str(row.get("power_state", row.get("powerplay_state", "")) or "")
+            progress = SpanshPowerplaySearchClient._power_conflict_progress(row)
+            pledged_progress = progress.get(wanted)
+            opponents = [
+                value for power, value in progress.items() if power != wanted
+            ]
+            explicitly_contested = state.casefold() in {"contested", "disputed"}
+            inferred_contested = bool(
+                pledged_progress is not None
+                # En expansiones ordinarias puede aparecer una potencia rival
+                # con progreso alto y una participación testimonial de la
+                # potencia jurada. Una disputa efectiva requiere que ambos
+                # bandos hayan superado el umbral de conflicto comunitario.
+                and pledged_progress >= 0.5
+                and opponents
+                and max(opponents) >= 0.5
+            )
+            if not (explicitly_contested or inferred_contested):
+                continue
+            operation = "undermine"
+            conflict = "Disputa Powerplay"
+            locations.append(CombatLocation(
+                system, distance, controlling, state or "Disputed", operation, conflict,
+                str(row.get("updated_at", "") or ""),
+            ))
+        return tuple(sorted(locations, key=lambda item: item.distance_ly))
+
+    @staticmethod
+    def _power_conflict_progress(row) -> dict[str, float]:
+        raw = row.get("power_conflict_progress", ()) or ()
+        if isinstance(raw, dict):
+            raw = raw.items()
+        else:
+            raw = (
+                (
+                    item.get("power", item.get("name", "")),
+                    item.get("progress", item.get("value", 0)),
+                )
+                for item in raw if isinstance(item, dict)
+            )
+        progress = {}
+        for power, value in raw:
+            try:
+                progress[str(power).casefold()] = float(value or 0)
+            except (TypeError, ValueError):
+                continue
+        return progress
 
 
 def activity_snapshot(state, selected: dict | None = None) -> dict:
