@@ -6,6 +6,7 @@ import hashlib
 from pathlib import Path
 
 from core.config import Config
+from core.officer_names import publicize_officer_text
 from platform_adapters.audio import (
     AudioPlayer,
     SpeechPlayer,
@@ -80,6 +81,7 @@ class OfficerVoiceService:
     def prepare(self, officer: str, text: str) -> None:
         """Genera anticipadamente una frase Edge repetitiva sin reproducirla."""
 
+        text = publicize_officer_text(text)
         settings = self.repository.load()
         assignment = settings.officers.get(officer.upper())
         if not settings.enabled or assignment is None or assignment.provider != "edge":
@@ -97,6 +99,7 @@ class OfficerVoiceService:
         cache_path.write_bytes(audio)
 
     def speak(self, officer: str, text: str) -> None:
+        text = publicize_officer_text(text)
         settings = self.repository.load()
         assignment = settings.officers.get(officer.upper())
         if not settings.enabled or assignment is None:

@@ -5,6 +5,7 @@ from __future__ import annotations
 import queue
 import ctypes
 import logging
+import re
 import sys
 import threading
 import webbrowser
@@ -17,7 +18,7 @@ from core.database import DatabaseManager
 from core.localization import SUPPORTED_LANGUAGES, text as localized_text
 from platform_adapters.clipboard import copy_text
 from guardian.unlocks import GUARDIAN_MODULE_RECIPES
-from core.officer_names import public_officer_name
+from core.officer_names import public_officer_name, publicize_officer_text
 from engineering.planner import ENGINEERS, ENGINEERING_PLANS
 from services.edsm_credentials import EDSMCredentialStore
 from services.inara_credentials import InaraCredentialStore
@@ -58,7 +59,7 @@ class GuiLogStream:
 
     def write(self, text: str) -> int:
         if text:
-            self.messages.put(str(text))
+            self.messages.put(publicize_officer_text(text))
             if self.fallback is not None:
                 self.fallback.write(text)
         return len(text)
@@ -89,8 +90,8 @@ class OdinDesktopApp:
         except tk.TclError:
             pass
         self.root.title(self._t("app.title"))
-        self.root.geometry(self.odin.config.desktop_geometry or "1180x720")
-        self.root.minsize(900, 580)
+        self.root.geometry(self._initial_geometry())
+        self.root.minsize(1100, 700)
         self.root.configure(bg=ELITE["background"])
         self.log_messages: queue.Queue[str] = queue.Queue()
         self.original_stdout = sys.stdout
@@ -99,7 +100,7 @@ class OdinDesktopApp:
         self.engine_thread: threading.Thread | None = None
         self._closing = False
         self._geometry_save_job: str | None = None
-        self._last_normal_geometry = self.odin.config.desktop_geometry or "1180x720"
+        self._last_normal_geometry = self.root.geometry()
         self.values: dict[str, tk.StringVar] = {}
         self._guardian_collection_system = ""
         self._guardian_broker_system = ""
@@ -123,6 +124,16 @@ class OdinDesktopApp:
 
     def _t(self, key: str, **values) -> str:
         return localized_text(key, self.odin.config.language, **values)
+
+    def _initial_geometry(self) -> str:
+        saved = str(self.odin.config.desktop_geometry or "")
+        match = re.match(r"^(\d+)x(\d+)([+-].+)?$", saved)
+        if not match:
+            return "1440x860"
+        width, height = int(match.group(1)), int(match.group(2))
+        if width >= 1280 and height >= 760:
+            return saved
+        return f"1440x860{match.group(3) or ''}"
 
     def _report_callback_exception(self, exception, value, traceback) -> None:
         logging.getLogger("odin").error(
@@ -254,12 +265,15 @@ class OdinDesktopApp:
             self.root, orient="horizontal", sashwidth=5, sashrelief="flat",
             bg=ELITE["border"], bd=0,
         )
+        commander_strip = tk.Frame(self.root, bg=ELITE["background"])
+        commander_strip.pack(fill="x")
+        self._build_commander_panel(commander_strip)
         content.pack(fill="both", expand=True)
 
         console_panel = tk.Frame(content, bg=ELITE["background"])
-        side = tk.Frame(content, bg=ELITE["surface"], width=440)
+        side = tk.Frame(content, bg=ELITE["surface"], width=650)
         content.add(console_panel, stretch="always", minsize=520)
-        content.add(side, stretch="never", minsize=390)
+        content.add(side, stretch="always", minsize=560)
 
         self._section_title(
             console_panel, self._t("app.operational_log"), self._t("app.live")
@@ -279,7 +293,6 @@ class OdinDesktopApp:
         )
         footer.pack(fill="x")
 
-        self._build_commander_panel(side)
         self._build_details_panel(side)
 
     def _section_title(self, parent, title: str, extra: str = "") -> None:
@@ -300,14 +313,16 @@ class OdinDesktopApp:
                          highlightbackground=ELITE["border"])
         panel.pack(fill="x", padx=10, pady=(10, 5))
         self._section_title(panel, self._t("app.commander_ship"))
-        body = tk.Frame(panel, bg=ELITE["surface"], padx=12, pady=10)
+        body = tk.Frame(panel, bg=ELITE["surface"], padx=12, pady=8)
         body.pack(fill="x")
+        identity = tk.Frame(body, bg=ELITE["surface"])
+        identity.pack(side="left", fill="both", expand=True, padx=(0, 12))
         for key in ("commander", "system", "ship", "ship_stats"):
             self.values[key] = tk.StringVar(value="—")
-        tk.Label(body, textvariable=self.values["commander"], anchor="w",
+        tk.Label(identity, textvariable=self.values["commander"], anchor="w",
                  bg=ELITE["surface"], fg=ELITE["text"],
                  font=("Segoe UI", 13, "bold")).pack(fill="x")
-        location_row = tk.Frame(body, bg=ELITE["surface"])
+        location_row = tk.Frame(identity, bg=ELITE["surface"])
         location_row.pack(fill="x", pady=(2, 8))
         tk.Label(location_row, textvariable=self.values["system"], anchor="w",
                  bg=ELITE["surface"], fg=ELITE["orange"],
@@ -321,18 +336,18 @@ class OdinDesktopApp:
             font=("Segoe UI", 8, "bold"),
         )
         self.community_status_label.pack(side="right")
-        tk.Label(body, textvariable=self.values["ship"], anchor="w",
+        tk.Label(identity, textvariable=self.values["ship"], anchor="w",
                  bg=ELITE["surface"], fg=ELITE["text"],
                  font=("Segoe UI", 10, "bold")).pack(fill="x")
-        tk.Label(body, textvariable=self.values["ship_stats"], anchor="w",
+        tk.Label(identity, textvariable=self.values["ship_stats"], anchor="w",
                  bg=ELITE["surface"], fg=ELITE["muted"],
                  font=("Segoe UI", 9)).pack(fill="x", pady=(2, 8))
         metrics = tk.Frame(body, bg=ELITE["surface"])
-        metrics.pack(fill="x")
+        metrics.pack(side="right", fill="both", expand=True)
         self._metric(metrics, "credits", self._t("app.credits"), 0, 0)
         self._metric(metrics, "pending", self._t("app.expedition"), 0, 1)
-        self._metric(metrics, "cartography", self._t("app.cartography"), 1, 0)
-        self._metric(metrics, "exobiology", self._t("app.exobiology"), 1, 1)
+        self._metric(metrics, "cartography", self._t("app.cartography"), 0, 2)
+        self._metric(metrics, "exobiology", self._t("app.exobiology"), 0, 3)
 
     def _metric(self, parent, key, label, row, column) -> None:
         frame = tk.Frame(parent, bg=ELITE["surface_alt"], padx=9, pady=7,
@@ -626,8 +641,8 @@ class OdinDesktopApp:
             fg=ELITE["background"], relief="flat", padx=7, pady=5,
         ).pack(side="left", fill="x", expand=True)
         tk.Button(
-            powerplay_actions, text=self._t("powerplay.use_heimdall"),
-            command=self._powerplay_location_to_heimdall,
+            powerplay_actions, text=self._t("powerplay.use_njordr"),
+            command=self._powerplay_location_to_njordr,
             bg=ELITE["orange_soft"], fg=ELITE["background"], relief="flat",
             padx=7, pady=5,
         ).pack(side="left", fill="x", expand=True, padx=(6, 0))
@@ -1831,15 +1846,15 @@ class OdinDesktopApp:
         destination = self.values["route_destination_input"].get().strip()
         if not destination:
             messagebox.showwarning(
-                "HEIMDALL", self._t("dialog.route_destination"), parent=self.root
+                "NJÖRÐR", self._t("dialog.route_destination"), parent=self.root
             )
             return
         if self.odin.request_neutron_route(destination):
             self.route_calculate_button.configure(text="SOLICITADO", state="disabled")
-            print(f"HEIMDALL: solicitud de ruta recibida hacia {destination}.")
+            print(f"NJÖRÐR: solicitud de ruta recibida hacia {destination}.")
             return
         messagebox.showinfo(
-            "HEIMDALL", "Ya hay una ruta en proceso. Esperá a que finalice.",
+            "NJÖRÐR", "Ya hay una ruta en proceso. Esperá a que finalice.",
             parent=self.root,
         )
 
@@ -1850,9 +1865,9 @@ class OdinDesktopApp:
             self.exact_route_calculate_button.configure(
                 text="SOLICITADO", state="disabled"
             )
-            print(f"HEIMDALL: solicitud de ruta exacta recibida hacia {destination}.")
+            print(f"NJÖRÐR: solicitud de ruta exacta recibida hacia {destination}.")
             return
-        messagebox.showinfo("HEIMDALL", detail, parent=self.root)
+        messagebox.showinfo("NJÖRÐR", detail, parent=self.root)
 
     def _request_trade(self, strategy: str) -> None:
         labels = {
@@ -1930,12 +1945,12 @@ class OdinDesktopApp:
             copy_text(system)
             print(f"POWERPLAY: {system} copiado al portapapeles.")
 
-    def _powerplay_location_to_heimdall(self) -> None:
+    def _powerplay_location_to_njordr(self) -> None:
         system = self._selected_powerplay_system()
         if not system:
             return
         self.values["route_destination_input"].set(system)
-        print(f"POWERPLAY: {system} preparado como destino de HEIMDALL.")
+        print(f"POWERPLAY: {system} preparado como destino de NJÖRÐR.")
 
     def _open_powerplay_location_inara(self) -> None:
         selection = self.powerplay_location_list.curselection()
@@ -2053,7 +2068,7 @@ class OdinDesktopApp:
 
     def _route_mining_system(self, tier: str) -> None:
         if self.odin.select_mining_destination(tier):
-            print("BROKK: destino entregado a HEIMDALL.")
+            print("BROKK: destino entregado a NJÖRÐR.")
 
     def _toggle_mute(self) -> None:
         settings = self.voice_repository.load()

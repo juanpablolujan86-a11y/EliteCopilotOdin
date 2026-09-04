@@ -69,7 +69,8 @@ class LocalizationTestCase(unittest.TestCase):
             "powerplay.on_foot", "powerplay.salvage", "powerplay.power",
             "powerplay.rank", "powerplay.merits", "powerplay.earned",
             "powerplay.territory", "powerplay.activity", "powerplay.locations",
-            "powerplay.use_heimdall", "powerplay.searching_combat",
+            "powerplay.use_heimdall", "powerplay.use_njordr",
+            "powerplay.searching_combat",
             "powerplay.no_activity", "powerplay.verification.direct",
             "powerplay.verification.contextual", "powerplay.verification.experimental",
             "powerplay.verification.unverified", "powerplay.operation.reinforce",
@@ -316,7 +317,7 @@ class LocalizationTestCase(unittest.TestCase):
         self.assertEqual(VERSION, "0.8.0-beta")
         self.assertEqual(
             CAPABILITY,
-            "MÍMIR, HEIMDALL, FREYJA y BROKK beta",
+            "MÍMIR, NJÖRÐR, HEIMDALL, FREYJA y BROKK beta",
         )
 
 

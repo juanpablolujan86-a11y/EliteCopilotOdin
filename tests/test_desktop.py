@@ -68,7 +68,15 @@ class DesktopTests(unittest.TestCase):
         written = stream.write(text)
 
         self.assertEqual(written, len(text))
-        self.assertEqual(messages.get_nowait(), text)
+        self.assertEqual(messages.get_nowait(), "NJÖRÐR: ruta calculada\n")
+
+    def test_small_saved_window_is_upgraded_to_dashboard_size(self) -> None:
+        app = OdinDesktopApp.__new__(OdinDesktopApp)
+        app.odin = SimpleNamespace(config=SimpleNamespace(
+            desktop_geometry="980x620+40+50"
+        ))
+
+        self.assertEqual(app._initial_geometry(), "1440x860+40+50")
 
     def test_credit_format_matches_spanish_dashboard(self) -> None:
         self.assertEqual(OdinDesktopApp._credits(359520), "359.520 CR")
