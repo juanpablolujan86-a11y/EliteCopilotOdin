@@ -84,7 +84,7 @@ from freyja.planner import (
 )
 from freyja.market_source import MarketCache, MarketSourceError, SpanshMarketClient
 from freyja.station_finder import StationFinder
-from freyja.powerplay_sale import PowerplaySaleFinder
+from freyja.powerplay_sale import PowerplaySaleFinder, external_commodity_name
 from heimdall.bindings import BindingAudit, BindingCustodian
 from heimdall.cockpit import CockpitAdvisor, parse_cockpit_intent
 from heimdall.docking_assist import DockingAssist
@@ -3888,9 +3888,8 @@ class CommandCenter:
         if self._powerplay_activity.get("calculating"):
             return False, "Ya hay una búsqueda Powerplay en curso."
         subject = " ".join(str(subject).split())
-        if selected.key in {"mining", "trade"} and not subject:
-            noun = "mineral" if selected.key == "mining" else "mercancía"
-            return False, f"Indicá la {noun} que querés buscar."
+        if selected.key == "mining" and not subject:
+            return False, "Indicá el mineral que querés buscar."
         self._powerplay_activity = {
             "key": selected.key,
             "start_merits": int(self.commander_state.powerplay_merits or 0),
@@ -3968,33 +3967,69 @@ class CommandCenter:
                 requires_large_pad = bool(
                     getattr(self.trade_profile, "requires_large_pad", False)
                 )
-                sales = self.market_cache.sales_in_systems(
-                    subject, systems, requires_large_pad=requires_large_pad
-                ) if self.market_cache else []
                 territory_by_system = {
                     item.system.casefold(): item for item in locations
                 }
                 matched = []
-                for sale in sales:
-                    territory = territory_by_system.get(
-                        str(sale["system_name"]).casefold()
+                if subject:
+                    query = external_commodity_name(subject)
+                    sales = self.market_cache.sales_in_systems(
+                        query, systems, requires_large_pad=requires_large_pad
+                    ) if self.market_cache else []
+                    for sale in sales:
+                        territory = territory_by_system.get(
+                            str(sale["system_name"]).casefold()
+                        )
+                        if territory is None:
+                            continue
+                        record = territory.to_dict()
+                        record.update({
+                            "commodity": subject,
+                            "station": sale["station_name"],
+                            "sell_price": int(sale["sell_price"] or 0),
+                            "demand": int(sale["demand"] or 0),
+                            "has_large_pad": bool(sale["has_large_pad"]),
+                            "market_updated_at": str(sale["updated_at"] or ""),
+                        })
+                        matched.append(record)
+                elif self.market_cache and self.navigation_manager is not None:
+                    profile = TradeProfileBuilder.build(
+                        self.commander_state, self.navigation_manager.context,
+                        self.config.cargo_file,
                     )
-                    if territory is None:
-                        continue
-                    record = territory.to_dict()
-                    record.update({
-                        "station": sale["station_name"],
-                        "sell_price": int(sale["sell_price"] or 0),
-                        "demand": int(sale["demand"] or 0),
-                        "has_large_pad": bool(sale["has_large_pad"]),
-                        "market_updated_at": str(sale["updated_at"] or ""),
-                    })
-                    matched.append(record)
+                    candidates = [
+                        item for item in self.market_cache.opportunities(profile)
+                        if item.sell_system.casefold() in territory_by_system
+                    ]
+                    plan = QuickRouteOptimizer().choose(profile, candidates)
+                    if plan is not None:
+                        item = plan.opportunity
+                        territory = territory_by_system[item.sell_system.casefold()]
+                        record = territory.to_dict()
+                        record.update({
+                            "commodity": item.commodity,
+                            "buy_system": item.buy_system,
+                            "buy_station": item.buy_station,
+                            "buy_price": item.buy_price,
+                            "station": item.sell_station,
+                            "sell_price": plan.estimated_sell_price,
+                            "demand": item.demand,
+                            "has_large_pad": item.sell_has_large_pad,
+                            "units": plan.units,
+                            "estimated_profit": plan.estimated_profit,
+                            "market_updated_at": item.updated_at,
+                            "instructions": (
+                                f"Comprá {plan.units} t en {item.buy_station}, "
+                                f"{item.buy_system}; vendé en {item.sell_station}."
+                            ),
+                        })
+                        matched.append(record)
                 self._powerplay_activity["locations"] = matched[:6]
                 if not matched:
                     self._powerplay_activity["error"] = (
-                        f"La caché no contiene mercados compatibles para {subject} "
-                        "en los territorios candidatos."
+                        (f"La caché no contiene mercados compatibles para {subject} "
+                         if subject else "No encontré una operación comercial rentable ")
+                        + "en los territorios Powerplay candidatos."
                     )
             elif activity == "transport":
                 try:

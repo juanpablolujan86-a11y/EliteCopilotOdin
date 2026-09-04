@@ -556,6 +556,16 @@ class OdinDesktopApp:
             insertbackground=ELITE["orange"], relief="flat",
             font=("Segoe UI", 9),
         ).pack(fill="x", ipady=5, pady=(0, 6))
+        self.powerplay_soontill_relics = tk.BooleanVar(value=False)
+        self.powerplay_soontill_check = tk.Checkbutton(
+            powerplay, text=self._t("powerplay.soontill_relics"),
+            variable=self.powerplay_soontill_relics,
+            bg=ELITE["surface"], fg=ELITE["amber"],
+            activebackground=ELITE["surface"], activeforeground=ELITE["orange"],
+            selectcolor=ELITE["surface_alt"], anchor="w",
+            font=("Segoe UI", 8, "bold"), cursor="hand2",
+        )
+        self.powerplay_soontill_check.pack(fill="x", pady=(0, 6))
         activity_buttons = tk.Frame(powerplay, bg=ELITE["surface"])
         activity_buttons.pack(fill="x", pady=(0, 8))
         self.powerplay_activity_buttons = []
@@ -1271,7 +1281,10 @@ class OdinDesktopApp:
              int(item.get("demand", 0) or 0),
              bool(item.get("contact_unverified", False)),
              float(item.get("distance_ls", 0) or 0),
-             item.get("power_state", ""), item.get("instructions", ""))
+             item.get("power_state", ""), item.get("instructions", ""),
+             item.get("commodity", ""), item.get("buy_system", ""),
+             item.get("buy_station", ""), int(item.get("units", 0) or 0),
+             int(item.get("estimated_profit", 0) or 0))
             for item in powerplay.get("locations", ())
         )
         if locations != self._powerplay_location_signature:
@@ -1280,8 +1293,13 @@ class OdinDesktopApp:
             self.powerplay_location_list.delete(0, "end")
             for (system, operation, distance, conflict, body, ring, reserve,
                  hotspots, station, sell_price, demand, contact_unverified,
-                 distance_ls, category, instructions) in locations:
+                 distance_ls, category, instructions, commodity, buy_system,
+                 buy_station, units, estimated_profit) in locations:
                 suffix = f" · {conflict}" if conflict else ""
+                if commodity:
+                    suffix += f" · {commodity}"
+                if buy_station:
+                    suffix += f" · comprar {units} t en {buy_station}, {buy_system}"
                 if ring:
                     suffix += f" · {body} / {ring} · {reserve} · {hotspots} hotspot"
                 if station:
@@ -1295,6 +1313,8 @@ class OdinDesktopApp:
                 if instructions:
                     concise = " ".join(str(instructions).split())
                     suffix += f" · {concise[:90]}{'…' if len(concise) > 90 else ''}"
+                if estimated_profit:
+                    suffix += f" · beneficio ≈ {estimated_profit:,} CR"
                 if contact_unverified:
                     suffix += f" · {self._t('powerplay.contact_unverified')}"
                 operation_label = self._t(f"powerplay.operation.{operation}")
@@ -1845,8 +1865,11 @@ class OdinDesktopApp:
         )
 
     def _request_powerplay_activity(self, activity: str) -> None:
+        subject = self.powerplay_subject.get()
+        if activity == "trade" and self.powerplay_soontill_relics.get():
+            subject = "Reliquias de Soontill"
         accepted, detail = self.odin.request_powerplay_activity(
-            activity, self.powerplay_subject.get()
+            activity, subject
         )
         if accepted:
             print(f"POWERPLAY: {detail}")
