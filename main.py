@@ -35,6 +35,19 @@ def configure_language(config: Config, language: str) -> str:
 
 
 def main() -> None:
+    if "--check-local-speech" in sys.argv:
+        import json
+        from pathlib import Path
+        from installer.local_speech_gui import validate_recognition
+        index = sys.argv.index("--check-local-speech")
+        report = Path(sys.argv[index + 1])
+        try:
+            validate_recognition(Config().data_root)
+            result = {"recognition_loaded": True}
+        except Exception as error:
+            result = {"recognition_loaded": False, "error": str(error)}
+        report.write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
+        raise SystemExit(0 if result["recognition_loaded"] else 1)
     if "--install-ollama" in sys.argv:
         raise SystemExit(run_ollama_setup())
     if "--install-local-speech" in sys.argv:
@@ -55,6 +68,10 @@ def main() -> None:
             return
 
     config = Config()
+    if getattr(sys, "frozen", False) and len(sys.argv) == 1:
+        from installer.speech_readiness import offer_speech_setup
+        offer_speech_setup(config)
+        config = Config()
     if "--set-language" in sys.argv:
         index = sys.argv.index("--set-language")
         language = (

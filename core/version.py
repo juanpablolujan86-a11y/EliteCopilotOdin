@@ -1,7 +1,7 @@
 """Versión visible de ODIN durante el desarrollo y las distribuciones."""
 import os
 
-VERSION = os.environ.get("ODIN_VERSION_OVERRIDE", "0.8.2-beta")
+VERSION = os.environ.get("ODIN_VERSION_OVERRIDE", "0.8.3-beta")
 CAPABILITY = os.environ.get(
     "ODIN_CAPABILITY_OVERRIDE",
     "MÍMIR, NJÖRÐR, HEIMDALL, FREYJA y BROKK beta",

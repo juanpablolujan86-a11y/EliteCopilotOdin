@@ -1,5 +1,5 @@
 #define MyAppName "ODIN"
-#define MyAppVersion "0.8.2-beta"
+#define MyAppVersion "0.8.3-beta"
 #define MyAppPublisher "ODIN Project"
 #define MyAppExeName "ODIN.exe"
 
@@ -40,6 +40,7 @@ Source: "..\dist\review-beta\ODIN\*"; DestDir: "{app}"; Flags: ignoreversion rec
 
 [Icons]
 Name: "{group}\ODIN"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"
+Name: "{group}\Reparar reconocimiento de voz"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--install-local-speech"; WorkingDir: "{app}"
 Name: "{autodesktop}\ODIN"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]

@@ -9,6 +9,7 @@ import tarfile
 import tempfile
 import threading
 import time
+import uuid
 import tkinter as tk
 import urllib.request
 from dataclasses import dataclass
@@ -43,6 +44,30 @@ PACKAGES = (
         ("model.int8.onnx", "voices.bin", "tokens.txt", "espeak-ng-data"),
     ),
 )
+
+
+def package_complete(target: Path, package: ModelPackage) -> bool:
+    return all(
+        (target / name).exists()
+        and ((target / name).is_dir() or (target / name).stat().st_size > 0)
+        for name in package.required
+    )
+
+
+def validate_recognition(data_root: Path) -> None:
+    from speech.parakeet import ParakeetTranscriber
+    package = PACKAGES[0]
+    recognizer = ParakeetTranscriber(data_root / package.relative_parent / package.directory)
+    if not recognizer.warm_up():
+        raise RuntimeError(
+            "No se pudo cargar el reconocimiento local. No se considera instalado. "
+            "Reintente con el instalador de ODIN actualizado."
+        )
+
+
+def activate_recognition() -> None:
+    from core.config import Config
+    Config().update_preferences(speech_recognition_provider="auto")
 
 
 def _human_bytes(value: float) -> str:
@@ -141,10 +166,14 @@ class LocalSpeechSetupWindow:
                 if self.cancelled.is_set():
                     return
                 target = self.data_root / package.relative_parent / package.directory
-                if all((target / item).exists() for item in package.required):
+                if package_complete(target, package):
                     continue
                 self._install(package, index)
             if not self.cancelled.is_set():
+                self.messages.put(("progress", "Comprobando reconocimiento…", "Cargando el motor local en CPU…", 99))
+                validate_recognition(self.data_root)
+            if not self.cancelled.is_set():
+                activate_recognition()
                 self.messages.put(("done",))
         except Exception as error:
             if not self.cancelled.is_set():
@@ -167,7 +196,7 @@ class LocalSpeechSetupWindow:
                     speed = downloaded / max(0.1, time.monotonic() - started)
                     remaining = max(0, total - downloaded)
                     local_percent = downloaded * 100 / total if total else 0
-                    overall = (package_index * 50) + local_percent / len(PACKAGES)
+                    overall = (package_index * 100 + local_percent) / len(PACKAGES)
                     self.messages.put((
                         "progress", f"Descargando {package.title}…",
                         f"{_human_bytes(downloaded)} de {_human_bytes(total)} · "
@@ -182,16 +211,21 @@ class LocalSpeechSetupWindow:
             with tarfile.open(archive, "r:bz2") as bundle:
                 bundle.extractall(extract_root, filter="data")
             source = extract_root / package.directory
-            if not all((source / item).exists() for item in package.required):
+            if not package_complete(source, package):
                 raise RuntimeError(f"El paquete descargado de {package.title} está incompleto.")
             parent = self.data_root / package.relative_parent
             parent.mkdir(parents=True, exist_ok=True)
             target = parent / package.directory
+            backup = None
             if target.exists():
-                raise RuntimeError(
-                    f"Existe una instalación incompleta en {target}. Elimínela y reintente."
-                )
-            shutil.move(str(source), str(target))
+                backup = target.with_name(target.name + ".incomplete-" + uuid.uuid4().hex)
+                target.rename(backup)
+            try:
+                shutil.move(str(source), str(target))
+            except Exception:
+                if backup is not None and not target.exists():
+                    backup.rename(target)
+                raise
 
 
 def run_local_speech_setup() -> int:

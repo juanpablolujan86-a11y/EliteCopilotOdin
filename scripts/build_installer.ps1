@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 $projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $spec = Join-Path $projectRoot "installer\ODIN.iss"
-$pyInstaller = Join-Path $projectRoot ".venv\Scripts\pyinstaller.exe"
+$pyInstaller = if ($env:ODIN_BUILD_PYINSTALLER) { $env:ODIN_BUILD_PYINSTALLER } else { Join-Path $projectRoot ".venv\Scripts\pyinstaller.exe" }
 $pyInstallerSpec = Join-Path $projectRoot "ODIN.spec"
 
 if (-not (Test-Path -LiteralPath $pyInstaller)) {
@@ -35,7 +35,7 @@ Write-Host "Construyendo el instalador de ODIN..."
 & $compiler $spec
 if ($LASTEXITCODE -ne 0) { throw "La creación del instalador falló." }
 
-$installer = Join-Path $projectRoot "dist\installer\ODIN-v0.8.2-beta-Setup-win64.exe"
+$installer = Join-Path $projectRoot "dist\installer\ODIN-v0.8.3-beta-Setup-win64.exe"
 if (-not (Test-Path -LiteralPath $installer)) {
     throw "El compilador terminó sin generar el instalador esperado: $installer"
 }

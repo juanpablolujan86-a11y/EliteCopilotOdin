@@ -44,7 +44,7 @@ class WhisperTranscriber:
 
     def transcribe(self, audio: Path) -> str:
         if not self.executable.exists() or not self.model.exists():
-            raise TranscriptionError("Falta instalar el motor local de reconocimiento de voz.")
+            raise TranscriptionError("Falta instalar el reconocimiento de voz. Cierre ODIN y abra Inicio → ODIN → Reparar reconocimiento de voz. Ollama no instala este componente.")
         # Cada proceso recibe un archivo propio. Esto evita lecturas parciales si
         # dos solicitudes de voz llegan casi al mismo tiempo.
         output_base = audio.parent / f"{audio.stem}-{uuid.uuid4().hex}"
@@ -88,7 +88,7 @@ class WhisperTranscriber:
         """Transcribe una orden y devuelve la confianza media de sus palabras."""
 
         if not self.executable.exists() or not self.model.exists():
-            raise TranscriptionError("Falta instalar el motor local de reconocimiento de voz.")
+            raise TranscriptionError("Falta instalar el reconocimiento de voz. Cierre ODIN y abra Inicio → ODIN → Reparar reconocimiento de voz. Ollama no instala este componente.")
         output_base = audio.parent / f"{audio.stem}-{uuid.uuid4().hex}"
         command = [
             str(self.executable), "-m", str(self.model), "-f", str(audio),
