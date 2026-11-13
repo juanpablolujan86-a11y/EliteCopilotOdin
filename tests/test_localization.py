@@ -314,7 +314,7 @@ class LocalizationTestCase(unittest.TestCase):
             )
 
     def test_header_identifies_current_release(self) -> None:
-        self.assertEqual(VERSION, "0.8.3-beta")
+        self.assertEqual(VERSION, "0.8.4-beta")
         self.assertEqual(
             CAPABILITY,
             "MÍMIR, NJÖRÐR, HEIMDALL, FREYJA y BROKK beta",

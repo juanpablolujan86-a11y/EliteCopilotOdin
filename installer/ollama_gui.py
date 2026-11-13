@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import logging
+from datetime import datetime
 import queue
 import re
 import subprocess
@@ -60,10 +62,21 @@ def _ollama_path() -> Path | None:
 
 class OllamaSetupWindow:
     def __init__(self) -> None:
+        log_dir = Path(os.environ.get("LOCALAPPDATA", tempfile.gettempdir())) / "ODIN" / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        self.log_path = log_dir / ("ollama-setup-" + datetime.now().strftime("%Y%m%d-%H%M%S") + ".log")
+        self.logger = logging.getLogger("odin.ollama.setup." + str(time.time_ns()))
+        self.logger.setLevel(logging.INFO)
+        self.logger.propagate = False
+        handler = logging.FileHandler(self.log_path, encoding="utf-8")
+        handler.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
+        self.logger.addHandler(handler)
+        self.logger.info("ODIN 0.8.4-beta; model=%s", MODEL)
         self.root = tk.Tk()
         self.root.title("ODIN — Inteligencia local")
-        self.root.geometry("620x330")
-        self.root.resizable(False, False)
+        self.root.geometry("820x460")
+        self.root.minsize(620, 400)
+        self.root.resizable(True, True)
         self.root.configure(bg="#090b0c")
         self.messages: queue.Queue[tuple] = queue.Queue()
         self.cancelled = threading.Event()
@@ -106,7 +119,16 @@ class OllamaSetupWindow:
             padx=18, pady=7, font=("Segoe UI", 9, "bold"),
         )
         self.cancel.pack(side="right", padx=24, pady=(0, 20))
+        tk.Button(self.root, text="COPIAR REGISTRO", command=self._copy_log).pack(side="left", padx=24)
+        tk.Label(self.root, text=str(self.log_path), wraplength=420,
+                 bg="#090b0c", fg="#d5b07a").pack(side="left", fill="x", expand=True)
         self.root.protocol("WM_DELETE_WINDOW", self._cancel)
+
+    def _copy_log(self):
+        for handler in self.logger.handlers:
+            handler.flush()
+        self.root.clipboard_clear()
+        self.root.clipboard_append(self.log_path.read_text(encoding="utf-8"))
 
     def run(self) -> int:
         threading.Thread(target=self._worker, name="odin-ollama-setup", daemon=True).start()
@@ -115,6 +137,7 @@ class OllamaSetupWindow:
         return self.result
 
     def _cancel(self) -> None:
+        self.logger.info("Cancelled by user")
         self.cancelled.set()
         if self.process is not None:
             try:
@@ -150,9 +173,10 @@ class OllamaSetupWindow:
                     self.result = 0
                 elif kind == "error":
                     self.progress.stop()
-                    messagebox.showerror("ODIN — Ollama", values[0], parent=self.root)
+                    self.stage.set("No se pudo completar la preparación. Copiá el registro.")
+                    messagebox.showerror("ODIN — Ollama", values[0] + "\n\nRegistro: " + str(self.log_path), parent=self.root)
                     self.result = 1
-                    self.root.destroy()
+                    self.cancel.configure(text="CERRAR", command=self._finish)
         except queue.Empty:
             pass
         if self.root.winfo_exists():
@@ -164,6 +188,7 @@ class OllamaSetupWindow:
     def _worker(self) -> None:
         try:
             executable = _ollama_path()
+            self.logger.info("Detected executable: %s", executable)
             if executable is None:
                 installer = Path(tempfile.gettempdir()) / "ODIN-OllamaSetup.exe"
                 self._download_ollama(installer)
@@ -181,10 +206,18 @@ class OllamaSetupWindow:
                 executable = _ollama_path()
                 if completed.returncode or executable is None:
                     raise RuntimeError("Ollama no pudo instalarse. ODIN igualmente quedó instalado.")
+            try:
+                version = subprocess.run([str(executable), "--version"], capture_output=True,
+                    text=True, errors="replace", timeout=10, creationflags=hidden_process_flags())
+                self.logger.info("Version exit=%s output=%s", version.returncode, (version.stdout + version.stderr).strip())
+            except (OSError, subprocess.SubprocessError) as error:
+                self.logger.info("Version check failed: %s", error)
             self._pull_model(executable)
             if not self.cancelled.is_set():
                 self.messages.put(("done",))
+                self.logger.info("Preparation successful")
         except Exception as error:
+            self.logger.exception("Preparation failed")
             if not self.cancelled.is_set():
                 self.messages.put(("error", str(error)))
 
@@ -234,11 +267,15 @@ class OllamaSetupWindow:
             if line:
                 self._model_progress(line)
         code = self.process.wait()
+        if buffer.strip():
+            self._model_progress(ANSI.sub("", buffer).strip())
+        self.logger.info("Model download exit code: %s", code)
         self.process = None
         if code and not self.cancelled.is_set():
             raise RuntimeError(f"No se pudo descargar el modelo {MODEL}. Puede reintentarlo desde ODIN.")
 
     def _model_progress(self, line: str) -> None:
+        self.logger.info("%s", line)
         percent_match = re.search(r"(\d{1,3})\s*%", line)
         percent = float(percent_match.group(1)) if percent_match else 0
         transfer = re.search(
@@ -260,7 +297,7 @@ class OllamaSetupWindow:
         if percent_match:
             self.messages.put(("progress", f"Descargando el modelo {MODEL}…", detail, percent))
         else:
-            self.messages.put(("indeterminate", f"Preparando el modelo {MODEL}…", detail[:100]))
+            self.messages.put(("indeterminate", f"Preparando el modelo {MODEL}…", detail))
 
 
 def run_ollama_setup() -> int:

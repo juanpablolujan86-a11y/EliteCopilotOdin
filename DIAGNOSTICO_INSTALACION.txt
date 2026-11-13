@@ -1,0 +1,16 @@
+ODIN 0.8.4 beta - diagnostico de preparacion de Ollama
+
+Instala esta version y marca la preparacion de Ollama.
+Si falla, no necesitas ampliar la ventana: pulsa COPIAR REGISTRO.
+Tambien puedes abrir con Win+R esta carpeta:
+%LOCALAPPDATA%\ODIN\logs
+
+Envia el archivo mas reciente llamado ollama-setup-FECHA-HORA.log.
+Se genera en TU computadora durante la prueba; no viene precargado con resultados.
+Registra version y ruta de Ollama, salida completa de descarga y codigo de salida.
+Revisa el contenido antes de compartir: puede contener rutas locales y nombres de usuario.
+No envies preferences.json ni archivos de API keys.
+
+El instalador general tambien crea un registro Setup Log en la carpeta temporal de Windows.
+Esta beta agrega diagnosticos; no garantiza resolver un fallo de red o certificados.
+No incorpora los experimentos nuevos de IA de la carpeta de desarrollo.

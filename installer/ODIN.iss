@@ -1,5 +1,5 @@
 #define MyAppName "ODIN"
-#define MyAppVersion "0.8.3-beta"
+#define MyAppVersion "0.8.4-beta"
 #define MyAppPublisher "ODIN Project"
 #define MyAppExeName "ODIN.exe"
 
